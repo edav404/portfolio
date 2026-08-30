@@ -1,6 +1,17 @@
-# EDAV OS
+# EDAV Desktop 98
 
-Portafolio profesional de Emmanuel Dávila, construido con Next.js, TypeScript y una salida estática compatible con hosting cPanel.
+Portafolio profesional experimental de Emmanuel Dávila, construido con Next.js, TypeScript y una salida estática compatible con hosting cPanel. La portada funciona como un sistema operativo retro interactivo inspirado en Windows 98/XP y la estética Y2K.
+
+## Experiencia principal
+
+- Secuencia de arranque BIOS opcional.
+- Escritorio responsive con iconos, menú Inicio y barra de tareas.
+- Gestor de ventanas con foco, arrastre, minimizar, maximizar y cerrar.
+- Selector persistente entre EDAV Desktop 98 y una vista web convencional más accesible.
+- Explorador de los 13 proyectos, terminal funcional y asistente de servicios.
+- ED Assistant animado, arrastrable y contextual para formularios, terminal y errores 404.
+- Reproductor conectado a Last.fm, notificaciones, sonido opcional y shader CRT WebGL.
+- Adaptación móvil como launcher, accesibilidad por teclado y reducción de movimiento.
 
 ## Desarrollo local
 
@@ -47,3 +58,6 @@ Los secretos usados por PHP deben configurarse en el servidor; no deben incorpor
 ## Contenido
 
 Los proyectos se administran en `data/projects.ts`. La identidad, servicios, testimonios y tecnologías se encuentran en `data/site.ts`.
+## Last.fm en localhost
+
+El frontend consulta `http://127.0.0.1:8787/api/lastfm.php` durante el desarrollo. En una terminal, ejecuta `npm run lastfm:dev` y, en otra, `npm run dev`. El proxy Node lee `LASTFM_API_KEY` y `LASTFM_USERNAME` desde `.env` sin enviarlos al navegador. En producción se puede utilizar `public/api/lastfm.php` desde un hosting con PHP.

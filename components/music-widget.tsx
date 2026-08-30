@@ -23,19 +23,25 @@ export function MusicWidget() {
       .catch(() => setState("error"));
   }, []);
 
-  if (state === "loading") return <div className="music-card" aria-live="polite"><div className="skeleton album-skeleton"/><div className="music-copy"><span className="skeleton line"/><span className="skeleton line short"/></div></div>;
+  const isLoading = state === "loading";
+  const isError = state === "error" || !track;
+  const trackUrl = track?.url ?? `https://www.last.fm/user/${site.lastfm}`;
 
-  if (state === "error" || !track) return (
-    <div className="music-card music-fallback">
-      <span className="music-icon"><Icon name="music" /></span>
-      <div><strong>La estación está iniciando…</strong><p>Conecta la API al publicar para mostrar la escucha en vivo.</p><a href={`https://www.last.fm/user/${site.lastfm}`} target="_blank" rel="noreferrer">Abrir perfil de Last.fm</a></div>
+  return <section className={`music-player ${isLoading ? "is-loading" : ""} ${isError ? "is-error" : ""}`} aria-label="Reproductor de música Last.fm">
+    <div className="music-player-titlebar"><strong><i aria-hidden="true"/> EDAV.FM // WINAMP</strong><span>STEREO · 192 KBPS</span></div>
+    <div className="music-player-screen" aria-live="polite">
+      <a className="music-player-cover" href={trackUrl} target="_blank" rel="noreferrer" aria-label="Abrir perfil o canción en Last.fm">
+        {track?.image ? <img src={track.image} alt={`Portada de ${track.name}`} width="96" height="96" /> : <span><Icon name="music"/></span>}
+      </a>
+      <div className="music-player-info">
+        <span className="music-player-status">{isLoading ? "CARGANDO LASTFM.DRV" : track?.nowPlaying ? "● ESCUCHANDO AHORA" : isError ? "○ MODO OFFLINE" : "○ ÚLTIMA REPRODUCCIÓN"}</span>
+        <strong>{isLoading ? "Buscando tu soundtrack…" : track?.name ?? "Last.fm espera conexión"}</strong>
+        <p>{isLoading ? "Consultando a edav404" : track ? `${track.artist}${track.album ? ` · ${track.album}` : ""}` : "Inicia el proxy local para conectar Last.fm."}</p>
+        <div className="music-player-spectrum" aria-hidden="true">{Array.from({ length: 24 }, (_, index) => <i key={index} style={{ height: `${18 + ((index * 17) % 68)}%` }}/>)}</div>
+        <div className="music-player-progress" aria-hidden="true"><span/></div>
+      </div>
     </div>
-  );
-
-  return (
-    <a className="music-card" href={track.url} target="_blank" rel="noreferrer">
-      {track.image ? <img src={track.image} alt={`Portada de ${track.name}`} width="96" height="96" /> : <span className="music-icon"><Icon name="music" /></span>}
-      <div className="music-copy"><span className="live-dot">{track.nowPlaying ? "Escuchando ahora" : "Última reproducción"}</span><strong>{track.name}</strong><p>{track.artist}{track.album ? ` · ${track.album}` : ""}</p><small>Powered by Last.fm</small></div>
-    </a>
-  );
+    <div className="music-player-controls" aria-hidden="true"><span>◀◀</span><b>▶</b><span>▶▶</span><em>VOL</em><i/></div>
+    <div className="music-player-footer"><span>{isError ? "PROXY LAST.FM SIN RESPUESTA" : "Powered by Last.fm"}</span><a href={`https://www.last.fm/user/${site.lastfm}`} target="_blank" rel="noreferrer">ABRIR LAST.FM ↗</a></div>
+  </section>;
 }

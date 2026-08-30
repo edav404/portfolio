@@ -1,6 +1,12 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: public, max-age=60, stale-while-revalidate=300');
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+$allowedOrigins = ['http://127.0.0.1:3000', 'http://localhost:3000'];
+if (in_array($origin, $allowedOrigins, true)) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+    header('Vary: Origin');
+}
 
 $apiKey = getenv('LASTFM_API_KEY');
 $username = getenv('LASTFM_USERNAME') ?: 'edav404';

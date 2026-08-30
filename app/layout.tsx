@@ -4,6 +4,7 @@ import { Header } from "@/components/header";
 import { JsonLd } from "@/components/ui";
 import { site } from "@/data/site";
 import "./globals.css";
+import "./desktop.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.domain),
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: "Emmanuel Dávila — Desarrollo y diseño web", description: site.description },
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#eaf4ff", colorScheme: "light" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#167ea5", colorScheme: "light" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const person = {
