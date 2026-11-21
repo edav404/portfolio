@@ -60,6 +60,15 @@ type ParamsArg<K extends RouteKey> = [ParamNames<(typeof routes)[K]["es"]>] exte
 
 const PARAM = /\[([^\]]+)\]/g;
 
+/**
+ * Validador único de segmentos (ya decodificados) para `href` y `matchPath` y, a través de ellos,
+ * `canonicalPath`, `localizeInternalHref` y el selector de idioma: no vacío, sin separadores
+ * (`/`, `\`, también llegados como `%2F`/`%5C`) y distinto de `.` y `..`.
+ */
+export function isValidSegment(value: string): boolean {
+  return value.length > 0 && !/[/\\]/.test(value) && value !== "." && value !== "..";
+}
+
 function resolveParam(value: ParamValue | undefined, locale: Locale): string | undefined {
   return typeof value === "string" ? value : value?.[locale];
 }
@@ -70,7 +79,7 @@ function build(key: RouteKey, locale: Locale, params: Record<string, ParamValue>
   const path = routes[key][locale].replace(PARAM, (_, name: string) => {
     const value = resolveParam(params?.[name], locale);
     if (!value) { missing = true; return ""; }
-    if (value.includes("/")) throw new Error(`content/routes.ts: el parámetro "${name}" de "${key}" no puede contener "/": ${value}`);
+    if (!isValidSegment(value)) throw new Error(`content/routes.ts: el parámetro "${name}" de "${key}" no es un segmento válido (vacío, con "/" o "\\", "." o ".."): ${value}`);
     return encodeURIComponent(value);
   });
   return missing ? null : path;
@@ -167,10 +176,21 @@ export function matchPath(pathname: string): RouteMatch | null {
     if (!match) continue;
     try {
       const params = Object.fromEntries(names.map((name, index) => [name, decodeURIComponent(match[index + 1])]));
+      // `%2F`, `%5C`, `.` o `..` en un parámetro: no es una ruta del sitio (no se normaliza a otra).
+      if (!Object.values(params).every(isValidSegment)) return null;
       return { key, locale, params };
     } catch {
       return null; // secuencia % mal formada
     }
   }
   return null;
+}
+
+/**
+ * Forma canónica de una ruta conocida (`/proyectos/%63ia-sur` → `/proyectos/cia-sur/`), sin query
+ * ni hash; `null` si no es una ruta del sitio. Es la clave de los índices de equivalencias.
+ */
+export function canonicalPath(pathname: string): string | null {
+  const match = matchPath(pathname);
+  return match ? build(match.key, match.locale, match.params) : null;
 }

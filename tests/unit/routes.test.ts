@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import baseline from "../fixtures/routes-baseline.json";
 import { posts } from "@/content/posts";
 import { caseStudies } from "@/content/projects";
-import { alternates, href, hreflangMap, intlLocale, matchPath, ogLocale, publishedLocales, routes, type RouteKey } from "@/content/routes";
+import { alternates, canonicalPath, href, hreflangMap, intlLocale, isValidSegment, matchPath, ogLocale, publishedLocales, routes, type RouteKey } from "@/content/routes";
 import { locales } from "@/content/types";
 import { wordpressRedirects } from "@/lib/redirects";
 
@@ -106,7 +106,7 @@ describe("content/routes.ts", () => {
   it("href lanza si falta un parámetro o contiene una barra", () => {
     expect(() => href("post", "en", { slug: { es: "solo-es" } })).toThrow(/faltan parámetros/);
     expect(() => href("project", "es", { slug: "" })).toThrow(/faltan parámetros/);
-    expect(() => href("project", "es", { slug: "a/b" })).toThrow(/no puede contener/);
+    expect(() => href("project", "es", { slug: "a/b" })).toThrow(/segmento válido/);
   });
 
   it("tipos: los parámetros se exigen solo donde el patrón los tiene (comprobado por tsc)", () => {
@@ -123,5 +123,33 @@ describe("content/routes.ts", () => {
       expect(ogLocale[locale]).toMatch(/^[a-z]{2}_[A-Z]{2}$/);
       expect(intlLocale[locale]).toMatch(/^[a-z]{2}-[A-Z]{2}$/);
     }
+  });
+});
+
+/** "a" + barra invertida + "b". */
+const BACKSLASH_SEGMENT = ["a", "b"].join(String.fromCharCode(92));
+
+describe("validador de segmentos y ruta canónica (Codex 6)", () => {
+  it("isValidSegment rechaza vacío, separadores, . y ..", () => {
+    for (const bad of ["", "a/b", BACKSLASH_SEGMENT, ".", ".."]) expect(isValidSegment(bad), bad).toBe(false);
+    for (const good of ["cia-sur", "a.b", "...", "año"]) expect(isValidSegment(good), good).toBe(true);
+  });
+
+  it("href lanza con segmentos inválidos", () => {
+    for (const bad of ["a/b", "..", ".", BACKSLASH_SEGMENT]) expect(() => href("project", "es", { slug: bad }), bad).toThrow(/segmento válido/);
+  });
+
+  it("matchPath rechaza separadores decodificados y . / ..", () => {
+    for (const path of ["/proyectos/a%2Fb/", "/proyectos/a%2fb/", "/proyectos/a%5Cb/", "/proyectos/%2E%2E/", "/proyectos/%2e/", "/proyectos/..", "/blog/./"]) {
+      expect(matchPath(path), path).toBeNull();
+    }
+  });
+
+  it("canonicalPath decodifica y normaliza: /proyectos/%63ia-sur → /proyectos/cia-sur/", () => {
+    expect(canonicalPath("/proyectos/%63ia-sur/")).toBe("/proyectos/cia-sur/");
+    expect(canonicalPath("/proyectos/%63ia-sur")).toBe("/proyectos/cia-sur/");
+    expect(canonicalPath("/en/projects/cia-sur?x=1#y")).toBe("/en/projects/cia-sur/");
+    expect(canonicalPath("/proyectos/a%2Fb/")).toBeNull();
+    expect(canonicalPath("/no-existe/")).toBeNull();
   });
 });

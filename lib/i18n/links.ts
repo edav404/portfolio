@@ -5,7 +5,7 @@
  * `content/posts.ts` escribe siempre la ruta ES con barra final (`/servicios/#wordpress`); en una
  * página EN ese enlace cruzaría de layout raíz. Aquí se traduce por el inventario de páginas.
  */
-import { matchPath } from "@/content/routes";
+import { canonicalPath, matchPath } from "@/content/routes";
 import type { Locale } from "@/content/types";
 import { languageIndex } from "./pages";
 
@@ -22,9 +22,10 @@ export function localizeInternalHref(esHref: string, locale: Locale): string {
   const match = matchPath(path);
   if (!match) return esHref;
   if (match.locale !== "es") return esHref;
-  const normalized = path.endsWith("/") ? path : `${path}/`;
+  // Clave canónica (barra final, parámetros decodificados y validados) antes de consultar el índice.
+  const key = canonicalPath(path);
   esToEn ??= languageIndex("es");
-  const target = esToEn[normalized];
+  const target = key ? esToEn[key] : undefined;
   if (!target) throw new Error(`lib/i18n/links.ts: "${esHref}" no tiene equivalente en ${locale}`);
   return `${target}${rest}`;
 }

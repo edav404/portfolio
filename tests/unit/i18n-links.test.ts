@@ -63,3 +63,14 @@ describe("localizeInternalHref", () => {
     expect(count).toBeGreaterThan(0);
   });
 });
+
+describe("localizeInternalHref con rutas no canónicas (Codex 6)", () => {
+  it("canonicaliza la clave: %63ia-sur y sin barra final resuelven igual", () => {
+    expect(localizeInternalHref("/proyectos/%63ia-sur/", "en")).toBe("/en/projects/cia-sur/");
+    expect(localizeInternalHref("/proyectos/%63ia-sur#galeria", "en")).toBe("/en/projects/cia-sur/#galeria");
+  });
+
+  it("separadores codificados o . / .. no son rutas del sitio: se devuelven tal cual", () => {
+    for (const value of ["/proyectos/a%2Fb/", "/proyectos/%2E%2E/"]) expect(localizeInternalHref(value, "en")).toBe(value);
+  });
+});
