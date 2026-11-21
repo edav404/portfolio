@@ -317,3 +317,25 @@ app/en/
   (Edge headless): el 404 EN hidrata con `lang="en"` y su UI; el escritorio EN no tiene microcopy ES.
 - Contenido pendiente (no es código): `technologies` de Civicoin incluye "Diseño editorial" (no es `L`);
   nombres propios en ES (Servicios Nutresa, Tecnológico de Antioquia) se mantienen a propósito.
+
+### 11.2 P7: selector de idioma y enlaces internos
+
+- `lib/i18n/pages.ts`: inventario único (`availablePages()`: 7 estáticas + casos de estudio + posts,
+  con su ruta en cada idioma). Dos vistas (§8.6): `languageIndex(locale)` (equivalencias, incluye
+  `noindex`) y `publicPages()` (indexables e idiomas publicados, para P8).
+- `components/shell/language-switch.tsx` (cliente, `prefetch={false}`, `hreflang` y `lang` del
+  destino): `SiteShell` calcula `languageIndex(locale)` en el servidor y la cabecera lo muestra como
+  un enlace más de la navegación ("English version" / "Versión en español"). Sin equivalente (404) →
+  portada del otro idioma. Visible ya, antes de P9, porque es la vía de revisión del EN. Cambio
+  visible intencionado en ES: ese enlace en la cabecera de las 23 páginas medidas (el resto del texto
+  ES no cambia). Sin estilos propios: hereda los de `.main-nav a` (`.language-switch` queda libre para CSS).
+- `lib/i18n/links.ts` → `localizeInternalHref(esHref, locale)`: traduce las rutas ES del cuerpo de
+  los posts (con ancla y query), deja igual externos, `/cv/`, `/api/` y rutas desconocidas, y lanza en
+  build si una ruta ES conocida no tiene equivalente. Lo usa `PostBody`; los proyectos no tienen
+  enlaces internos en su contenido. El escritorio ya enlaza por idioma (P6).
+- Tests: `tests/unit/i18n-links.test.ts` (inventario, reciprocidad de equivalencias, traducción de
+  enlaces y que todos los enlaces del cuerpo EN de los posts queden bajo `/en/`). Smoke: en cada
+  página EN ningún `<a href>` interno sale de `/en/` salvo `/cv/`, `/api/` y el selector
+  (`hreflang="es"`), y todas tienen selector. Edge headless: selector en `/proyectos/cia-sur/`,
+  `/en/blog/how-seo-helps-your-business-grow/` y `/sobre-mi/` → equivalente exacta y `lang` correcto
+  tras la recarga.

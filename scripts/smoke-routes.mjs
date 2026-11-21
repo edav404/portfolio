@@ -11,7 +11,8 @@
  * - cada redirección de lib/redirects.ts es un 308 de un solo salto a una URL que da 200;
  * - el 404 global (experimental.globalNotFound): /no-existe/, slug rechazado, /api/ y archivo
  *   inexistentes → 404 con lang="es", noindex y contenido EN EL HTML INICIAL, sin canonical;
- * - árbol EN (P6), rastreado desde /en/: 200, lang="en", canonical y og:url propios, noindex y sin
+ * - árbol EN (P6), rastreado desde /en/ (P7: sin enlaces internos fuera de /en/ salvo /cv/, /api/ y
+ *   el selector de idioma): 200, lang="en", canonical y og:url propios, noindex y sin
  *   hreflang mientras content/publication.ts no publique "en"; 404 del catch-all EN con noindex.
  * Sale con código 1 si algo falla.
  */
@@ -101,6 +102,20 @@ while (enQueue.length) {
   for (const [, href] of page.html.matchAll(/<a\b[^>]*\bhref="(\/en\/[^"#?]*)/g)) if (!enSeen.has(href)) enQueue.push(href);
 }
 check(enSeen.size >= 9, `árbol EN: solo ${enSeen.size} páginas alcanzables`);
+
+// 4b) P7: ningún enlace interno de una página EN sale de /en/ (salvo /cv/, /api/, externos y el
+// selector de idioma, que es el único que apunta a ES a propósito, con hreflang="es").
+for (const [path, html] of enPages) {
+  for (const [tag] of html.matchAll(/<a\b[^>]*>/g)) {
+    const target = tag.match(/\bhref="([^"]*)"/)?.[1];
+    if (!target || !target.startsWith("/") || target.startsWith("//")) continue;
+    if (/^\/(en|cv|api)\//.test(target) || target.startsWith("#")) continue;
+    if (/\bhrefLang="es"/i.test(tag) && /\blang="es"/.test(tag)) continue;
+    check(false, `${path}: enlace interno fuera de /en/ → ${target}`);
+  }
+  const switchTag = [...html.matchAll(/<a\b[^>]*>/g)].map((m) => m[0]).find((tag) => /class="language-switch"/.test(tag) && /\bhrefLang="es"/i.test(tag));
+  check(Boolean(switchTag), `${path}: sin selector de idioma`);
+}
 
 // 5) 404 EN: catch-all del árbol EN. El HTML inicial es el "error shell" de Next 16.4.6 (§9.1):
 // aquí solo status y noindex; lang="en" y la UI EN se comprueban con navegador.

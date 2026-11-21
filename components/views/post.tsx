@@ -80,7 +80,7 @@ export function PostView({ locale, slug }: { locale: Locale; slug: string }) {
             </dl>
           </aside>
           <div className="case-content">
-            <section><PostBody blocks={post.body[locale]} /></section>
+            <section><PostBody blocks={post.body[locale]} locale={locale} /></section>
           </div>
         </div>
         <section className="section-shell final-cta">

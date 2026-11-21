@@ -5,6 +5,7 @@ import { cvHref } from "@/content/site";
 import { ThemeRoot } from "./theme-root";
 import type { Locale } from "@/content/types";
 import { uiFor } from "@/content/ui";
+import { languageIndex } from "@/lib/i18n/pages";
 
 const navKeys = ["home", "projects", "services", "about", "blog", "now", "contact"] as const;
 
@@ -17,6 +18,8 @@ const navKeys = ["home", "projects", "services", "about", "blog", "now", "contac
 export function SiteShell({ locale, children }: { locale: Locale; children: React.ReactNode }) {
   const nav = uiFor(locale, "nav");
   const a11y = uiFor(locale, "a11y");
+  const language = uiFor(locale, "language");
+  const other = locale === "es" ? "en" : "es";
   const header = {
     copy: {
       skipToContent: a11y.skipToContent, homeLink: a11y.homeLink, openMenu: a11y.openMenu, closeMenu: a11y.closeMenu,
@@ -27,6 +30,8 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
     contactHref: href("contact", locale),
     cvHref: cvHref[locale],
     links: navKeys.map((key) => ({ href: href(key, locale), label: nav[key] })),
+    // Visible también mientras EN no esté publicado: es la vía para revisarlo (P9).
+    language: { index: languageIndex(locale), fallback: href("home", other), targetLocale: other, label: language.switchTo },
   };
   return <ThemeRoot homeHref={header.homeHref}><Header {...header}/><main id="contenido">{children}</main><Footer locale={locale}/></ThemeRoot>;
 }
