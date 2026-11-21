@@ -306,7 +306,8 @@ table { border-collapse: collapse; width: 100%; }
 .experience-switch:hover { filter: brightness(1.1); }
 .experience-switch:active { border-style: inset; box-shadow: none; transform: translate(1px, 1px); }
 /* "Cargando…" del escritorio (next/dynamic). Absorbe el antiguo .loading-screen (COD-11). */
-.os-loading { min-height: 100dvh; display: grid; place-items: center; align-content: center; gap: 1rem; color: var(--c-white); background: var(--c-desktop-teal); }
+/* Fijo y por encima del shell: el portal se añade al final de <body>, y mientras carga el chunk del escritorio aún no hay html[data-os-open]. */
+.os-loading { position: fixed; inset: 0; z-index: var(--z-os-root); min-height: 100dvh; display: grid; place-items: center; align-content: center; gap: 1rem; color: var(--c-white); background: var(--c-desktop-teal); }
 .os-loading p { color: var(--c-white); font: var(--text-os-md) var(--font-ui-98); }
 
 .site-footer { color: var(--footer-text); background: var(--footer-bg); }
