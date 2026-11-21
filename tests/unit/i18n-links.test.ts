@@ -74,3 +74,32 @@ describe("localizeInternalHref con rutas no canónicas (Codex 6)", () => {
     for (const value of ["/proyectos/a%2Fb/", "/proyectos/%2E%2E/"]) expect(localizeInternalHref(value, "en")).toBe(value);
   });
 });
+
+describe("selector de idioma: destino completo (Codex 7, QA B1)", async () => {
+  const { carryOver } = await import("@/components/shell/language-switch");
+  const es = languageIndex("es");
+  const en = languageIndex("en");
+
+  it("conserva ?servicio= en contacto y descarta el resto de la query", () => {
+    expect(carryOver(es["/contacto/"], "?servicio=shopify")).toBe("/en/contact/?servicio=shopify");
+    expect(carryOver(en["/en/contact/"], "?servicio=wordpress&utm_source=x#formulario")).toBe("/contacto/?servicio=wordpress#formulario");
+    expect(carryOver(es["/proyectos/"], "?servicio=shopify")).toBe("/en/projects/");
+  });
+
+  it("conserva el fragmento (las vistas compartidas usan los mismos ids)", () => {
+    expect(carryOver(es["/servicios/"], "#wordpress")).toBe("/en/services/#wordpress");
+    expect(carryOver(en["/en/services/"], "#shopify")).toBe("/servicios/#shopify");
+  });
+
+  it("sin query ni hash (HTML del servidor) devuelve la ruta sola", () => {
+    expect(carryOver("/en/about/", "")).toBe("/en/about/");
+  });
+
+  it("estática, proyecto y post traducido son recíprocos", () => {
+    const post = posts[1];
+    for (const [from, to] of [["/", "/en/"], ["/proyectos/cia-sur/", "/en/projects/cia-sur/"], [href("post", "es", { slug: post.slug }), href("post", "en", { slug: post.slug })]]) {
+      expect(es[from]).toBe(to);
+      expect(en[to]).toBe(from);
+    }
+  });
+});

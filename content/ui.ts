@@ -231,7 +231,6 @@ export const ui = {
     home: { es: "Volver al inicio", en: "Back to home" },
     projects: { es: "Ver proyectos", en: "View projects" },
     contact: { es: "Contactar", en: "Get in touch" },
-    otherLanguage: { es: "English version", en: "Versión en español" },
   },
 
   /** Reproductor de Last.fm (portada, /ahora y escritorio). */

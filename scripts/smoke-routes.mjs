@@ -149,8 +149,36 @@ for (const path of ["/en/no-existe/", "/en/projects/no-existe/", "/en/blog/no-ex
   check(!/rel="canonical"/.test(page.html), `${path}: el 404 no debe tener canonical`);
 }
 
+// 6) Selector de idioma (P7) en ambos sentidos: página estática, proyecto y post de slug traducido.
+// En el HTML del servidor el enlace va a la ruta sola (query y hash los añade el cliente).
+const switchOf = (html) => {
+  const tag = [...html.matchAll(/<a\b[^>]*>/g)].map((match) => match[0]).find((text) => /class="language-switch"/.test(text));
+  return tag && { href: tag.match(/\bhref="([^"]*)"/)?.[1], hreflang: tag.match(/\bhrefLang="([^"]*)"/i)?.[1], lang: tag.match(/\blang="([^"]*)"/)?.[1] };
+};
+const postsSource = await readFile(resolve(root, "content/posts.ts"), "utf8");
+const [, postEs, postEn] = postsSource.match(/slug:\s*\{\s*es:\s*"([^"]+)",\s*en:\s*"([^"]+)"\s*\}/) ?? [];
+check(Boolean(postEs && postEn), "no se pudo leer un slug de post traducido de content/posts.ts");
+const pairs = [["/", "/en/"], ["/proyectos/cia-sur/", "/en/projects/cia-sur/"], [`/blog/${postEs}/`, `/en/blog/${postEn}/`]];
+let switchChecks = 0;
+for (const [es, en] of pairs) {
+  for (const [from, to, target] of [[es, en, "en"], [en, es, "es"]]) {
+    const page = await get(from);
+    const link = switchOf(page.html);
+    check(link?.href === to && link?.hreflang === target && link?.lang === target, `${from}: selector ${JSON.stringify(link)} (se esperaba ${to}, ${target})`);
+    // Navegación real: el destino responde 200 con su idioma y su selector vuelve al origen.
+    const next = await get(to);
+    check(next.status === 200 && lang(next.html) === target && switchOf(next.html)?.href === from, `${from} → ${to}: ${next.status}, lang=${lang(next.html)}, vuelta=${switchOf(next.html)?.href}`);
+    switchChecks += 1;
+  }
+}
+// Desde el 404 ES (HTML completo en el servidor): el selector lleva a la portada EN.
+const notFoundSwitch = switchOf((await get("/no-existe/")).html);
+check(notFoundSwitch?.href === "/en/" && notFoundSwitch?.lang === "en", `/no-existe/: selector ${JSON.stringify(notFoundSwitch)}`);
+// El 404 EN es el "error shell" (§9.1): su selector solo existe tras hidratar; la navegación real
+// desde /en/no-existe/ se comprueba con navegador (ver docs §11.5).
+
 if (failures.length) {
   console.error(`✗ ${failures.length} fallos:\n- ${failures.join("\n- ")}`);
   process.exit(1);
 }
-console.log(`✓ smoke de rutas: ${paths.length} URLs del sitemap, redirecciones, 404 global, ${enSeen.size} páginas EN y 404 EN`);
+console.log(`✓ smoke de rutas: ${paths.length} URLs del sitemap, redirecciones, 404 global, ${enSeen.size} páginas EN, 404 EN y ${switchChecks} cambios de idioma`);
