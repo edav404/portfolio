@@ -569,3 +569,24 @@ Codex revisó el diseño y lo aprobó **con cambios** ("aprobar con cambios: con
 | **Conservado** | `/os/` y `/en/os/` bajo sus raíces, `noindex, follow`, canonical propio, sin hreflang, fuera de sitemap y `llms.txt`, `os` en `staticKeys` y `osProject` en `refs()`; Q2, Q5 (CSS), Q7, Q8, Q12; Q1 tras validar el corte; Q9 con presupuesto sobre datos transferidos; Q11 sin bloqueo previo a hidratación; Q13 con pila del sistema |
 
 **Decisiones que quedan para el usuario**: (1) Q6, si se publican en el SO los 4 proyectos sin portada (por defecto, solo los 13); (2) Q16, si el gesto Atrás del sistema en Pocket debe recorrer también las apps locales (por defecto, no); (3) Q17, si el redirect de `?view=retro` debe dejar un destino limpio en vez de `/os/?view=retro`; (4) 307 frente a 308, cuando se decida que la retirada es permanente.
+
+## 12. Resultado del spike O0 (confirma el plan B)
+
+Medido con un SO mínimo (SSG, 3 slugs, `dynamicParams=false`, `trailingSlash: true`) en standalone y Edge headless.
+
+| Medición | `pushState` + `usePathname` | `router.push/replace(href, { scroll: false })` |
+|---|---|---|
+| Shell y estado tras abrir A, B, Atrás×2, Adelante×2 | Sobrevive | Sobrevive |
+| `title`, canonical, `og:url`, `children` | **Quedan los del primer render** (sobre `/os/proyectos/civicoin/` seguía `canonical=/os/`) | Correctos en cada paso, también con Atrás/Adelante |
+| Red | 0 por navegación | 1 RSC de ~1 KB por `push`/`replace` (también en caliente); 0 con Atrás/Adelante |
+| Slug no autorizado | URL y ventana con 200 hasta recargar | Navegación completa y pérdida del shell |
+| Salir de `/os` | El shell sigue montado bajo una URL ajena | El layout se desmonta; al volver con Atrás se remonta sin red |
+| JS gzip | `/os/` mínimo 141,8 KB frente a `/` 155,6 KB (lo fija la página, no el mecanismo) | igual |
+
+**Decisión: `router.push/replace` con `{ scroll: false }`.** Salvaguardas:
+1. Validar el slug contra `osProjectSlugs` **antes** de navegar (un 404 por RSC provoca navegación completa).
+2. hrefs siempre con barra final (`hrefFor`/`canonicalPath`); sin barra, la entrada directa sufre un 308.
+3. La sincronización URL → store es la transición idempotente `ROUTE_CHANGED` de §1.3 (no un filtro `lastWritten` por pathname, que Codex descartó en R1).
+4. **No se escribe `history.state` a mano**: Next controla la entrada. Por tanto el "id de entrada" (`openedBy`) no puede apoyarse en `history.state`; el fallback por URL de §1.3 es el diseño base. Pocket usa su pila local con Atrás propio.
+5. Salir de `/os` y volver remonta el shell: el estado que deba sobrevivir (geometría, preferencias) se persiste en `localStorage` (hidratación tras montar), no en memoria del layout.
+6. Cuidado con contadores de módulo en el shell: el HTML estático los hornea y provoca el error de hidratación #418 (asignar ids en `useEffect`).
