@@ -11,19 +11,28 @@ export type ClippyOption = {
   onSelect: () => void;
 };
 
+/** Textos del asistente (`ui.os.clippy`), resueltos por el servidor. */
+export type ClippyCopy = {
+  appearing: string; idle: string; writing: string; searchingBefore: string; searchingAfter: string; confused: string;
+  show: string; name: string; closeMessage: string; dragHint: string; hideLabel: string; hide: string;
+};
+
 type RetroClippyProps = {
+  copy: ClippyCopy;
   state?: ClippyState;
   children?: ReactNode;
   options?: ClippyOption[];
 };
 
-const stateCopy: Record<ClippyState, ReactNode> = {
-  APPEARING: <>Iniciando ED Assistant...</>,
-  IDLE: <>Parece que estás explorando el portafolio de Emmanuel. ¿Quieres que te ayude?</>,
-  WRITING: <>Parece que estás escribiendo un mensaje. Incluye objetivo, alcance y fecha para recibir una respuesta más útil.</>,
-  SEARCHING: <>Estoy buscando comandos disponibles. Escribe <kbd>HELP</kbd> para verlos todos.</>,
-  CONFUSED: <>Hmm... no encuentro ese archivo. Podemos volver al escritorio o abrir los proyectos.</>,
-};
+function stateCopy(copy: ClippyCopy): Record<ClippyState, ReactNode> {
+  return {
+    APPEARING: copy.appearing,
+    IDLE: copy.idle,
+    WRITING: copy.writing,
+    SEARCHING: <>{copy.searchingBefore} <kbd>HELP</kbd> {copy.searchingAfter}</>,
+    CONFUSED: copy.confused,
+  };
+}
 
 /** Distancia mínima (px) para que una pulsación cuente como arrastre y no como clic. */
 const DRAG_THRESHOLD = 4;
@@ -144,7 +153,7 @@ function useClippyDrag() {
   };
 }
 
-export function RetroClippy({ state: forcedState, children, options = [] }: RetroClippyProps) {
+export function RetroClippy({ copy, state: forcedState, children, options = [] }: RetroClippyProps) {
   const [mounted, setMounted] = useState(false);
   const [appearing, setAppearing] = useState(true);
   const [formActive, setFormActive] = useState(false);
@@ -177,18 +186,18 @@ export function RetroClippy({ state: forcedState, children, options = [] }: Retr
   if (!mounted) return null;
 
   return createPortal(
-    <div className="retro-clippy-portal" ref={boundsRef}>
-      {!assistantVisible ? <button className="retro-clippy-restore win-outset" type="button" onClick={() => { setAssistantVisible(true); setBubbleVisible(true); }} aria-label="Mostrar asistente ED">ED?</button> :
-        <aside className="retro-clippy" ref={setNode} {...handlers} aria-label="Asistente ED" data-state={activeState}>
+    <div className="retro-clippy-portal" data-theme="xp" ref={boundsRef}>
+      {!assistantVisible ? <button className="retro-clippy-restore win-outset" type="button" onClick={() => { setAssistantVisible(true); setBubbleVisible(true); }} aria-label={copy.show}>ED?</button> :
+        <aside className="retro-clippy" ref={setNode} {...handlers} aria-label={copy.name} data-state={activeState}>
           {bubbleVisible && <div className="retro-clippy-bubble" role="status" aria-live="polite">
-            <button className="retro-clippy-close" type="button" onClick={() => setBubbleVisible(false)} aria-label="Cerrar mensaje del asistente">×</button>
-            <div className="retro-clippy-copy">{children ?? stateCopy[activeState]}</div>
+            <button className="retro-clippy-close" type="button" onClick={() => setBubbleVisible(false)} aria-label={copy.closeMessage}>×</button>
+            <div className="retro-clippy-copy">{children ?? stateCopy(copy)[activeState]}</div>
             {options.length > 0 && <div className="retro-clippy-actions">{options.map((option) => <button className="win-outset" type="button" key={option.label} onClick={option.onSelect}>{option.label}</button>)}</div>}
           </div>}
-          <button className="retro-clippy-character" type="button" aria-label="Asistente ED: clic para mostrar ayuda; arrástralo o usa las flechas para moverlo." onClick={() => setBubbleVisible(true)} onKeyDown={onKeyDown}>
+          <button className="retro-clippy-character" type="button" aria-label={copy.dragHint} onClick={() => setBubbleVisible(true)} onKeyDown={onKeyDown}>
             <span className="retro-clippy-sprite" aria-hidden="true" key={activeState}/>
           </button>
-          <button className="retro-clippy-hide win-outset" type="button" onClick={() => setAssistantVisible(false)} aria-label="Ocultar asistente ED">Ocultar</button>
+          <button className="retro-clippy-hide win-outset" type="button" onClick={() => setAssistantVisible(false)} aria-label={copy.hideLabel}>{copy.hide}</button>
         </aside>}
     </div>,
     document.body,

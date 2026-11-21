@@ -1,0 +1,645 @@
+{
+  "description": "Línea base de rutas (P0, docs/arquitectura-rutas.md). Regenerar con scripts/snapshot-routes.mjs contra el servidor standalone.",
+  "entries": [
+    {
+      "path": "/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "Emmanuel Dávila | Desarrollador Full Stack y de automatización",
+      "canonical": "https://edav.com.co/",
+      "ogUrl": "https://edav.com.co/"
+    },
+    {
+      "path": "/en/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "Emmanuel Dávila | Full-Stack & Automation Developer",
+      "canonical": "https://edav.com.co/en/",
+      "ogUrl": "https://edav.com.co/en/"
+    },
+    {
+      "path": "/proyectos/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "Proyectos de desarrollo web y e-commerce | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/proyectos/",
+      "ogUrl": "https://edav.com.co/proyectos/"
+    },
+    {
+      "path": "/en/projects/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "Web development and e-commerce projects | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/en/projects/",
+      "ogUrl": "https://edav.com.co/en/projects/"
+    },
+    {
+      "path": "/servicios/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "Servicios Full Stack y de automatización | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/servicios/",
+      "ogUrl": "https://edav.com.co/servicios/"
+    },
+    {
+      "path": "/en/services/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "Full-stack and automation services | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/en/services/",
+      "ogUrl": "https://edav.com.co/en/services/"
+    },
+    {
+      "path": "/sobre-mi/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "Sobre mí: desarrollador Full Stack | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/sobre-mi/",
+      "ogUrl": "https://edav.com.co/sobre-mi/"
+    },
+    {
+      "path": "/en/about/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "About me: full-stack developer | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/en/about/",
+      "ogUrl": "https://edav.com.co/en/about/"
+    },
+    {
+      "path": "/ahora/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "Ahora — Música y actividad | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/ahora/",
+      "ogUrl": "https://edav.com.co/ahora/"
+    },
+    {
+      "path": "/en/now/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "Now — Music and activity | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/en/now/",
+      "ogUrl": "https://edav.com.co/en/now/"
+    },
+    {
+      "path": "/contacto/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "Contacto — Inicia un proyecto web | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/contacto/",
+      "ogUrl": "https://edav.com.co/contacto/"
+    },
+    {
+      "path": "/en/contact/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "Contact — Start a web project | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/en/contact/",
+      "ogUrl": "https://edav.com.co/en/contact/"
+    },
+    {
+      "path": "/blog/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "Blog: desarrollo web, SEO y automatización | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/blog/",
+      "ogUrl": "https://edav.com.co/blog/"
+    },
+    {
+      "path": "/en/blog/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "Blog: web development, SEO and automation | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/en/blog/",
+      "ogUrl": "https://edav.com.co/en/blog/"
+    },
+    {
+      "path": "/blog/para-que-una-pagina-web-para-mi-negocio/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "Página web para tu negocio: beneficios y cómo elegir | edav",
+      "canonical": "https://edav.com.co/blog/para-que-una-pagina-web-para-mi-negocio/",
+      "ogUrl": "https://edav.com.co/blog/para-que-una-pagina-web-para-mi-negocio/"
+    },
+    {
+      "path": "/en/blog/why-your-business-needs-a-website/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "Why your business needs a website and how to choose | edav",
+      "canonical": "https://edav.com.co/en/blog/why-your-business-needs-a-website/",
+      "ogUrl": "https://edav.com.co/en/blog/why-your-business-needs-a-website/"
+    },
+    {
+      "path": "/blog/como-el-seo-puede-ayudar-a-tu-negocio-a-crecer/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "SEO para tu negocio en la era de la IA: cómo empezar | edav",
+      "canonical": "https://edav.com.co/blog/como-el-seo-puede-ayudar-a-tu-negocio-a-crecer/",
+      "ogUrl": "https://edav.com.co/blog/como-el-seo-puede-ayudar-a-tu-negocio-a-crecer/"
+    },
+    {
+      "path": "/en/blog/how-seo-helps-your-business-grow/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "SEO for your business in the AI era: where to start | edav",
+      "canonical": "https://edav.com.co/en/blog/how-seo-helps-your-business-grow/",
+      "ogUrl": "https://edav.com.co/en/blog/how-seo-helps-your-business-grow/"
+    },
+    {
+      "path": "/proyectos/green-holds-shopify/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "Green Holds Shopify — Caso de estudio | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/proyectos/green-holds-shopify/",
+      "ogUrl": "https://edav.com.co/proyectos/green-holds-shopify/"
+    },
+    {
+      "path": "/en/projects/green-holds-shopify/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "Green Holds Shopify — Case study | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/en/projects/green-holds-shopify/",
+      "ogUrl": "https://edav.com.co/en/projects/green-holds-shopify/"
+    },
+    {
+      "path": "/proyectos/biogenesis-peptides/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "BioGenesis Peptides — Caso de estudio | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/proyectos/biogenesis-peptides/",
+      "ogUrl": "https://edav.com.co/proyectos/biogenesis-peptides/"
+    },
+    {
+      "path": "/en/projects/biogenesis-peptides/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "BioGenesis Peptides — Case study | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/en/projects/biogenesis-peptides/",
+      "ogUrl": "https://edav.com.co/en/projects/biogenesis-peptides/"
+    },
+    {
+      "path": "/proyectos/civicoin/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "CiviCoin — Caso de estudio | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/proyectos/civicoin/",
+      "ogUrl": "https://edav.com.co/proyectos/civicoin/"
+    },
+    {
+      "path": "/en/projects/civicoin/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "CiviCoin — Case study | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/en/projects/civicoin/",
+      "ogUrl": "https://edav.com.co/en/projects/civicoin/"
+    },
+    {
+      "path": "/proyectos/green-holds-mexico/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "Green Holds México — Caso de estudio | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/proyectos/green-holds-mexico/",
+      "ogUrl": "https://edav.com.co/proyectos/green-holds-mexico/"
+    },
+    {
+      "path": "/en/projects/green-holds-mexico/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "Green Holds México — Case study | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/en/projects/green-holds-mexico/",
+      "ogUrl": "https://edav.com.co/en/projects/green-holds-mexico/"
+    },
+    {
+      "path": "/proyectos/cia-sur/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "CIA SUR — Caso de estudio | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/proyectos/cia-sur/",
+      "ogUrl": "https://edav.com.co/proyectos/cia-sur/"
+    },
+    {
+      "path": "/en/projects/cia-sur/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "CIA SUR — Case study | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/en/projects/cia-sur/",
+      "ogUrl": "https://edav.com.co/en/projects/cia-sur/"
+    },
+    {
+      "path": "/proyectos/zona-work/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "Zona Work — Caso de estudio | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/proyectos/zona-work/",
+      "ogUrl": "https://edav.com.co/proyectos/zona-work/"
+    },
+    {
+      "path": "/en/projects/zona-work/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "Zona Work — Case study | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/en/projects/zona-work/",
+      "ogUrl": "https://edav.com.co/en/projects/zona-work/"
+    },
+    {
+      "path": "/proyectos/anomaly-studio/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "Anomaly Studio — Caso de estudio | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/proyectos/anomaly-studio/",
+      "ogUrl": "https://edav.com.co/proyectos/anomaly-studio/"
+    },
+    {
+      "path": "/en/projects/anomaly-studio/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "Anomaly Studio — Case study | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/en/projects/anomaly-studio/",
+      "ogUrl": "https://edav.com.co/en/projects/anomaly-studio/"
+    },
+    {
+      "path": "/proyectos/erth-wellness/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "Erth Wellness — Caso de estudio | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/proyectos/erth-wellness/",
+      "ogUrl": "https://edav.com.co/proyectos/erth-wellness/"
+    },
+    {
+      "path": "/en/projects/erth-wellness/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "Erth Wellness — Case study | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/en/projects/erth-wellness/",
+      "ogUrl": "https://edav.com.co/en/projects/erth-wellness/"
+    },
+    {
+      "path": "/proyectos/the-brant/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "The Brant — Caso de estudio | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/proyectos/the-brant/",
+      "ogUrl": "https://edav.com.co/proyectos/the-brant/"
+    },
+    {
+      "path": "/en/projects/the-brant/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "The Brant — Case study | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/en/projects/the-brant/",
+      "ogUrl": "https://edav.com.co/en/projects/the-brant/"
+    },
+    {
+      "path": "/proyectos/vape-friends/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "Vape & Friends — Caso de estudio | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/proyectos/vape-friends/",
+      "ogUrl": "https://edav.com.co/proyectos/vape-friends/"
+    },
+    {
+      "path": "/en/projects/vape-friends/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "Vape & Friends — Case study | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/en/projects/vape-friends/",
+      "ogUrl": "https://edav.com.co/en/projects/vape-friends/"
+    },
+    {
+      "path": "/proyectos/tech-byte/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "Tech Byte Co — Caso de estudio | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/proyectos/tech-byte/",
+      "ogUrl": "https://edav.com.co/proyectos/tech-byte/"
+    },
+    {
+      "path": "/en/projects/tech-byte/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "Tech Byte Co — Case study | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/en/projects/tech-byte/",
+      "ogUrl": "https://edav.com.co/en/projects/tech-byte/"
+    },
+    {
+      "path": "/proyectos/big-vapers-company/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "Big Vapers Company — Caso de estudio | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/proyectos/big-vapers-company/",
+      "ogUrl": "https://edav.com.co/proyectos/big-vapers-company/"
+    },
+    {
+      "path": "/en/projects/big-vapers-company/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "Big Vapers Company — Case study | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/en/projects/big-vapers-company/",
+      "ogUrl": "https://edav.com.co/en/projects/big-vapers-company/"
+    },
+    {
+      "path": "/proyectos/green-holds/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "es",
+      "title": "Green Holds — Caso de estudio | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/proyectos/green-holds/",
+      "ogUrl": "https://edav.com.co/proyectos/green-holds/"
+    },
+    {
+      "path": "/en/projects/green-holds/",
+      "kind": "sitemap",
+      "status": 200,
+      "location": null,
+      "lang": "en",
+      "title": "Green Holds — Case study | Emmanuel Dávila",
+      "canonical": "https://edav.com.co/en/projects/green-holds/",
+      "ogUrl": "https://edav.com.co/en/projects/green-holds/"
+    },
+    {
+      "path": "/home/",
+      "kind": "redirect",
+      "status": 308,
+      "location": "/",
+      "lang": null,
+      "title": null,
+      "canonical": null,
+      "ogUrl": null
+    },
+    {
+      "path": "/contact/",
+      "kind": "redirect",
+      "status": 308,
+      "location": "/contacto/",
+      "lang": null,
+      "title": null,
+      "canonical": null,
+      "ogUrl": null
+    },
+    {
+      "path": "/portfolio/",
+      "kind": "redirect",
+      "status": 308,
+      "location": "/proyectos/",
+      "lang": null,
+      "title": null,
+      "canonical": null,
+      "ogUrl": null
+    },
+    {
+      "path": "/para-que-una-pagina-web-para-mi-negocio/",
+      "kind": "redirect",
+      "status": 308,
+      "location": "/blog/para-que-una-pagina-web-para-mi-negocio/",
+      "lang": null,
+      "title": null,
+      "canonical": null,
+      "ogUrl": null
+    },
+    {
+      "path": "/como-el-seo-puede-ayudar-a-tu-negocio-a-crecer/",
+      "kind": "redirect",
+      "status": 308,
+      "location": "/blog/como-el-seo-puede-ayudar-a-tu-negocio-a-crecer/",
+      "lang": null,
+      "title": null,
+      "canonical": null,
+      "ogUrl": null
+    },
+    {
+      "path": "/portfolio/big-vapers-company/",
+      "kind": "redirect",
+      "status": 308,
+      "location": "/proyectos/big-vapers-company/",
+      "lang": null,
+      "title": null,
+      "canonical": null,
+      "ogUrl": null
+    },
+    {
+      "path": "/portfolio/vie-company-logo/",
+      "kind": "redirect",
+      "status": 308,
+      "location": "/proyectos/green-holds/",
+      "lang": null,
+      "title": null,
+      "canonical": null,
+      "ogUrl": null
+    },
+    {
+      "path": "/portfolio/tech-byte-co/",
+      "kind": "redirect",
+      "status": 308,
+      "location": "/proyectos/tech-byte/",
+      "lang": null,
+      "title": null,
+      "canonical": null,
+      "ogUrl": null
+    },
+    {
+      "path": "/portfolio/vape-friends/",
+      "kind": "redirect",
+      "status": 308,
+      "location": "/proyectos/vape-friends/",
+      "lang": null,
+      "title": null,
+      "canonical": null,
+      "ogUrl": null
+    },
+    {
+      "path": "/portfolio/the-brant/",
+      "kind": "redirect",
+      "status": 308,
+      "location": "/proyectos/the-brant/",
+      "lang": null,
+      "title": null,
+      "canonical": null,
+      "ogUrl": null
+    },
+    {
+      "path": "/portfolio/erth-wellness/",
+      "kind": "redirect",
+      "status": 308,
+      "location": "/proyectos/erth-wellness/",
+      "lang": null,
+      "title": null,
+      "canonical": null,
+      "ogUrl": null
+    },
+    {
+      "path": "/portfolio/anomaly-studio/",
+      "kind": "redirect",
+      "status": 308,
+      "location": "/proyectos/anomaly-studio/",
+      "lang": null,
+      "title": null,
+      "canonical": null,
+      "ogUrl": null
+    },
+    {
+      "path": "/portfolio/zona-work/",
+      "kind": "redirect",
+      "status": 308,
+      "location": "/proyectos/zona-work/",
+      "lang": null,
+      "title": null,
+      "canonical": null,
+      "ogUrl": null
+    },
+    {
+      "path": "/portfolio/green-holds/",
+      "kind": "redirect",
+      "status": 308,
+      "location": "/proyectos/cia-sur/",
+      "lang": null,
+      "title": null,
+      "canonical": null,
+      "ogUrl": null
+    },
+    {
+      "path": "/portfolio/rediseno-green-holds-mx/",
+      "kind": "redirect",
+      "status": 308,
+      "location": "/proyectos/green-holds-mexico/",
+      "lang": null,
+      "title": null,
+      "canonical": null,
+      "ogUrl": null
+    },
+    {
+      "path": "/portfolio/civicoin/",
+      "kind": "redirect",
+      "status": 308,
+      "location": "/proyectos/civicoin/",
+      "lang": null,
+      "title": null,
+      "canonical": null,
+      "ogUrl": null
+    },
+    {
+      "path": "/portfolio/biogenesis-peptides/",
+      "kind": "redirect",
+      "status": 308,
+      "location": "/proyectos/biogenesis-peptides/",
+      "lang": null,
+      "title": null,
+      "canonical": null,
+      "ogUrl": null
+    },
+    {
+      "path": "/portfolio/biogenesis-peptides-2/",
+      "kind": "redirect",
+      "status": 308,
+      "location": "/proyectos/biogenesis-peptides/",
+      "lang": null,
+      "title": null,
+      "canonical": null,
+      "ogUrl": null
+    },
+    {
+      "path": "/no-existe/",
+      "kind": "probe",
+      "status": 404,
+      "location": null,
+      "lang": "es",
+      "title": "Página no encontrada | Emmanuel Dávila",
+      "canonical": null,
+      "ogUrl": null
+    },
+    {
+      "path": "/proyectos/no-existe/",
+      "kind": "probe",
+      "status": 404,
+      "location": null,
+      "lang": "es",
+      "title": "Página no encontrada | Emmanuel Dávila",
+      "canonical": null,
+      "ogUrl": null
+    }
+  ]
+}

@@ -1,0 +1,399 @@
+/* ==========================================================================
+   Capa de tokens (UI-03 · Fase 3)
+   --------------------------------------------------------------------------
+   Tres niveles. Las reglas de globals.css y desktop.css solo leen tokens: no
+   hay colores, sombras ni z-index literales fuera de este archivo y de
+   theme-xp.css.
+
+   1. Primitivos (--c-*, escalas): la paleta y las escalas en bruto. No
+      cambian entre temas.
+   2. Semánticos del tema base (:root, [data-theme]): el aspecto de la portada
+      (superficie, texto, borde, acento, foco, campo, sombra, radio, tipo).
+   3. Temas (atributo data-theme, sin :has() ni temas anidados; los portales
+      llevan su propio data-theme):
+        · classic ........... .theme-root del shell público (P5). En la Fase 3
+                              reproduce el aspecto actual:
+            - [data-theme="classic"][data-page="home"] → portada: tokens base.
+            - [data-theme="classic"]:not([data-page="home"]) → interiores y 404
+              con cromo 98 (antes: body sin .desktop-os ni .standard-home, con :has()).
+              En la Fase 5 cambian los valores de este bloque, no los nombres.
+        · xp ................ escritorio (EDAV Desktop, clases .os-*), en
+                              theme-xp.css (antes: body con .desktop-os, con :has()).
+   Estructura (globals.css): .theme-root hace lo que antes hacía body (color,
+   fondo, tipografía, fondos ::before/::after) y html[data-os-open] bloquea el
+   scroll y oculta el shell mientras el escritorio está abierto.
+
+   Contraste (A11Y-13): los pares texto/fondo corregidos llevan el ratio
+   antes→después en el comentario del token.
+   ========================================================================== */
+
+:root {
+  /* ---- 1. Primitivos: paleta ------------------------------------------ */
+  --c-white: #fff;
+  --c-black: #000;
+
+  /* Web (vista estándar) */
+  --c-ink-900: #10214f;
+  --c-slate-600: #54658b;
+  --c-slate-500: #5b6f9c;
+  --c-blue-600: #2257e7;
+  --c-blue-700: #123ba7;
+  --c-blue-800: #123699;
+  --c-cyan-400: #20d8f5;
+  --c-lime-300: #c9ff48;
+  --c-lime-400: #c5e95c;
+  --c-pink-400: #ff6dc8;
+  --c-paper: #f7fbff;
+  --c-navy-850: #0a205e;
+  --c-sky-200: #b9ddff;
+  --c-periwinkle-100: #c8d7fb;
+  --c-mint-100: #dbf7e4;
+  --c-green-700: #17753d;
+  --c-placeholder: #dfeaff;
+
+  /* Cromo 98 / escritorio */
+  --c-navy-98: #001b78;
+  --c-navy-classic: #000080;
+  --c-chrome: #c0c0c0;
+  --c-chrome-light: #e6e6e6;
+  --c-chrome-shadow: #808080;
+  --c-gray-600: #777;
+  --c-gray-500: #888;
+  --c-gray-400: #aaa;
+  --c-gray-700: #3d3d3d;
+  --c-balloon: #ffffcc;
+  --c-yellow-neon: #f6ff00;
+  --c-magenta-neon: #ff2db2;
+  --c-green-neon: #56ff91;
+  --c-green-led: #64ff8d;
+  --c-green-ok: #079044;
+  --c-blue-luna-1: #1565d8;
+  --c-blue-luna-2: #002d97;
+  --c-boot-ink: #b7c9f5;
+  --c-boot-bg: #010207;
+  --c-boot-hover: #174aab;
+  --c-boot-well: #020611;
+  --c-desktop-teal: #167f9f;
+
+  /* Degradados primitivos reutilizados por varios temas */
+  --gradient-98-primary: linear-gradient(var(--c-blue-luna-1), var(--c-blue-luna-2));
+  --gradient-brand: linear-gradient(145deg, var(--c-cyan-400), var(--c-blue-600), #a43cff);
+
+  /* ---- 1b. Primitivos: escalas ---------------------------------------- */
+  /* Espaciado: rejilla de 4 px. Disponible para los rediseños de las Fases 4-5;
+     las reglas actuales aún usan sus valores originales (ver informe). */
+  --space-1: 2px; --space-2: 4px; --space-3: 6px; --space-4: 8px; --space-5: 12px;
+  --space-6: 16px; --space-7: 24px; --space-8: 32px; --space-9: 48px; --space-10: 64px;
+
+  /* Tipografía: familias (antes 9 pilas, 3 variantes de Tahoma y "DM Mono" escrita a mano 4 veces) */
+  /* --font-space-grotesk y --font-dm-mono las declara next/font (lib/fonts.ts) en <html>. */
+  --font-sans: var(--font-space-grotesk, "Space Grotesk"), "Segoe UI", sans-serif;
+  --font-mono: var(--font-dm-mono, "DM Mono"), Consolas, monospace;
+  --font-serif: serif;
+  --font-ui-98: Tahoma, "Segoe UI", sans-serif;
+  --font-ui-retro: Tahoma, Verdana, "MS Sans Serif", sans-serif;
+  --font-display-narrow: "Arial Narrow", Impact, sans-serif;
+  --font-narrow: "Arial Narrow", sans-serif;
+  --font-black: "Arial Black", sans-serif;
+  --font-arial: Arial, sans-serif;
+  /* Tamaños de UI del escritorio (8-12 px de la época) */
+  --text-os-2xs: 9px; --text-os-xs: 10px; --text-os-sm: 11px; --text-os-md: 12px; --text-os-lg: 14px;
+
+  /* Radios (antes 21 valores; consolidados a ±2 px) */
+  --radius-none: 0;
+  --radius-xs: 4px;   /* 4-5 px */
+  --radius-sm: 8px;   /* 7-9 px */
+  --radius-md: 10px;  /* 10-11 px */
+  --radius-lg: 13px;  /* 12-14 px */
+  --radius-xl: 16px;  /* 16-18 px */
+  --radius-2xl: 20px; /* 20-22 px */
+  --radius-3xl: 24px;
+  --radius-4xl: 28px;
+  --radius-pill: 999px;
+  --radius-round: 50%;
+
+  /* Capas (UI-04 adelantado solo como tokens; antes 22 valores hasta 2147483000).
+     Locales: solo ordenan hermanos dentro de un contexto de apilamiento. */
+  --z-backdrop: -2;
+  --z-under: -1;
+  --z-1: 1; --z-2: 2; --z-3: 3; --z-4: 4; --z-5: 5; --z-6: 6;
+  /* Web */
+  --z-header: 100;
+  --z-skip-link: 1000;
+  /* Raíz del escritorio (portal en body, fixed): por encima de todo el shell público. */
+  --z-os-root: 2000;
+  /* Escritorio. Las ventanas usan z inline creciente (1…n) sin contexto aislado: los
+     iconos (5) y la etiqueta móvil (6) quedan por debajo de las ventanas ya enfocadas
+     (comportamiento actual, UI-04 se corrige en la Fase 4) y el cromo empieza en 9000
+     para quedar siempre encima de las ventanas. */
+  --z-os-icons: 5;
+  --z-os-mobile-label: 6;
+  --z-os-start-menu: 9000;
+  --z-os-taskbar: 9010;
+  --z-os-notification: 9020;
+  --z-os-context-menu: 9030;
+  --z-os-crt: 9040;
+  --z-os-skip-link: 9050;
+  --z-os-boot: 9060;
+  --z-os-assistant: 9070;
+
+}
+
+/* ---- 2. Semánticos: tema base (vista web actual) --------------------------
+   Se declaran también en [data-theme] para que los tokens derivados (los que
+   leen otro token con var()) se recalculen en el elemento del tema: una
+   custom property se resuelve donde se declara, no donde se usa. */
+:root,
+[data-theme] {
+  --page-bg: var(--c-paper);
+  --page-backdrop: radial-gradient(circle at 10% 8%, rgba(32,216,245,.18), transparent 24rem), radial-gradient(circle at 90% 18%, rgba(255,109,200,.13), transparent 28rem), linear-gradient(135deg, #f9fdff, #eef4ff 45%, #faf6ff);
+  --page-grid: linear-gradient(rgba(34,87,231,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(34,87,231,.08) 1px, transparent 1px);
+
+  /* Texto */
+  --color-text: var(--c-ink-900);                 /* 14,93:1 sobre --c-paper */
+  --color-text-muted: var(--c-slate-600);         /* 5,59:1 */
+  --color-on-accent: var(--c-white);
+  --color-text-on-dark: var(--c-periwinkle-100);
+  --color-text-on-dark-muted: var(--c-sky-200);
+  /* A11Y-13: #b9ddff sobre #245ce2 4,01 → #dce9ff 4,63 (kit de contacto del CTA final). */
+  --color-text-on-dark-soft: #dce9ff;
+
+  /* Acento */
+  --color-accent: var(--c-blue-600);
+  --color-accent-strong: var(--c-blue-800);
+  --color-highlight: var(--c-cyan-400);
+  --color-highlight-alt: var(--c-lime-300);
+
+  /* Superficies */
+  --color-surface: rgba(255,255,255,.74);
+  --color-surface-solid: var(--c-white);
+  --color-surface-glass: rgba(255,255,255,.66);        /* antes .6-.7 */
+  --color-surface-glass-strong: rgba(255,255,255,.75); /* antes .72-.75 */
+  --color-surface-glass-opaque: rgba(255,255,255,.82);
+  --color-surface-tint: rgba(236,246,255,.7);
+  --color-surface-tint-strong: rgba(223,235,255,.72);
+  --color-surface-on-dark: rgba(255,255,255,.09);
+  --color-surface-on-dark-hover: rgba(255,255,255,.14);
+  --color-placeholder: var(--c-placeholder);
+  --menu-panel-bg: rgba(250,253,255,.96);
+  --image-scrim: linear-gradient(to top, rgba(8,28,90,.2), transparent 45%);
+  --window-sheen: linear-gradient(125deg, rgba(255,255,255,.72), transparent 35%, rgba(83,218,255,.08));
+
+  /* Bordes */
+  --color-border: rgba(30,66,143,.2);
+  --color-border-accent: rgba(34,87,231,.2);          /* antes .2 y .22 */
+  --color-border-accent-strong: rgba(34,87,231,.25);
+  --color-border-glass: rgba(255,255,255,.8);
+  --color-border-on-dark: rgba(255,255,255,.12);
+  --window-border: 1px solid rgba(20,63,160,.34);
+  --card-border: 1px solid rgba(28,63,142,.17);
+  --card-border-on-dark: 1px solid rgba(255,255,255,.18);
+  --link-underline: rgba(18,54,153,.35);
+  --link-underline-on-dark: rgba(255,255,255,.4);
+
+  /* Estado */
+  --color-online: #35c46b;
+  --color-success: var(--c-green-700);              /* antes #17753d y #17733c */
+  --color-success-strong: #176739;
+  --color-success-bg: var(--c-mint-100);            /* antes #dbf7e4 y #d9f9e3 */
+  --color-error: #962b2b;
+  --color-error-bg: #ffe3e3;
+
+  /* Foco y campos (A11Y-03 / A11Y-04, Fase 2) */
+  /* #123699 sobre fondos claros: 10,03:1 (#f7fbff), 10,43:1 (#fff), 8,17:1 (#c9e9f5), 5,73:1 (#c0c0c0). */
+  --focus-ring: var(--c-blue-800);
+  /* Fondos oscuros: lima #c9ff48 → 10,10:1 (#0f2f86), 7,88:1 (#173ea5), 4,83:1 (#245ce2), 6,05:1 (#7134c0), 12,95:1 (#0a205e), 14,87:1 (#07183b). */
+  --focus-ring-on-dark: var(--c-lime-300);
+  /* #5b6f9c: 5,00:1 sobre #fff, 4,81:1 sobre #f7fbff, 3,92:1 sobre #c9e9f5. */
+  --field-border: var(--c-slate-500);
+  --field-border-focus: var(--c-blue-800);
+  --field-bg: var(--c-white);
+
+  /* Sombras */
+  --shadow-panel: 0 24px 70px rgba(31,64,139,.15), 0 3px 0 rgba(255,255,255,.8) inset;
+  --shadow-card: 0 15px 35px rgba(31,64,139,.08), inset 0 1px var(--c-white);
+  --shadow-card-hover: 0 25px 55px rgba(31,64,139,.16), inset 0 1px var(--c-white);
+  --shadow-card-soft: 0 12px 30px rgba(31,64,139,.08), inset 0 1px var(--c-white);
+  --shadow-card-on-dark: inset 0 1px rgba(255,255,255,.17);
+  --shadow-float: 0 10px 24px rgba(31,64,139,.14);
+  --shadow-inset-gloss: inset 0 1px var(--c-white);
+  --shadow-inset-gloss-soft: inset 0 2px rgba(255,255,255,.5);
+  --shadow-inset-gloss-strong: inset 0 1px rgba(255,255,255,.7);
+  --shadow-inset-gloss-faint: inset 0 1px rgba(255,255,255,.35);
+  --shadow-online-ring: 0 0 0 4px rgba(53,196,107,.15);
+  --shadow-online-ring-out: 0 0 0 8px rgba(53,196,107,0);
+  --shadow-hero-halo: 0 0 0 60px rgba(34,87,231,.025), 0 0 0 120px rgba(34,87,231,.018);
+  --hero-halo-border: rgba(34,87,231,.16);
+  --drop-icon: drop-shadow(1px 2px rgba(32,216,245,.3));
+
+  /* Cabecera y navegación */
+  --header-pad-y: 14px;
+  --header-bg: rgba(247,251,255,.72);
+  --header-border: 1px solid rgba(34,87,231,.1);
+  --header-backdrop: blur(18px) saturate(1.4);
+  --header-text-muted: var(--color-text-muted);
+  --nav-max: 1260px;
+  --nav-gutter: 32px;
+  --brand-mark-radius: var(--radius-md);
+  --brand-mark-bg: linear-gradient(145deg, var(--c-cyan-400), var(--c-blue-600) 55%, #9c3aff);
+  --brand-mark-shadow: 0 5px 14px rgba(34,87,231,.27), 0 0 0 1px var(--c-blue-800);
+  --nav-link-radius: var(--radius-md);
+  --nav-link-text-hover: var(--color-accent);
+  --nav-link-bg-hover: var(--color-surface-glass-strong);
+  --nav-link-shadow-hover: inset 0 0 0 1px var(--color-border);
+  --nav-cta-border: none;
+  --nav-cta-bg: linear-gradient(180deg, #477bff, #1741ba);
+  --nav-cta-bg-hover: linear-gradient(180deg, #5988ff, #204cca);
+  --nav-cta-shadow: inset 0 1px rgba(255,255,255,.5), 0 6px 16px rgba(34,87,231,.25);
+
+  /* Botones */
+  --button-text: var(--color-on-accent);
+  --button-border: 1px solid var(--c-blue-700);
+  --button-radius: var(--radius-lg);
+  --button-bg: linear-gradient(180deg, #4c7fff 0%, var(--c-blue-600) 55%, #173faf 100%);
+  --button-shadow: inset 0 2px rgba(255,255,255,.5), inset 0 -2px rgba(0,0,70,.17), 0 9px 20px rgba(34,87,231,.23);
+  --button-shadow-hover: inset 0 2px rgba(255,255,255,.55), 0 14px 28px rgba(34,87,231,.29);
+  --button-secondary-text: var(--color-text);
+  --button-secondary-text-hover: var(--button-secondary-text);
+  --button-secondary-border-color: var(--color-border-accent);
+  --button-secondary-bg: linear-gradient(180deg, rgba(255,255,255,.96), rgba(226,236,255,.9));
+  --button-secondary-bg-hover: var(--button-secondary-bg);
+  --button-secondary-shadow: inset 0 2px var(--c-white), 0 8px 20px rgba(31,64,139,.12);
+  --switch-border: 2px outset #b4caff;
+  --switch-bg: var(--gradient-98-primary);
+  --switch-shadow: 2px 2px var(--c-black);
+
+  /* Paneles: --panel-*-override solo lo definen los temas que aplanan las tarjetas
+     (classic en interiores). Si no existe, cada componente usa su valor base. */
+
+  /* Barra de título web (.window-bar) */
+  --titlebar-web-bg: linear-gradient(180deg, #66c7ff 0%, #336fe3 18%, #1643bd 70%, #0c2e92 100%);
+  --titlebar-web-border: 1px solid #092b8e;
+  --caption-web-border: 1px solid rgba(5,34,120,.72);
+  --caption-web-bg: linear-gradient(#f9fdff, #9fcaff);
+  --caption-web-close-bg: linear-gradient(#ffb491, #ef4b3f);
+
+  /* Decoración de la portada */
+  --orb-one-bg: radial-gradient(circle at 30% 25%, var(--c-white) 0 5%, var(--c-cyan-400) 14%, #4084ff 52%, #7c38de 78%);
+  --orb-one-shadow: inset -15px -18px 28px rgba(10,25,100,.3), 0 25px 45px rgba(50,80,200,.25);
+  --orb-two-bg: radial-gradient(circle at 30% 25%, var(--c-white), var(--c-lime-300) 18%, #45c486 62%, #15858c);
+  --orb-two-shadow: inset -10px -12px 22px rgba(10,90,80,.3), 0 18px 35px rgba(30,150,140,.2);
+  --ticker-bg: linear-gradient(90deg, #133899, #245deb 50%, #6638cf);
+  --ticker-border: 1px solid #153ead;
+  --services-bg: linear-gradient(135deg, #0f2f86, #173ea5 55%, #46279b);
+  --services-glow: radial-gradient(circle at 12% 15%, var(--c-cyan-400), transparent 20rem), radial-gradient(circle at 80% 90%, var(--c-pink-400), transparent 26rem);
+
+  /* CTA final.
+     A11Y-13: párrafo #cbdcff sobre #245ce2 4,11 → #e8efff 4,92 (9,87 sobre #11328a).
+     El brillo cian de la esquina pasa de .45 a .22: en su centro (donde está el botón en
+     escritorio) el fondo baja de #2294eb a #2377e6 y el párrafo sube de 2,80 a 3,75.
+     En móvil el texto queda a ≥ 9rem del centro, donde el brillo ya es la mitad. */
+  --cta-bg: radial-gradient(circle at 85% 0, rgba(32,216,245,.22), transparent 18rem), linear-gradient(135deg, #11328a, #245ce2 55%, #7134c0);
+  --cta-border: 1px solid #133aa3;
+  --cta-text-muted: #e8efff;
+  --cta-shadow: inset 0 1px rgba(255,255,255,.38), 0 25px 60px rgba(24,54,139,.25);
+  --cta-button-text: var(--color-accent-strong);
+  --cta-button-text-hover: var(--cta-button-text);
+  --cta-button-border-color: var(--c-lime-400);
+  --cta-button-bg: linear-gradient(#edffad, var(--c-lime-300));
+  --cta-button-bg-hover: var(--cta-button-bg);
+  --cta-button-shadow: inset 0 2px var(--c-white), 0 10px 24px rgba(7,22,79,.3);
+
+  /* Pie */
+  --footer-bg: var(--c-navy-850);
+  --footer-text: var(--color-text-on-dark);
+
+  /* Reproductor (Last.fm), compartido por la portada y el escritorio */
+  --player-text: #eaf3ff;
+  --player-text-strong: var(--c-white);
+  --player-text-muted: #aebee1;
+  --player-text-faint: #7891b7;        /* 5,43:1 sobre --player-bg */
+  --player-link: #7edfff;
+  --player-led: var(--c-green-led);
+  --player-warning: var(--c-yellow-neon);
+  --player-bg: #07183b;
+  --player-border: 2px solid var(--c-blue-700);
+  --player-shadow: 5px 6px 0 rgba(0,0,50,.18), inset 0 1px rgba(255,255,255,.6);
+  /* A11Y-13: el estado de la derecha (#d7ebff) caía sobre el extremo #63c7ff: 1,54 → #e6f1ff sobre #1265d2 4,82. */
+  --player-titlebar-bg: linear-gradient(90deg, #001777, #1265d2 65%);
+  --player-titlebar-meta: #e6f1ff;
+  --player-led-glow: 0 0 7px var(--c-green-led);
+  --player-led-glow-sm: 0 0 5px var(--c-green-led);
+  --player-screen-bg: repeating-linear-gradient(0deg, rgba(32,216,245,.045) 0 1px, transparent 1px 3px), #06122b;
+  --player-cover-border: 2px inset #8fa6c9;
+  --player-cover-bg: radial-gradient(circle, #4e6fff, #8c27cf 55%, #101438);
+  --player-cover-shadow: 0 0 0 2px var(--c-black);
+  --player-well: #020915;
+  --player-well-border: 1px inset #416091;
+  --player-progress-border: 1px inset #567099;
+  --player-spectrum: linear-gradient(to top, #24e874, var(--c-yellow-neon) 62%, #ff3a70);
+  --player-controls-bg: #101c34;
+  --player-controls-rule: 1px solid #36537e;
+  --player-key-text: #d7e7ff;
+  --player-key-border: 2px outset #98a6b9;
+  --player-key-bg: #586477;
+  --player-key-active-text: #061b5e;
+  --player-key-active-bg: #dfe9f7;
+  --player-volume-border: 1px inset #7c8ca3;
+  --player-volume-bg: linear-gradient(90deg, var(--c-green-led) 0 72%, #152033 72%);
+  --player-footer-rule: 1px solid #132e60;
+}
+
+/* 3a. Tema xp: vive en app/styles/theme-xp.css, importado desde desktop.css (que carga
+   desktop-shell.tsx), así solo se descarga con el escritorio (PERF-06). */
+
+/* --------------------------------------------------------------------------
+   3b. Tema classic, páginas interiores y 404: cromo 98 sobre la web.
+   La portada lleva data-page="home" en el mismo .theme-root y se queda con
+   los tokens base. Especificidad (0,2,0): gana al bloque base [data-theme].
+   La propuesta visual de la Fase 5 está en docs/auditoria/02-ui-ux-tokens.md §3.5.
+   -------------------------------------------------------------------------- */
+[data-theme="classic"]:not([data-page="home"]) {
+  --page-bg: #c9e9f5;
+  /* A11Y-13: el texto secundario (#54658b) y el acento (#2257e7) quedaban sobre el inicio
+     del degradado (#64cbe3): 3,10 / 3,12 → inicio #c0ebf7: ≥ 4,53 / 4,57 en todo el fondo. */
+  --page-backdrop: linear-gradient(145deg, #c0ebf7, #d8f4ff 45%, #e9deff);
+
+  --header-pad-y: 5px;
+  --header-bg: var(--c-chrome);
+  --header-border: 2px outset var(--c-white);
+  --header-backdrop: none;
+  /* A11Y-13: "small" de la marca #54658b sobre el cromo #c0c0c0 3,20 → #36425e 5,50. */
+  --header-text-muted: #36425e;
+  --nav-max: 1280px;
+  --nav-gutter: 14px;
+  --brand-mark-radius: var(--radius-none);
+  --brand-mark-bg: linear-gradient(145deg, var(--c-yellow-neon), var(--c-magenta-neon) 48%, #009ad1);
+  --brand-mark-shadow: 2px 2px var(--c-navy-98);
+  --nav-link-radius: var(--radius-none);
+  --nav-link-text-hover: var(--c-white);
+  --nav-link-bg-hover: var(--c-navy-98);
+  --nav-link-shadow-hover: none;
+  --nav-cta-border: 2px outset var(--c-white);
+  --nav-cta-bg: var(--gradient-98-primary);
+  --nav-cta-bg-hover: var(--c-navy-98);
+  --nav-cta-shadow: 2px 2px var(--c-black);
+
+  --button-border: 2px outset var(--c-white);
+  --button-radius: var(--radius-none);
+  --button-bg: var(--gradient-98-primary);
+  --button-shadow: 2px 2px var(--c-black);
+  --button-shadow-hover: 2px 2px var(--c-black);
+  --button-secondary-text: var(--c-navy-98);
+  --button-secondary-text-hover: var(--c-navy-98);
+  --button-secondary-border-color: var(--c-white) #686868 #686868 var(--c-white);
+  --button-secondary-bg: linear-gradient(var(--c-white), #d8e8ff);
+  --button-secondary-bg-hover: linear-gradient(var(--c-white), #c8dcff);
+  --button-secondary-shadow: 2px 2px var(--c-black);
+  --cta-button-text: #071b4f;
+  --cta-button-text-hover: #071b4f;
+  --cta-button-border-color: var(--c-white) #8da62e #8da62e var(--c-white);
+  --cta-button-bg: linear-gradient(#f7ffc9, var(--c-lime-400));
+  --cta-button-bg-hover: linear-gradient(#fffbd2, #d3f56c);
+  --cta-button-shadow: 2px 2px var(--c-black);
+
+  /* Tarjetas y ventanas planas, con bisel 98 */
+  --panel-radius-override: var(--radius-none);
+  --panel-border-override: 2px outset var(--c-white);
+  --panel-shadow-override: 5px 6px rgba(0,0,60,.18);
+}

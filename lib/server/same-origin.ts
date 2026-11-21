@@ -48,7 +48,7 @@ const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]"]);
  */
 function allowedOrigins(request: Request): Set<string> {
   const origins = new Set<string>();
-  // Mismo valor por defecto que data/site.ts. NEXT_PUBLIC_* se fija en el build.
+  // Mismo valor por defecto que content/site.ts. NEXT_PUBLIC_* se fija en el build.
   try {
     origins.add(new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://edav.com.co").origin.toLowerCase());
   } catch {

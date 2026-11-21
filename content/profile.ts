@@ -18,6 +18,17 @@ export const profile = {
     es: "Emmanuel Dávila, desarrollador Full Stack y de automatización en Medellín: sitios a la medida, WordPress, Shopify y automatización de procesos.",
     en: "Emmanuel Dávila, Full-Stack & Automation Developer in Medellín, Colombia: custom websites, WordPress, Shopify and business process automation.",
   } satisfies L,
+  /** Versión corta del titular (tarjetas, cabecera). */
+  shortHeadline: { es: "Full Stack · Automatización", en: "Full Stack · Automation" } satisfies L,
+  /** Encabezado de la página "Sobre mí" (`/sobre-mi/`). */
+  about: {
+    title: { es: "Desarrollador, automatizador y aprendiz constante.", en: "Developer, automator and lifelong learner." } satisfies L,
+    lead: {
+      es: "Conecto tecnología, procesos y comunicación para crear soluciones que la gente entienda y quiera usar.",
+      en: "I connect technology, processes and communication to build solutions people understand and want to use.",
+    } satisfies L,
+    bioTitle: { es: "Me interesa tanto el “por qué” como el “cómo”.", en: "I care about the “why” as much as the “how”." } satisfies L,
+  },
   /** Párrafos de "Sobre mí". */
   bio: {
     es: [
@@ -60,11 +71,7 @@ export const profile = {
     lastfm: "edav404",
     email: "contacto@edav.com.co",
   },
-  stats: [
-    { value: "12", label: { es: "Proyectos web para clientes", en: "Client web projects" } satisfies L },
-    { value: "3", label: { es: "Países: Colombia, México y EE. UU.", en: "Countries: Colombia, Mexico & USA" } satisfies L },
-    { value: "3", label: { es: "Productos en equipo", en: "Team products" } satisfies L },
-  ],
+  // Las cifras ("12 proyectos para clientes"…) se derivan en `content/stats.ts` (decisión 10).
 } as const;
 
 export const skills = {
@@ -74,6 +81,25 @@ export const skills = {
   data: ["PostgreSQL", "Supabase", "SQLite"],
   tools: ["Git", "GitHub", "Docker", "Coolify", "Figma", "Claude Code", "Codex"],
 } as const;
+
+/** Temas para `knowsAbout` del JSON-LD `Person`. */
+export const knowsAbout = {
+  es: ["Desarrollo web Full Stack", "Automatización de procesos", "Power Platform", "Microsoft 365", "WordPress", "WooCommerce", "Shopify", "React", "Next.js"],
+  en: ["Full-stack web development", "Business process automation", "Power Platform", "Microsoft 365", "WordPress", "WooCommerce", "Shopify", "React", "Next.js"],
+} satisfies L<string[]>;
+
+/**
+ * Selección de tecnologías que se muestra en portada, "Sobre mí", el escritorio y la terminal
+ * (una sola lista para que /os y /classic no diverjan, COD-06).
+ */
+export const technologies: readonly string[] = [
+  ...skills.web,
+  ...skills.cms,
+  ...skills.automation.slice(0, 4),
+  ...skills.data.slice(0, 2),
+  "Git",
+  "Figma",
+];
 
 export const skillGroups: { id: keyof typeof skills; label: L }[] = [
   { id: "web", label: { es: "Desarrollo web", en: "Web development" } },

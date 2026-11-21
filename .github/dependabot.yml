@@ -1,0 +1,52 @@
+# Actualizaciones automáticas (DX-01). Los majors de next, react, eslint y typescript se hacen a mano
+# siguiendo sus guías de migración (y node_modules/next/dist/docs/ para Next).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # Un solo PR semanal con todo lo minor/patch (dependencias y devDependencies).
+      npm-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: next
+        update-types: [version-update:semver-major]
+      - dependency-name: eslint-config-next
+        update-types: [version-update:semver-major]
+      - dependency-name: react
+        update-types: [version-update:semver-major]
+      - dependency-name: react-dom
+        update-types: [version-update:semver-major]
+      - dependency-name: "@types/react"
+        update-types: [version-update:semver-major]
+      - dependency-name: "@types/react-dom"
+        update-types: [version-update:semver-major]
+      - dependency-name: eslint
+        update-types: [version-update:semver-major]
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      # La línea de @types/node sigue al runtime (Node 24 en .nvmrc y el Dockerfile).
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  # Imagen base del Dockerfile (etiqueta + digest). Ojo: la imagen se declara en `ARG NODE_IMAGE`,
+  # y Dependabot solo actualiza referencias en líneas FROM; si no abre PRs, actualizarla a mano.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: monthly
+    ignore:
+      # El salto de Node (24 → 26) va junto con .nvmrc, engines y @types/node.
+      - dependency-name: node
+        update-types: [version-update:semver-major]

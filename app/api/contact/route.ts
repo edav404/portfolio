@@ -1,4 +1,5 @@
 import { resolveServiceSlug, serviceLabel } from "@/content/services";
+import type { ContactErrorCode } from "@/content/contact-errors";
 import { describeSmtpError, EMAIL_RE, getMailConfig, sendMail } from "@/lib/server/mailer";
 import { clientKey, createRateLimiter } from "@/lib/server/rate-limit";
 import { isSameOriginRequest } from "@/lib/server/same-origin";
@@ -13,8 +14,33 @@ const MAX_BODY_BYTES = 20_000;
 const BODY_TIMEOUT_MS = 10_000;
 const ALLOWED_TYPES = ["multipart/form-data", "application/x-www-form-urlencoded"];
 
-function json(message: string, status: number, headers?: Record<string, string>) {
-  return Response.json({ message }, { status, headers: { "Cache-Control": "no-store", ...headers } });
+/**
+ * `message` en ES por compatibilidad con clientes antiguos: el texto exacto que devolvía cada rama
+ * antes de los códigos (P4). El formulario actual traduce `code` con `ui.contactForm.errors`.
+ */
+const messages = {
+  origin: "Origen no permitido.",
+  rateLimitedIp: "Demasiados envíos. Intenta de nuevo en unos minutos.",
+  rateLimitedGlobal: "El formulario está recibiendo demasiados mensajes. Escríbeme por WhatsApp.",
+  unsupportedType: "Tipo de contenido no admitido.",
+  tooLarge: "El mensaje es demasiado largo.",
+  timeout: "La solicitud tardó demasiado.",
+  badRequest: "Solicitud inválida.",
+  invalidFields: "Revisa el nombre, correo y mensaje antes de enviar.",
+  notConfigured: "El formulario aún no está conectado. Escríbeme por WhatsApp.",
+  server: "No fue posible enviar el mensaje. Intenta por WhatsApp.",
+} as const;
+
+const noStore = { "Cache-Control": "no-store" };
+
+/** Error: `{ ok: false, code, message }`. */
+function fail(code: ContactErrorCode, status: number, message: string, headers?: Record<string, string>) {
+  return Response.json({ ok: false, code, message }, { status, headers: { ...noStore, ...headers } });
+}
+
+/** Éxito: `{ ok: true, message }`. */
+function success(message: string) {
+  return Response.json({ ok: true, message }, { status: 200, headers: noStore });
 }
 
 type BodyResult = { ok: true; body: Uint8Array<ArrayBuffer> } | { ok: false; reason: "too-large" | "timeout" | "invalid" };
@@ -92,35 +118,35 @@ function logRejection(reason: keyof typeof rejections) {
 
 export async function POST(request: Request) {
   // Antes del rate limit: un POST cross-site no debe gastar la cuota de la IP del visitante.
-  if (!isSameOriginRequest(request)) return json("Origen no permitido.", 403);
+  if (!isSameOriginRequest(request)) return fail("origin", 403, messages.origin);
 
   const key = clientKey(request);
   const { ok, retryAfter } = perIp.check(key);
   if (!ok) {
     logRejection("ip");
-    return json("Demasiados envíos. Intenta de nuevo en unos minutos.", 429, { "Retry-After": String(retryAfter) });
+    return fail("rate_limited", 429, messages.rateLimitedIp, { "Retry-After": String(retryAfter) });
   }
 
   const contentType = request.headers.get("content-type") ?? "";
-  if (!ALLOWED_TYPES.some((type) => contentType.toLowerCase().startsWith(type))) return json("Tipo de contenido no admitido.", 415);
-  if (Number(request.headers.get("content-length") || 0) > MAX_BODY_BYTES) return json("El mensaje es demasiado largo.", 413);
+  if (!ALLOWED_TYPES.some((type) => contentType.toLowerCase().startsWith(type))) return fail("invalid", 415, messages.unsupportedType);
+  if (Number(request.headers.get("content-length") || 0) > MAX_BODY_BYTES) return fail("too_large", 413, messages.tooLarge);
 
   const raw = await readLimited(request, MAX_BODY_BYTES, BODY_TIMEOUT_MS);
   if (!raw.ok) {
-    if (raw.reason === "too-large") return json("El mensaje es demasiado largo.", 413);
-    if (raw.reason === "timeout") return json("La solicitud tardó demasiado.", 408);
-    return json("Solicitud inválida.", 400);
+    if (raw.reason === "too-large") return fail("too_large", 413, messages.tooLarge);
+    if (raw.reason === "timeout") return fail("timeout", 408, messages.timeout);
+    return fail("invalid", 400, messages.badRequest);
   }
 
   let form: FormData;
   try {
     form = await new Request(request.url, { method: "POST", headers: { "content-type": contentType }, body: raw.body }).formData();
   } catch {
-    return json("Solicitud inválida.", 400);
+    return fail("invalid", 400, messages.badRequest);
   }
 
   // Honeypot: los bots rellenan el campo oculto; respondemos éxito sin enviar.
-  if (line(form, "website", 200)) return json("Mensaje recibido.", 200);
+  if (line(form, "website", 200)) return success("Mensaje recibido.");
 
   const name = line(form, "name", 120);
   const email = line(form, "email", 254);
@@ -130,16 +156,16 @@ export async function POST(request: Request) {
   const message = multiline(form, "message", 5_000);
 
   if (name.length < 2 || !EMAIL_RE.test(email) || message.length < 20) {
-    return json("Revisa el nombre, correo y mensaje antes de enviar.", 422);
+    return fail("invalid", 422, messages.invalidFields);
   }
 
   const mail = getMailConfig();
-  if (!mail.ok) return json("El formulario aún no está conectado. Escríbeme por WhatsApp.", 503);
+  if (!mail.ok) return fail("not_configured", 503, messages.notConfigured);
 
   const global = globalLimit.check(GLOBAL_KEY);
   if (!global.ok) {
     logRejection("global");
-    return json("El formulario está recibiendo demasiados mensajes. Escríbeme por WhatsApp.", 429, { "Retry-After": String(global.retryAfter) });
+    return fail("rate_limited", 429, messages.rateLimitedGlobal, { "Retry-After": String(global.retryAfter) });
   }
 
   try {
@@ -153,8 +179,8 @@ export async function POST(request: Request) {
     // para que los reintentos en bucle sigan acotados).
     global.release();
     console.error(`[contact] Error SMTP: ${describeSmtpError(error)}`);
-    return json("No fue posible enviar el mensaje. Intenta por WhatsApp.", 502);
+    return fail("server", 502, messages.server);
   }
 
-  return json("Mensaje enviado correctamente.", 200);
+  return success("Mensaje enviado correctamente.");
 }

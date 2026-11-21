@@ -14,16 +14,29 @@
 
 import dynamic from "next/dynamic";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { DesktopIcon } from "@/components/desktop/desktop-icons";
+import type { DesktopCopy } from "@/components/desktop/desktop-shell";
 
 const loadDesktop = () => import("@/components/desktop/desktop-shell").then((module) => module.DesktopShell);
 const DesktopShell = dynamic(loadDesktop, {
   ssr: false,
-  loading: () => <div className="loading-screen os-loading" role="status"><p>Cargando EDAV Desktop 98…</p></div>,
+  loading: () => <DesktopLoading/>,
 });
 
-type DesktopControls = { open: () => void; preload: () => void };
+/** Textos ya resueltos por el servidor: el cliente no importa content/ui.ts. */
+export type ExperienceCopy = DesktopCopy & { loading: string; open: string };
+
+type DesktopControls = { open: () => void; preload: () => void; label: string };
 const DesktopContext = createContext<DesktopControls | null>(null);
+const LoadingText = createContext("");
+/** Clase del botón de apertura (también destino de foco de respaldo al cerrar). */
+const LAUNCHER_CLASS = "experience-switch";
+
+/** "Cargando…" dentro del portal: misma raíz temática que el escritorio. */
+function DesktopLoading() {
+  return <div className="os-loading" data-theme="xp" role="status"><p>{useContext(LoadingText)}</p></div>;
+}
 
 const RETRO_PARAM = "retro";
 
@@ -33,25 +46,37 @@ function setViewParam(view: string | null) {
   window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
-export function PortfolioExperience({ children }: { children: ReactNode }) {
+export function PortfolioExperience({ copy, children }: { copy: ExperienceCopy; children: ReactNode }) {
   const [active, setActive] = useState(false);
   const [skipBoot, setSkipBoot] = useState(false);
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  const restoreFocusRef = useRef(false);
 
   const open = useCallback(() => {
-    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    returnFocusRef.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null;
     setActive(true);
     setViewParam(RETRO_PARAM);
-    window.scrollTo({ top: 0, behavior: "auto" });
   }, []);
 
   const close = useCallback(() => {
+    restoreFocusRef.current = true;
     setActive(false);
     setSkipBoot(true);
     setViewParam(null);
-    // Devuelve el foco al botón que abrió el escritorio, ya visible de nuevo.
-    window.requestAnimationFrame(() => returnFocusRef.current?.focus());
   }, []);
+
+  // Foco de vuelta tras el commit que desmonta el escritorio (determinista, sin rAF): para entonces
+  // DesktopShell ya quitó html[data-os-open] en su limpieza y el shell vuelve a ser visible.
+  // preventScroll: la página no se movió y el scroll se conserva.
+  useEffect(() => {
+    if (active || !restoreFocusRef.current) return;
+    restoreFocusRef.current = false;
+    // Respaldo con `?view=retro` (no hay elemento previo): el botón de apertura de la portada.
+    const launcher = document.querySelector<HTMLElement>(`.${LAUNCHER_CLASS}`);
+    const target = [returnFocusRef.current, launcher].find((element) => element?.isConnected);
+    target?.focus({ preventScroll: true });
+  }, [active]);
+
 
   // Enlace profundo `/?view=retro`: se lee solo en el cliente y tras hidratar.
   useEffect(() => {
@@ -60,19 +85,22 @@ export function PortfolioExperience({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(timer);
   }, []);
 
-  const controls: DesktopControls = { open, preload: () => void loadDesktop() };
+  const controls: DesktopControls = { open, preload: () => void loadDesktop(), label: copy.open };
 
-  return <DesktopContext.Provider value={controls}>
-    <div hidden={active}>{children}</div>
-    {active && <DesktopShell skipBoot={skipBoot} onSwitchToStandard={close}/>}
-  </DesktopContext.Provider>;
+  // El escritorio se monta en un portal en <body>, fuera del .theme-root del shell público: así lleva
+  // su propio tema (data-theme="xp") sin anidarlo. DesktopShell pone html[data-os-open] al montarse,
+  // que oculta el shell y bloquea el scroll del documento sin perder la posición.
+  return <DesktopContext.Provider value={controls}><LoadingText.Provider value={copy.loading}>
+    {children}
+    {active && createPortal(<DesktopShell copy={copy} skipBoot={skipBoot} onSwitchToStandard={close}/>, document.body)}
+  </LoadingText.Provider></DesktopContext.Provider>;
 }
 
 /** Botón en línea (no flotante: no tapa contenido) que abre el escritorio. */
 export function DesktopLaunchButton() {
   const controls = useContext(DesktopContext);
   if (!controls) return null;
-  return <button type="button" className="experience-switch" onClick={controls.open} onPointerEnter={controls.preload} onFocus={controls.preload}>
-    <DesktopIcon name="terminal"/> Abrir EDAV Desktop 98
+  return <button type="button" className={LAUNCHER_CLASS} onClick={controls.open} onPointerEnter={controls.preload} onFocus={controls.preload}>
+    <DesktopIcon name="terminal"/> {controls.label}
   </button>;
 }

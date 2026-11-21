@@ -3,12 +3,19 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ContactForm } from "@/components/contact-form";
-import { MusicWidget } from "@/components/music-widget";
-import { projects } from "@/data/projects";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { ContactForm, type ContactFormCopy } from "@/components/contact-form";
+import { MusicWidget, type MusicCopy } from "@/components/music-widget";
 import { experienceSince } from "@/content/experience";
-import { site, technologies } from "@/data/site";
+import { format, roleInSentence } from "@/content/format";
+import { profile, technologies } from "@/content/profile";
+import { href, intlLocale } from "@/content/routes";
+import { cvHref } from "@/content/site";
+import type { Locale } from "@/content/types";
+import type { Resolved, Ui } from "@/content/ui";
+import { useLocale } from "@/lib/i18n/locale-context";
+// El CSS del escritorio solo se descarga con este módulo (next/dynamic, ssr: false).
+import "@/app/desktop.css";
 import { CrtOverlay } from "./crt-overlay";
 import { DesktopIcon, type DesktopIconName, PixelLogo } from "./desktop-icons";
 import { RetroClippy, type ClippyState } from "./RetroClippy";
@@ -18,15 +25,26 @@ import { TerminalApp } from "./terminal-app";
 type AppId = "welcome" | "projects" | "services" | "about" | "contact" | "media" | "terminal";
 type WindowState = { id: AppId; open: boolean; minimized: boolean; maximized: boolean; z: number; x: number; y: number; width: number; height: number };
 
-const appMeta: Record<AppId, { title: string; file: string; icon: DesktopIconName }> = {
-  welcome: { title: "Bienvenido", file: "Welcome.exe", icon: "welcome" },
-  projects: { title: "Mi trabajo", file: "Project Explorer", icon: "folder" },
-  services: { title: "Mis servicios", file: "Services Wizard", icon: "services" },
-  about: { title: "Sobre Emmanuel", file: "About.txt", icon: "about" },
-  contact: { title: "Contacto", file: "New Message", icon: "contact" },
-  media: { title: "Reproductor", file: "EDAV Media Player", icon: "music" },
-  terminal: { title: "Command Prompt", file: "C:\\EDAV", icon: "terminal" },
+const appIcons: Record<AppId, DesktopIconName> = {
+  welcome: "welcome", projects: "folder", services: "services", about: "about", contact: "contact", media: "music", terminal: "terminal",
 };
+
+/** Microcopy del escritorio (`ui.os`), resuelto por el servidor para un idioma. */
+export type OsCopy = Resolved<Ui["os"]>;
+
+/** Textos del escritorio + idioma, para los subcomponentes sin pasar props en cadena. */
+/**
+ * Proyecto tal como lo pinta el explorador: solo esos campos y ya en el idioma de la página. El
+ * servidor (HomeView) hace la proyección; así el chunk del escritorio no arrastra content/projects.ts.
+ */
+export type DesktopProject = { slug: string; title: string; category: string; year: string; summary: string; image: string; href: string };
+
+const OsContext = createContext<{ os: OsCopy; locale: Locale; projects: DesktopProject[] } | null>(null);
+function useOs() {
+  const value = useContext(OsContext);
+  if (!value) throw new Error("useOs fuera de DesktopShell");
+  return value;
+}
 
 const initialWindows: WindowState[] = [
   { id: "welcome", open: true, minimized: false, maximized: false, z: 3, x: 235, y: 70, width: 720, height: 560 },
@@ -39,6 +57,8 @@ const initialWindows: WindowState[] = [
 ];
 
 function BootScreen({ onFinish, onSwitchToStandard }: { onFinish: () => void; onSwitchToStandard?: () => void }) {
+  const { os, projects } = useOs();
+  const boot = os.boot;
   const [started, setStarted] = useState(false);
   const [phase, setPhase] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -47,6 +67,7 @@ function BootScreen({ onFinish, onSwitchToStandard }: { onFinish: () => void; on
   const audioRef = useRef<AudioContext | null>(null);
   const completedRef = useRef(false);
   const exitTimerRef = useRef<number | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const playTone = useCallback((frequency: number, delay: number, duration: number, volume = .035, type: OscillatorType = "square") => {
     const audio = audioRef.current;
@@ -81,7 +102,7 @@ function BootScreen({ onFinish, onSwitchToStandard }: { onFinish: () => void; on
     setPhase(1);
     try {
       const AudioCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!AudioCtor) throw new Error("Web Audio no disponible");
+      if (!AudioCtor) throw new Error(boot.audioUnavailable);
       const audio = new AudioCtor();
       audioRef.current = audio;
       await audio.resume();
@@ -92,7 +113,7 @@ function BootScreen({ onFinish, onSwitchToStandard }: { onFinish: () => void; on
     } catch {
       setSoundStatus("unavailable");
     }
-  }, [playTone, started]);
+  }, [boot.audioUnavailable, playTone, started]);
 
   useEffect(() => {
     if (!started) return;
@@ -126,69 +147,93 @@ function BootScreen({ onFinish, onSwitchToStandard }: { onFinish: () => void; on
     if (audioRef.current && audioRef.current.state !== "closed") void audioRef.current.close();
   }, []);
 
+  // Al iniciar desaparece el botón que tenía el foco: el foco pasa al propio diálogo (aria-modal), no a <body>.
+  useEffect(() => {
+    if (!started) return;
+    const dialog = dialogRef.current;
+    if (dialog && !dialog.contains(document.activeElement)) dialog.focus({ preventScroll: true });
+  }, [started]);
+
   const memory = Math.min(65536, Math.round((progress / 19) * 65536));
-  return <div className={`os-boot ${started ? "is-started" : "is-awaiting"} ${phase >= 4 ? "is-splash" : ""} ${exiting ? "is-exiting" : ""}`} role="dialog" aria-modal="true" aria-label="Inicio de EDAV Desktop 98">
+  return <div className={`os-boot ${started ? "is-started" : "is-awaiting"} ${phase >= 4 ? "is-splash" : ""} ${exiting ? "is-exiting" : ""}`} role="dialog" aria-modal="true" aria-label={boot.region} ref={dialogRef} tabIndex={-1}>
     <div className="os-boot-glow" aria-hidden="true"/>
     {/* A11Y-05: la BIOS es decorativa y cambia cada 45 ms; no se anuncia. Solo hay un anuncio único abajo. */}
-    <p className="sr-only" role="status">{started ? "Iniciando EDAV Desktop 98…" : ""}</p>
+    <p className="sr-only" role="status">{started ? boot.announce : ""}</p>
     <div className="os-boot-bios" aria-hidden="true">
       <div className="os-bios-header"><strong>EDAV BIOS</strong><span>v98.04.04</span></div>
-      <p>Copyright (C) 2026 Emmanuel Dávila. All systems reserved.</p>
-      <p>CPU: Creative Engine @ 404 MHz</p>
+      <p>{boot.biosLines[0]}</p>
+      <p>{boot.biosLines[1]}</p>
       <p>Memory Test: {started ? String(memory).padStart(5, "0") : "00000"}K {progress >= 19 ? "OK" : ""}<i className="os-bios-cursor"/></p>
-      {phase >= 2 && <div className="os-boot-lines"><p>Detecting primary master ........ PORTFOLIO.EXE</p><p>Detecting design system ......... EDAV DESKTOP 98</p><p>Mouse interface ................. ONLINE</p><p>Audio controller ................ {soundStatus === "on" ? "SOUNDBLASTER READY" : "SILENT MODE"}</p></div>}
-      {phase >= 3 && <div className="os-boot-lines"><p>Mounting C:\PROJECTS ............ {projects.length} ITEMS</p><p>Loading LASTFM.DRV .............. READY</p><p>Starting graphical interface .... OK</p></div>}
+      {phase >= 2 && <div className="os-boot-lines"><p>{boot.biosLines[2]}</p><p>{boot.biosLines[3]}</p><p>{boot.biosLines[4]}</p><p>Audio controller ................ {soundStatus === "on" ? "SOUNDBLASTER READY" : "SILENT MODE"}</p></div>}
+      {phase >= 3 && <div className="os-boot-lines"><p>{format(boot.mountProjects, { count: projects.length })}</p><p>{boot.biosLines[5]}</p><p>{boot.biosLines[6]}</p></div>}
     </div>
 
     {!started && <div className="os-boot-prompt">
       <div className="os-boot-primary">
         <PixelLogo/>
         <p>EDAV PERSONAL COMPUTER</p>
-        <strong>Presiona Enter o haz clic para iniciar</strong>
-        <span>El gesto activa la secuencia de audio del sistema.</span>
-        <button type="button" className="os-boot-start" autoFocus onClick={(event) => { event.stopPropagation(); void startBoot(); }}>Iniciar con sonido</button>
+        <strong>{boot.pressToStart}</strong>
+        <span>{boot.gestureNote}</span>
+        <button type="button" className="os-boot-start" autoFocus onClick={(event) => { event.stopPropagation(); void startBoot(); }}>{boot.startWithSound}</button>
       </div>
     </div>}
 
-    {phase >= 4 && <div className="os-boot-brand" aria-hidden="true"><div className="os-boot-logo-wrap"><PixelLogo/><span className="os-boot-orbit"/></div><strong>EDAV Desktop <i>98</i></strong><span>Personal portfolio system</span><div className="os-boot-loader"><b style={{ transform: `translateX(${Math.max(0, progress - 60) * 2.5}px)` }}/></div><small>Preparando tu escritorio...</small></div>}
+    {phase >= 4 && <div className="os-boot-brand" aria-hidden="true"><div className="os-boot-logo-wrap"><PixelLogo/><span className="os-boot-orbit"/></div><strong>EDAV Desktop <i>98</i></strong><span>{boot.subtitle}</span><div className="os-boot-loader"><b style={{ transform: `translateX(${Math.max(0, progress - 60) * 2.5}px)` }}/></div><small>{boot.preparing}</small></div>}
 
-    <div className="os-boot-footer"><span>{started ? `POST ${Math.round(progress)}% · ${soundStatus === "on" ? "AUDIO ON" : soundStatus === "unavailable" ? "AUDIO N/A" : "AUDIO..."}` : "ENTER: iniciar · ESC: omitir"}</span><div className="os-boot-footer-actions">{onSwitchToStandard && <button type="button" className="os-boot-accessible" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.preventDefault(); event.stopPropagation(); onSwitchToStandard(); }}>Vista web accesible</button>}<button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.preventDefault(); event.stopPropagation(); finishBoot(true); }}>Omitir inicio <kbd>Esc</kbd></button></div></div>
+    <div className="os-boot-footer"><span>{started ? `POST ${Math.round(progress)}% · ${soundStatus === "on" ? "AUDIO ON" : soundStatus === "unavailable" ? "AUDIO N/A" : "AUDIO..."}` : boot.keysHint}</span><div className="os-boot-footer-actions">{onSwitchToStandard && <button type="button" className="os-boot-accessible" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.preventDefault(); event.stopPropagation(); onSwitchToStandard(); }}>{boot.accessibleView}</button>}<button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.preventDefault(); event.stopPropagation(); finishBoot(true); }}>{boot.skip} <kbd>Esc</kbd></button></div></div>
   </div>;
 }
 
 function ProjectExplorer() {
   const router = useRouter();
+  const { os, projects } = useOs();
+  const copy = os.explorer;
   const [selected, setSelected] = useState(projects[0]);
   return <div className="os-explorer">
-    <div className="os-toolbar"><button>←</button><button>→</button><button>↑</button><span>Dirección</span><div>C:\Mi trabajo\Todos</div></div>
-    <div className="os-explorer-body"><aside><strong>Carpetas</strong><ul><li>▾ Escritorio</li><li className="active">　Mi trabajo</li><li>　Desarrollo web</li><li>　E-commerce</li><li>　Identidad visual</li></ul><div className="os-file-details"><small>SELECCIONADO</small><strong>{selected.title}</strong><span>{selected.category} · {selected.year}</span></div></aside><section><div className="os-file-grid">{projects.map((project) => <button className={selected.slug === project.slug ? "is-selected" : ""} key={project.slug} onClick={() => setSelected(project)} onDoubleClick={() => router.push(`/proyectos/${project.slug}`)} aria-label={`Seleccionar ${project.title}. Doble clic para abrir el caso.`}><span className="os-file-thumb"><Image src={project.image} alt={`Vista previa del proyecto ${project.title}`} fill sizes="120px"/></span><strong>{project.title}</strong><small>{project.category}</small></button>)}</div></section></div>
-    <div className="os-preview-bar"><div><strong>{selected.title}</strong><span>{selected.summary}</span></div><Link className="os-98-button is-primary" href={`/proyectos/${selected.slug}`}>Abrir caso</Link></div>
+    <div className="os-toolbar"><button>←</button><button>→</button><button>↑</button><span>{copy.address}</span><div>{copy.path}</div></div>
+    <div className="os-explorer-body"><aside><strong>{copy.folders}</strong><ul><li>▾ {copy.desktop}</li><li className="active">　{os.apps.projects.title}</li><li>　{copy.folderWeb}</li><li>　{copy.folderCommerce}</li><li>　{copy.folderBrand}</li></ul><div className="os-file-details"><small>{copy.selected}</small><strong>{selected.title}</strong><span>{selected.category} · {selected.year}</span></div></aside><section><div className="os-file-grid">{projects.map((project) => <button className={selected.slug === project.slug ? "is-selected" : ""} key={project.slug} onClick={() => setSelected(project)} onDoubleClick={() => router.push(project.href)} aria-label={format(copy.selectItem, { title: project.title })}><span className="os-file-thumb"><Image src={project.image} alt={format(copy.previewAlt, { title: project.title })} fill sizes="120px"/></span><strong>{project.title}</strong><small>{project.category}</small></button>)}</div></section></div>
+    <div className="os-preview-bar"><div><strong>{selected.title}</strong><span>{selected.summary}</span></div><Link className="os-98-button is-primary" href={selected.href}>{copy.openCase}</Link></div>
   </div>;
 }
 
 function WelcomeApp({ openApp }: { openApp: (id: AppId) => void }) {
+  const { os, locale, projects } = useOs();
+  const copy = os.welcome;
+  // El nombre va en <strong>: se parte la plantilla por `{name}`.
+  const [beforeName, afterName = ""] = copy.intro.split("{name}");
   return <div className="os-welcome">
-    <div className="os-welcome-copy"><p className="os-kicker">WELCOME TO MY PERSONAL COMPUTER</p><h1>Sitios, productos y automatizaciones hechos a la medida.</h1><p>Soy <strong>{site.name}</strong>, {site.role.charAt(0).toLowerCase() + site.role.slice(1)}. Construyo sitios, tiendas y productos digitales, y automatizo procesos para reducir el trabajo repetitivo.</p><div className="os-button-row"><button className="os-98-button is-primary" onClick={() => openApp("projects")}>Explorar mi trabajo</button><button className="os-98-button" onClick={() => openApp("contact")}>Iniciar proyecto</button></div></div>
+    <div className="os-welcome-copy"><p className="os-kicker">{copy.kicker}</p><h1>{copy.title}</h1><p>{beforeName}<strong>{profile.name}</strong>{format(afterName, { role: roleInSentence(profile.headline[locale], locale) })}</p><div className="os-button-row"><button className="os-98-button is-primary" onClick={() => openApp("projects")}>{copy.exploreWork}</button><button className="os-98-button" onClick={() => openApp("contact")}>{copy.startProject}</button></div></div>
     <div className="os-welcome-art" aria-hidden="true"><div className="os-chrome-disc"><span>ED</span></div><div className="os-orbit orbit-a"/><div className="os-orbit orbit-b"/><p>FULL STACK<br/><i>AUTOMATION</i><br/>SYSTEM</p></div>
-    <div className="os-quick-launch"><button onClick={() => openApp("projects")}><DesktopIcon name="folder"/><span>{projects.length} proyectos</span></button><button onClick={() => openApp("services")}><DesktopIcon name="services"/><span>Servicios</span></button><button onClick={() => openApp("terminal")}><DesktopIcon name="terminal"/><span>Modo developer</span></button></div>
+    <div className="os-quick-launch"><button onClick={() => openApp("projects")}><DesktopIcon name="folder"/><span>{format(copy.projectsCount, { count: projects.length })}</span></button><button onClick={() => openApp("services")}><DesktopIcon name="services"/><span>{copy.services}</span></button><button onClick={() => openApp("terminal")}><DesktopIcon name="terminal"/><span>{copy.developerMode}</span></button></div>
   </div>;
 }
 
 function AboutApp() {
-  return <div className="os-about"><aside><div className="os-user-card"><span>ED</span></div><strong>Emmanuel Dávila</strong><small>Medellín, Colombia</small><div className="os-online"><i/> Disponible para proyectos</div></aside><section><p className="os-kicker">ABOUT_EMMANUEL.TXT</p><h2>Curioso por naturaleza.<br/>Práctico por oficio.</h2><p>Estudio Tecnología en Sistemas, desarrollo proyectos web freelance y automatizo procesos con Power Platform y n8n. Busco soluciones fáciles de entender y mantener.</p><div className="os-system-specs"><div><span>Rol</span><strong>{site.role}</strong></div><div><span>Experiencia</span><strong>Desde {experienceSince}</strong></div><div><span>Proyectos</span><strong>{projects.length} documentados</strong></div></div><ul className="os-contact-links" aria-label="CV y contacto directo"><li><a href={site.cv.es} type="application/pdf">CV (ES, PDF)</a></li><li><a href={site.cv.en} type="application/pdf" hrefLang="en" lang="en">CV (EN, PDF)</a></li><li><a href={`mailto:${site.email}`}>{site.email}</a></li><li><a href={site.linkedin} target="_blank" rel="me noreferrer">LinkedIn</a></li><li><a href={site.github} target="_blank" rel="me noreferrer">GitHub</a></li></ul><div className="os-tech-marquee">{technologies.map((item) => <span key={item}>{item}</span>)}</div><Link className="os-98-button" href="/sobre-mi">Abrir perfil completo</Link></section></div>;
+  const { os, locale, projects } = useOs();
+  const copy = os.about;
+  const other: Locale = locale === "es" ? "en" : "es";
+  return <div className="os-about"><aside><div className="os-user-card"><span>ED</span></div><strong>{profile.name}</strong><small>{profile.location[locale]}</small><div className="os-online"><i/> {copy.available}</div></aside><section><p className="os-kicker">{copy.kicker}</p><h2>{copy.titleLine1}<br/>{copy.titleLine2}</h2><p>{profile.tagline[locale]}</p><div className="os-system-specs"><div><span>{copy.role}</span><strong>{profile.headline[locale]}</strong></div><div><span>{copy.experience}</span><strong>{format(copy.since, { year: experienceSince })}</strong></div><div><span>{copy.projects}</span><strong>{format(copy.projectsValue, { count: projects.length })}</strong></div></div><ul className="os-contact-links" aria-label={copy.contactLinks}><li><a href={cvHref[locale]} type="application/pdf">{locale === "es" ? copy.cvEs : copy.cvEn}</a></li><li><a href={cvHref[other]} type="application/pdf" hrefLang={other} lang={other}>{other === "es" ? copy.cvEs : copy.cvEn}</a></li><li><a href={`mailto:${profile.contact.email}`}>{profile.contact.email}</a></li><li><a href={profile.contact.linkedin} target="_blank" rel="me noreferrer">LinkedIn</a></li><li><a href={profile.contact.github} target="_blank" rel="me noreferrer">GitHub</a></li></ul><div className="os-tech-marquee">{technologies.map((item) => <span key={item}>{item}</span>)}</div><Link className="os-98-button" href={href("about", locale)}>{copy.openProfile}</Link></section></div>;
 }
 
-function WindowContent({ id, openApp }: { id: AppId; openApp: (id: AppId) => void }) {
+/** Textos de los componentes compartidos con la web, resueltos por el servidor (portada). */
+export type DesktopCopy = { contactForm: ContactFormCopy; music: MusicCopy; os: OsCopy; projects: DesktopProject[] };
+
+function WindowContent({ id, openApp, copy }: { id: AppId; openApp: (id: AppId) => void; copy: DesktopCopy }) {
   if (id === "welcome") return <WelcomeApp openApp={openApp}/>;
   if (id === "projects") return <ProjectExplorer/>;
-  if (id === "services") return <ServicesWizard/>;
+  if (id === "services") return <ServicesWizard copy={copy.os.wizard}/>;
   if (id === "about") return <AboutApp/>;
-  if (id === "contact") return <div className="os-contact-app"><div><p className="os-kicker">NUEVO MENSAJE</p><h2>Cuéntame qué quieres construir.</h2><p>Objetivo, alcance, público y referencias: con eso podemos comenzar una conversación útil.</p></div><ContactForm/></div>;
-  if (id === "media") return <div className="os-media-player"><MusicWidget/></div>;
-  return <TerminalApp onOpen={(value) => { if (value in appMeta) openApp(value as AppId); }}/>;
+  if (id === "contact") return <div className="os-contact-app"><div><p className="os-kicker">{copy.os.contact.kicker}</p><h2>{copy.os.contact.title}</h2><p>{copy.os.contact.copy}</p></div><ContactForm copy={copy.contactForm}/></div>;
+  if (id === "media") return <div className="os-media-player"><MusicWidget copy={copy.music}/></div>;
+  return <TerminalApp copy={copy.os.terminal} onOpen={(value) => { if (value in appIcons) openApp(value as AppId); }}/>;
 }
 
-export function DesktopShell({ onSwitchToStandard, skipBoot = false }: { onSwitchToStandard?: () => void; skipBoot?: boolean }) {
+export function DesktopShell({ copy, onSwitchToStandard, skipBoot = false }: { copy: DesktopCopy; onSwitchToStandard?: () => void; skipBoot?: boolean }) {
+  const locale = useLocale();
+  const os = copy.os;
+  const desk = os.desktop;
+  const win = os.window;
+  const osContext = useMemo(() => ({ os, locale, projects: copy.projects }), [os, locale, copy.projects]);
   const [windows, setWindows] = useState(initialWindows);
   const [startOpen, setStartOpen] = useState(false);
   const [crt, setCrt] = useState(true);
@@ -196,7 +241,7 @@ export function DesktopShell({ onSwitchToStandard, skipBoot = false }: { onSwitc
   const [booting, setBooting] = useState(!skipBoot);
   const [time, setTime] = useState("");
   const [context, setContext] = useState<{ x: number; y: number } | null>(null);
-  const [notification, setNotification] = useState("Sistema listo — doble clic o Enter para explorar.");
+  const [notification, setNotification] = useState(desk.readyNotice);
   const drag = useRef<{ id: AppId; startX: number; startY: number; x: number; y: number } | null>(null);
   const resize = useRef<{ id: AppId; startX: number; startY: number; width: number; height: number; x: number; y: number } | null>(null);
   const maxZ = useMemo(() => Math.max(...windows.map((item) => item.z)), [windows]);
@@ -205,9 +250,9 @@ export function DesktopShell({ onSwitchToStandard, skipBoot = false }: { onSwitc
   const clippyState: ClippyState = activeApp === "terminal" ? "SEARCHING" : activeApp === "contact" ? "WRITING" : "IDLE";
 
   useEffect(() => {
-    const update = () => setTime(new Intl.DateTimeFormat("es-CO", { hour: "numeric", minute: "2-digit" }).format(new Date()));
+    const update = () => setTime(new Intl.DateTimeFormat(intlLocale[locale], { hour: "numeric", minute: "2-digit" }).format(new Date()));
     update(); const timer = setInterval(update, 30000); return () => clearInterval(timer);
-  }, []);
+  }, [locale]);
   useEffect(() => { const timer = setTimeout(() => setNotification(""), 5500); return () => clearTimeout(timer); }, [notification]);
 
   const beep = (frequency = 520) => {
@@ -225,26 +270,33 @@ export function DesktopShell({ onSwitchToStandard, skipBoot = false }: { onSwitc
   const beginResize = (event: React.PointerEvent<HTMLButtonElement>, item: WindowState) => { if (item.maximized || innerWidth < 769) return; event.preventDefault(); event.stopPropagation(); focus(item.id); resize.current = { id: item.id, startX: event.clientX, startY: event.clientY, width: item.width, height: item.height, x: item.x, y: item.y }; event.currentTarget.setPointerCapture(event.pointerId); };
   const moveResize = (event: React.PointerEvent<HTMLButtonElement>) => { const current = resize.current; if (!current) return; const maxWidth = Math.max(320, innerWidth - current.x - 4); const maxHeight = Math.max(220, innerHeight - current.y - 44); updateWindow(current.id, { width: Math.max(320, Math.min(maxWidth, current.width + event.clientX - current.startX)), height: Math.max(220, Math.min(maxHeight, current.height + event.clientY - current.startY)) }); };
   const endResize = () => { resize.current = null; };
-  const finishBoot = useCallback(() => { setBooting(false); setNotification("Bienvenido a EDAV Desktop 98"); }, []);
+  const finishBoot = useCallback(() => { setBooting(false); setNotification(desk.welcomeNotice); }, [desk.welcomeNotice]);
   const iconsRef = useRef<HTMLDivElement>(null);
   // Evita perder el foco cuando el botón que abrió el escritorio queda oculto o la BIOS desaparece.
   useEffect(() => { if (!booting) iconsRef.current?.querySelector("button")?.focus(); }, [booting]);
 
-  return <div className="desktop-os os-desktop" onClick={() => { setContext(null); }} onContextMenu={(event) => { event.preventDefault(); setContext({ x: event.clientX, y: event.clientY }); }}>
+  // Mientras el escritorio está montado: shell público oculto y sin scroll de fondo (globals.css).
+  useEffect(() => {
+    document.documentElement.setAttribute("data-os-open", "");
+    return () => document.documentElement.removeAttribute("data-os-open");
+  }, []);
+
+  return <OsContext.Provider value={osContext}><div className="desktop-os os-desktop" data-theme="xp" onClick={() => { setContext(null); }} onContextMenu={(event) => { event.preventDefault(); setContext({ x: event.clientX, y: event.clientY }); }}>
     {booting && <BootScreen onFinish={finishBoot} onSwitchToStandard={onSwitchToStandard}/>}<CrtOverlay enabled={crt}/>
-    {!booting && <RetroClippy state={clippyState} options={[{ label: "Ver proyectos", onSelect: () => openApp("projects") }, { label: "Contactar", onSelect: () => openApp("contact") }]}/>} 
+    {!booting && <RetroClippy copy={os.clippy} state={clippyState} options={[{ label: os.clippy.viewProjects, onSelect: () => openApp("projects") }, { label: os.clippy.contact, onSelect: () => openApp("contact") }]}/>} 
     <div className="os-wallpaper" aria-hidden="true"><div className="os-wallpaper-sun"/><div className="os-wallpaper-grid"/><div className="os-wallpaper-word">EDAV<span>98</span></div><div className="os-wallpaper-ring ring-one"/><div className="os-wallpaper-ring ring-two"/></div>
-    <a className="os-skip-link" href="#welcome-content" onClick={() => openApp("welcome")}>Ir al contenido principal</a>
-    <div className="os-desktop-icons" ref={iconsRef} role="group" aria-label="Aplicaciones del escritorio">{(["projects", "services", "about", "contact", "media", "terminal"] as AppId[]).map((id) => <button key={id} onClick={(event) => { event.stopPropagation(); openApp(id); }}><span className={`os-icon-art icon-${id}`}><DesktopIcon name={appMeta[id].icon}/></span><span>{appMeta[id].title}</span></button>)}{onSwitchToStandard && <button onClick={(event) => { event.stopPropagation(); onSwitchToStandard(); }}><span className="os-icon-art icon-accessible-web"><DesktopIcon name="welcome"/></span><span>Vista web accesible</span></button>}</div>
-    <div className="os-mobile-label"><PixelLogo/><div><strong>EDAV Desktop 98</strong><span>Mobile launcher</span></div></div>
-    <div className="os-window-layer">{windows.filter((item) => item.open && !item.minimized).map((item) => <section id={item.id === "welcome" ? "welcome-content" : undefined} className={`os-window ${item.maximized ? "is-maximized" : ""} ${item.z === topVisibleZ ? "is-active" : "is-inactive"} app-${item.id}`} style={{ left: item.x, top: item.y, width: item.width, height: item.height, zIndex: item.z }} key={item.id} onPointerDown={() => focus(item.id)} aria-label={appMeta[item.id].file}>
-      <div className="os-titlebar" onPointerDown={(event) => beginDrag(event, item)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} onLostPointerCapture={endDrag} onDoubleClick={() => updateWindow(item.id, { maximized: !item.maximized })}><div><DesktopIcon name={appMeta[item.id].icon}/><strong>{appMeta[item.id].file}</strong></div><div className="os-window-buttons" onPointerDown={(event) => event.stopPropagation()} onDoubleClick={(event) => event.stopPropagation()}><button type="button" title="Minimizar" aria-label={`Minimizar ${appMeta[item.id].title}`} onClick={(event) => { event.stopPropagation(); updateWindow(item.id, { minimized: true }); beep(360); }}>_</button><button type="button" title={item.maximized ? "Restaurar" : "Maximizar"} aria-label={`${item.maximized ? "Restaurar" : "Maximizar"} ${appMeta[item.id].title}`} onClick={(event) => { event.stopPropagation(); updateWindow(item.id, { maximized: !item.maximized }); beep(450); }}>{item.maximized ? "❐" : "□"}</button><button type="button" title="Cerrar" className="close" aria-label={`Cerrar ${appMeta[item.id].title}`} onClick={(event) => { event.stopPropagation(); updateWindow(item.id, { open: false }); beep(260); }}>×</button></div></div>
-      <div className="os-menu-strip"><span>Archivo</span><span>Editar</span><span>Ver</span><span>Ayuda</span></div><div className="os-window-content"><WindowContent id={item.id} openApp={openApp}/></div><div className="os-statusbar"><span>{appMeta[item.id].title}</span><span>EDAV Desktop 98</span></div>
-      {!item.maximized && <button type="button" className="os-resize-handle" aria-label={`Redimensionar ${appMeta[item.id].title}`} title="Arrastra para redimensionar" onPointerDown={(event) => beginResize(event, item)} onPointerMove={moveResize} onPointerUp={endResize} onPointerCancel={endResize} onLostPointerCapture={endResize} onKeyDown={(event) => { const step = event.shiftKey ? 50 : 20; if (event.key === "ArrowRight") updateWindow(item.id, { width: item.width + step }); else if (event.key === "ArrowLeft") updateWindow(item.id, { width: Math.max(320, item.width - step) }); else if (event.key === "ArrowDown") updateWindow(item.id, { height: item.height + step }); else if (event.key === "ArrowUp") updateWindow(item.id, { height: Math.max(220, item.height - step) }); else return; event.preventDefault(); }}/>} 
+    {/* Mientras arranca, la BIOS es modal: el resto del escritorio queda inerte (ni foco ni lectores). */}
+    <a inert={booting} className="os-skip-link" href="#welcome-content" onClick={() => openApp("welcome")}>{desk.skipLink}</a>
+    <div inert={booting} className="os-desktop-icons" ref={iconsRef} role="group" aria-label={desk.iconsGroup}>{(["projects", "services", "about", "contact", "media", "terminal"] as AppId[]).map((id) => <button key={id} onClick={(event) => { event.stopPropagation(); openApp(id); }}><span className={`os-icon-art icon-${id}`}><DesktopIcon name={appIcons[id]}/></span><span>{os.apps[id].title}</span></button>)}{onSwitchToStandard && <button onClick={(event) => { event.stopPropagation(); onSwitchToStandard(); }}><span className="os-icon-art icon-accessible-web"><DesktopIcon name="welcome"/></span><span>{desk.accessibleView}</span></button>}</div>
+    <div inert={booting} className="os-mobile-label"><PixelLogo/><div><strong>{os.productName}</strong><span>{desk.quickLaunch}</span></div></div>
+    <div inert={booting} className="os-window-layer">{windows.filter((item) => item.open && !item.minimized).map((item) => <section id={item.id === "welcome" ? "welcome-content" : undefined} className={`os-window ${item.maximized ? "is-maximized" : ""} ${item.z === topVisibleZ ? "is-active" : "is-inactive"} app-${item.id}`} style={{ left: item.x, top: item.y, width: item.width, height: item.height, zIndex: item.z }} key={item.id} onPointerDown={() => focus(item.id)} aria-label={os.apps[item.id].file}>
+      <div className="os-titlebar" onPointerDown={(event) => beginDrag(event, item)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} onLostPointerCapture={endDrag} onDoubleClick={() => updateWindow(item.id, { maximized: !item.maximized })}><div><DesktopIcon name={appIcons[item.id]}/><strong>{os.apps[item.id].file}</strong></div><div className="os-window-buttons" onPointerDown={(event) => event.stopPropagation()} onDoubleClick={(event) => event.stopPropagation()}><button type="button" title={win.minimize} aria-label={format(win.actionOn, { action: win.minimize, title: os.apps[item.id].title })} onClick={(event) => { event.stopPropagation(); updateWindow(item.id, { minimized: true }); beep(360); }}>_</button><button type="button" title={item.maximized ? win.restore : win.maximize} aria-label={format(win.actionOn, { action: item.maximized ? win.restore : win.maximize, title: os.apps[item.id].title })} onClick={(event) => { event.stopPropagation(); updateWindow(item.id, { maximized: !item.maximized }); beep(450); }}>{item.maximized ? "❐" : "□"}</button><button type="button" title={win.close} className="close" aria-label={format(win.actionOn, { action: win.close, title: os.apps[item.id].title })} onClick={(event) => { event.stopPropagation(); updateWindow(item.id, { open: false }); beep(260); }}>×</button></div></div>
+      <div className="os-menu-strip"><span>{win.menuFile}</span><span>{win.menuEdit}</span><span>{win.menuView}</span><span>{win.menuHelp}</span></div><div className="os-window-content"><WindowContent copy={copy} id={item.id} openApp={openApp}/></div><div className="os-statusbar"><span>{os.apps[item.id].title}</span><span>{os.productName}</span></div>
+      {!item.maximized && <button type="button" className="os-resize-handle" aria-label={format(win.resize, { title: os.apps[item.id].title })} title={win.resizeHint} onPointerDown={(event) => beginResize(event, item)} onPointerMove={moveResize} onPointerUp={endResize} onPointerCancel={endResize} onLostPointerCapture={endResize} onKeyDown={(event) => { const step = event.shiftKey ? 50 : 20; if (event.key === "ArrowRight") updateWindow(item.id, { width: item.width + step }); else if (event.key === "ArrowLeft") updateWindow(item.id, { width: Math.max(320, item.width - step) }); else if (event.key === "ArrowDown") updateWindow(item.id, { height: item.height + step }); else if (event.key === "ArrowUp") updateWindow(item.id, { height: Math.max(220, item.height - step) }); else return; event.preventDefault(); }}/>} 
     </section>)}</div>
-    {notification && <div className="os-notification" role="status"><PixelLogo small/><div><strong>EDAV Desktop 98</strong><p>{notification}</p></div><button onClick={() => setNotification("")} aria-label="Cerrar notificación">×</button></div>}
-    {context && <div className="os-context-menu" style={{ left: context.x, top: context.y }} onClick={(event) => event.stopPropagation()}><button onClick={() => openApp("terminal")}><DesktopIcon name="terminal"/>Abrir terminal</button><button onClick={() => setNotification("Escritorio actualizado.")}>Actualizar</button><hr/><button onClick={() => setCrt((value) => !value)}>{crt ? "Desactivar" : "Activar"} efecto CRT</button><button onClick={() => openApp("about")}>Propiedades</button></div>}
-    {startOpen && <div className="os-start-menu" onClick={(event) => event.stopPropagation()}><div className="os-start-brand"><span>EDAV</span><strong>98</strong></div><div className="os-start-main"><header><div className="os-start-avatar">ED</div><div><strong>Emmanuel Dávila</strong><span>Full Stack y automatización</span></div></header><div className="os-start-apps">{(Object.keys(appMeta) as AppId[]).map((id) => <button key={id} onClick={() => openApp(id)}><span className={`os-mini-icon icon-${id}`}><DesktopIcon name={appMeta[id].icon}/></span><div><strong>{appMeta[id].title}</strong><small>{appMeta[id].file}</small></div></button>)}</div><footer>{onSwitchToStandard && <button onClick={onSwitchToStandard}>Vista web accesible</button>}<button onClick={() => setSound((value) => !value)}>Sonido: {sound ? "ON" : "OFF"}</button><button onClick={() => setNotification("Gracias por visitar mi computador personal.")}><DesktopIcon name="power"/>Cerrar sesión</button></footer></div></div>}
-    <nav className="os-taskbar" aria-label="Barra de tareas"><button className={startOpen ? "os-start-button is-active" : "os-start-button"} onClick={(event) => { event.stopPropagation(); setStartOpen((value) => !value); beep(); }}><PixelLogo small/><strong>Inicio</strong></button><div className="os-task-tabs">{windows.filter((item) => item.open).map((item) => <button className={!item.minimized && item.z === topVisibleZ ? "is-active" : ""} key={item.id} onClick={(event) => { event.stopPropagation(); if (!item.minimized && item.z === topVisibleZ) updateWindow(item.id, { minimized: true }); else focus(item.id); }}><DesktopIcon name={appMeta[item.id].icon}/><span>{appMeta[item.id].title}</span></button>)}</div><div className="os-tray">{onSwitchToStandard && <button className="os-view-switch" onClick={onSwitchToStandard} aria-label="Cambiar a vista web convencional">WEB</button>}<button className={crt ? "is-on" : ""} onClick={() => setCrt((value) => !value)} aria-label="Alternar efecto CRT">CRT</button><button onClick={() => setSound((value) => !value)} aria-label="Alternar sonido">{sound ? "VOL" : "MUTE"}</button><time>{time}</time></div></nav>
-  </div>;
+    {notification && <div inert={booting} className="os-notification" role="status"><PixelLogo small/><div><strong>{os.productName}</strong><p>{notification}</p></div><button onClick={() => setNotification("")} aria-label={desk.closeNotification}>×</button></div>}
+    {context && <div className="os-context-menu" style={{ left: context.x, top: context.y }} onClick={(event) => event.stopPropagation()}><button onClick={() => openApp("terminal")}><DesktopIcon name="terminal"/>{desk.openTerminal}</button><button onClick={() => setNotification(desk.refreshedNotice)}>{desk.refresh}</button><hr/><button onClick={() => setCrt((value) => !value)}>{crt ? desk.disableCrt : desk.enableCrt}</button><button onClick={() => openApp("about")}>{desk.properties}</button></div>}
+    {startOpen && <div className="os-start-menu" onClick={(event) => event.stopPropagation()}><div className="os-start-brand"><span>EDAV</span><strong>98</strong></div><div className="os-start-main"><header><div className="os-start-avatar">ED</div><div><strong>{profile.name}</strong><span>{desk.startTagline}</span></div></header><div className="os-start-apps">{(Object.keys(appIcons) as AppId[]).map((id) => <button key={id} onClick={() => openApp(id)}><span className={`os-mini-icon icon-${id}`}><DesktopIcon name={appIcons[id]}/></span><div><strong>{os.apps[id].title}</strong><small>{os.apps[id].file}</small></div></button>)}</div><footer>{onSwitchToStandard && <button onClick={onSwitchToStandard}>{desk.accessibleView}</button>}<button onClick={() => setSound((value) => !value)}>{format(desk.sound, { state: sound ? "ON" : "OFF" })}</button><button onClick={() => setNotification(desk.signOutNotice)}><DesktopIcon name="power"/>{desk.signOut}</button></footer></div></div>}
+    <nav inert={booting} className="os-taskbar" aria-label={desk.taskbar}><button className={startOpen ? "os-start-button is-active" : "os-start-button"} onClick={(event) => { event.stopPropagation(); setStartOpen((value) => !value); beep(); }}><PixelLogo small/><strong>{desk.start}</strong></button><div className="os-task-tabs">{windows.filter((item) => item.open).map((item) => <button className={!item.minimized && item.z === topVisibleZ ? "is-active" : ""} key={item.id} onClick={(event) => { event.stopPropagation(); if (!item.minimized && item.z === topVisibleZ) updateWindow(item.id, { minimized: true }); else focus(item.id); }}><DesktopIcon name={appIcons[item.id]}/><span>{os.apps[item.id].title}</span></button>)}</div><div className="os-tray">{onSwitchToStandard && <button className="os-view-switch" onClick={onSwitchToStandard} aria-label={desk.switchToWeb}>WEB</button>}<button className={crt ? "is-on" : ""} onClick={() => setCrt((value) => !value)} aria-label={desk.toggleCrt}>CRT</button><button onClick={() => setSound((value) => !value)} aria-label={desk.toggleSound}>{sound ? "VOL" : "MUTE"}</button><time>{time}</time></div></nav>
+  </div></OsContext.Provider>;
 }

@@ -15,24 +15,42 @@ Portafolio profesional experimental de Emmanuel Dávila, construido con Next.js 
 
 ## Desarrollo local
 
-Requisitos: Node.js 24 o superior y npm.
+Requisitos:
+
+- Node.js 24 (la versión de `.nvmrc`; `nvm use` o `fnm use` la selecciona) y npm.
+- Solo para construir la imagen: Docker con BuildKit (el `Dockerfile` usa `RUN --mount=type=cache`).
 
 ```powershell
-npm install
+npm ci
 npm run dev
 ```
 
 Abre `http://localhost:3000`.
 
-## Validación
+### Scripts
 
-```powershell
-npm run lint
-npm run typecheck
-npm run build
-```
+| Script | Qué hace |
+|---|---|
+| `npm run dev` | Servidor de desarrollo. |
+| `npm run build` / `npm start` | Build de producción (servidor autocontenido en `.next/standalone/`) y arranque. |
+| `npm run typecheck` | `next typegen` + `tsc --noEmit` (genera los tipos de rutas antes de comprobar). |
+| `npm run lint` | ESLint (`eslint-config-next`). |
+| `npm test` | Tests unitarios con Vitest, una sola pasada. |
+| `npm run test:watch` | Vitest en modo observación. |
+| `npm run check` | `typecheck` + `lint` + `test`: lo mínimo antes de subir cambios. |
 
-El build genera un servidor autocontenido en `.next/standalone/` (Next.js `output: "standalone"`).
+### Tests
+
+Viven en `tests/` (`*.test.ts`) y cubren lógica pura: rate limit e IP del cliente, la comprobación de
+mismo origen, la resolución de servicios del formulario, las redirecciones de WordPress, la integridad
+de los posts y el sitemap. La configuración está en `vitest.config.mts` (alias `@/` y un sustituto de
+`server-only`). No renderizan componentes: para eso harían falta tests E2E.
+
+### Integración continua
+
+`.github/workflows/ci.yml` ejecuta typecheck, lint, tests y `next build` en cada push y PR a `main` y a
+las ramas `fase/**`. Dependabot (`.github/dependabot.yml`) propone cada semana las actualizaciones
+minor/patch de npm agrupadas; los majors de Next, React, ESLint y TypeScript se hacen a mano.
 
 ## Variables de entorno
 
@@ -57,4 +75,4 @@ docker run -p 3000:3000 --env-file .env.local edav-portfolio
 
 ## Contenido
 
-Los proyectos se administran en `data/projects.ts`. La identidad, servicios, testimonios y tecnologías se encuentran en `data/site.ts`.
+Todo el contenido vive en `content/` (bilingüe ES/EN): proyectos en `content/projects.ts`, perfil, contacto y tecnologías en `content/profile.ts`, servicios y testimonios en `content/services.ts`, artículos en `content/posts.ts`, datos del sitio y CV en `content/site.ts`, y cifras derivadas en `content/stats.ts`. Guía editorial en `docs/contenido.md`.

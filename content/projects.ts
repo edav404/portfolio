@@ -1,3 +1,4 @@
+import { projectKindLabels, projectOwnershipLabels, projectStatusLabels } from "./project-labels";
 import type { PersonId } from "./people";
 import type { L, Locale } from "./types";
 
@@ -522,25 +523,12 @@ export const projects: Project[] = [
   },
 ];
 
-export const projectKinds: { id: ProjectKind; label: L }[] = [
-  { id: "client", label: { es: "Clientes", en: "Clients" } },
-  { id: "personal", label: { es: "Personales", en: "Personal" } },
-  { id: "automation", label: { es: "Automatizaciones", en: "Automation" } },
-];
+export const projectKinds: { id: ProjectKind; label: L }[] = (Object.keys(projectKindLabels) as ProjectKind[]).map((id) => ({ id, label: projectKindLabels[id] }));
 
-export const statusLabels: Record<ProjectStatus, L> = {
-  delivered: { es: "Entregado", en: "Delivered" },
-  live: { es: "En uso", en: "In use" },
-  "in-development": { es: "En desarrollo", en: "In development" },
-  academic: { es: "Académico", en: "Academic" },
-};
+// Etiquetas: fuente única en content/project-labels.ts (también las usa content/ui.ts).
+export const statusLabels: Record<ProjectStatus, L> = projectStatusLabels;
 
-export const ownershipLabels: Record<Ownership, L> = {
-  own: { es: "Proyecto propio", en: "Own project" },
-  "co-created": { es: "Cocreado", en: "Co-created" },
-  collaboration: { es: "Colaboración", en: "Collaboration" },
-  client: { es: "Proyecto para cliente", en: "Client project" },
-};
+export const ownershipLabels: Record<Ownership, L> = projectOwnershipLabels;
 
 export function projectTitle(project: Pick<Project, "title">, locale: Locale): string {
   return typeof project.title === "string" ? project.title : project.title[locale];
@@ -548,4 +536,31 @@ export function projectTitle(project: Pick<Project, "title">, locale: Locale): s
 
 export function getProject(slug: string) {
   return projects.find((project) => project.slug === slug);
+}
+
+/** Proyecto con portada: el único que hoy tiene página de caso de estudio (`/proyectos/<slug>/`). */
+export type CaseStudy = Project & { image: string };
+
+function hasCover(project: Project): project is CaseStudy {
+  return Boolean(project.image);
+}
+
+/**
+ * Casos de estudio publicados. Los personales y las automatizaciones sin portada
+ * se mostrarán cuando la galería con filtros esté lista (Fase 4).
+ */
+export const caseStudies: CaseStudy[] = projects.filter(hasCover);
+
+export function getCaseStudy(slug: string): CaseStudy | undefined {
+  return caseStudies.find((project) => project.slug === slug);
+}
+
+/**
+ * Casos para la portada (COD-03): primero los marcados con `featured` y, si no llegan
+ * a `limit`, se completa con el resto en el orden de `projects`.
+ */
+export function featuredCaseStudies(limit = 6): CaseStudy[] {
+  const featured = caseStudies.filter((project) => project.featured);
+  const rest = caseStudies.filter((project) => !project.featured);
+  return [...featured, ...rest].slice(0, limit);
 }
