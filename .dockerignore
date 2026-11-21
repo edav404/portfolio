@@ -1,17 +1,38 @@
+# Contexto de build de Docker: solo lo necesario para `next build`.
+# Mismo criterio que .gitignore para el material privado (INF-01): en un `docker build`
+# local, todo lo que no se excluya aquí entra en la capa del stage `builder` y en la caché.
+
+# Control de versiones y CI
 .git
 .github
+
+# Artefactos y dependencias (se generan dentro de la imagen)
 .next
 out
 node_modules
+coverage
 npm-debug.log*
 *.tsbuildinfo
+next-env.d.ts
+
+# Secretos: las variables llegan por Coolify, nunca por el contexto
 .env*
 !.env.example
+
+# Material privado local
+private
+WordPress
+.cloudflare-temp
+
+# content/ solo aporta los módulos .ts; el resto (guiones, HTML, PDF) es privado
+content/*
+!content/*.ts
+
+# Herramientas locales, agentes y documentación (no afectan al build)
 .claude
 .agents
-.cloudflare-temp
-WordPress
+.vscode
 docs
+*.md
 Dockerfile
 .dockerignore
-README.md

@@ -17,39 +17,13 @@ body:has(.desktop-os) { overflow: hidden; background: #167f9f; }
 body:has(.desktop-os)::before, body:has(.desktop-os)::after,
 body:has(.desktop-os) > .site-header, body:has(.desktop-os) > .site-footer { display: none; }
 body:has(.desktop-os) > main { min-height: 100dvh; }
-body:has(.experience-gateway) { overflow: hidden; background: #071634; }
-body:has(.experience-gateway)::before, body:has(.experience-gateway)::after,
-body:has(.experience-gateway) > .site-header, body:has(.experience-gateway) > .site-footer { display: none; }
-
-.experience-gateway { position: fixed; z-index: 30000; inset: 0; display: grid; place-items: center; width: 100vw; height: 100dvh; min-height: 100dvh; overflow: auto; padding: 28px; color: #eaf3ff; background: radial-gradient(circle at 78% 18%, rgba(255,45,178,.22), transparent 28%), radial-gradient(circle at 14% 78%, rgba(35,222,255,.2), transparent 32%), linear-gradient(145deg, #040816, #0a2554 58%, #281049); font-family: Tahoma, Verdana, sans-serif; }
-.experience-gateway::before { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .18; background-image: linear-gradient(rgba(92,209,255,.35) 1px, transparent 1px), linear-gradient(90deg, rgba(92,209,255,.35) 1px, transparent 1px); background-size: 34px 34px; mask-image: linear-gradient(to bottom, transparent, #000 35%); }
-.experience-gateway-panel { position: relative; width: min(920px, 100%); padding: clamp(24px, 4vw, 46px); border: 1px solid #5f86d8; background: rgba(5,13,35,.94); box-shadow: 0 0 0 2px #01030a, 0 0 0 3px #1b3f81, 14px 16px 0 rgba(0,0,0,.42), inset 0 0 50px rgba(62,116,255,.08); }
-.experience-gateway-panel > header { display: flex; align-items: center; gap: 12px; padding-bottom: 18px; border-bottom: 1px solid #284b8d; }
-.experience-gateway-panel > header > div { display: grid; gap: 2px; }
-.experience-gateway-panel > header strong { color: #fff; font-size: 21px; letter-spacing: .05em; }
-.experience-gateway-panel > header span { color: #79a9ff; font: 10px "DM Mono", Consolas, monospace; letter-spacing: .12em; }
-.experience-gateway-kicker { margin: 25px 0 8px; color: #f6ff00; font: 700 10px "DM Mono", Consolas, monospace; letter-spacing: .2em; }
-.experience-gateway h1 { max-width: 720px; margin: 0; color: #fff; font: 800 clamp(2rem, 5vw, 3.6rem)/1.02 var(--sans); letter-spacing: -.045em; }
-.experience-gateway-intro { max-width: 650px; margin: 14px 0 24px; color: #aebee1; line-height: 1.55; }
-.experience-gateway-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.experience-gateway-options > button { position: relative; display: grid; grid-template-columns: 54px 1fr; align-items: center; gap: 7px 14px; min-height: 190px; padding: 20px; color: #eaf3ff; text-align: left; border: 2px outset #9ebcff; border-radius: 0; background: linear-gradient(145deg, rgba(20,47,100,.96), rgba(6,16,43,.98)); box-shadow: 4px 5px 0 #000; cursor: pointer; }
-.experience-gateway-options > button:hover { border-color: #fff; background: linear-gradient(145deg, #244f9e, #0b1f53); transform: translateY(-2px); }
-.experience-gateway-options > button:active { border-style: inset; transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
-.experience-gateway-options > button:focus-visible { outline: 3px solid #f6ff00; outline-offset: 4px; }
-.experience-gateway-icon { grid-row: 1 / span 2; display: grid; place-items: center; width: 54px; height: 54px; color: #fff; border: 2px outset #fff; box-shadow: 2px 3px #000; }
-.experience-gateway-icon svg { width: 34px; }
-.experience-gateway-icon.is-standard { background: linear-gradient(145deg, #62ebff, #245bd5 58%, #071b67); }
-.experience-gateway-icon.is-retro { color: #7cff9d; background: #06130a; }
-.experience-gateway-options strong { align-self: end; color: #fff; font-size: 18px; }
-.experience-gateway-options button > span[id] { grid-column: 1 / -1; align-self: start; color: #b8c7e5; font-size: 12px; line-height: 1.5; }
-.experience-gateway-options b { grid-column: 1 / -1; align-self: end; width: fit-content; padding-bottom: 2px; color: #7edfff; font-size: 12px; border-bottom: 1px solid currentColor; }
-.experience-gateway-recommended { display: none; position: absolute; top: 8px; right: 8px; padding: 3px 6px; color: #071b4f; font-size: 9px; font-weight: 700; background: #ffffcc; }
-.experience-gateway-panel > small { display: block; margin-top: 16px; color: #7186af; font-size: 10px; }
 
 .os-desktop { position: relative; width: 100%; height: 100dvh; min-height: 580px; overflow: hidden; color: #080808; font: 12px/1.35 var(--os-font); user-select: none; isolation: isolate; background: linear-gradient(145deg, #1596b4, #136994 64%, #031c5d); }
 .os-desktop button, .os-desktop input, .os-desktop select, .os-desktop textarea { font: inherit; }
 .os-desktop button { color: inherit; }
-.os-desktop :focus-visible { outline: 2px dotted #050505; outline-offset: -4px; }
+/* A11Y-03: anillo doble interior (negro + blanco). Para cualquier color de fondo C, max(contraste(C,#000), contraste(C,#fff)) ≥ 4,58:1;
+   p. ej. sobre #c0c0c0 el negro da 11,54:1, sobre el azul #001b78 el blanco da 14,7:1 y sobre el fondo #1596b4 el negro da 6,05:1. */
+.os-desktop :focus-visible { outline: 2px solid #fff; outline-offset: -4px; box-shadow: inset 0 0 0 4px #000; }
 .os-desktop p { color: inherit; }
 
 .os-wallpaper { position: absolute; inset: 0 0 38px; overflow: hidden; pointer-events: none; background: radial-gradient(circle at 72% 25%, rgba(255,255,255,.24), transparent 16%), linear-gradient(125deg, transparent 47%, rgba(1,21,95,.18) 48%, transparent 50%); }
@@ -190,7 +164,8 @@ body:has(.experience-gateway) > .site-header, body:has(.experience-gateway) > .s
 .os-contact-app { display: grid; grid-template-columns: .75fr 1.25fr; gap: 20px; min-height: 100%; padding: 22px; background: linear-gradient(120deg, #d6edff, #fff 42%); }
 .os-contact-app .contact-form { margin: 0; padding: 15px; border: 2px inset #fff; border-radius: 0; background: var(--os-chrome); box-shadow: none; }
 .os-contact-app .contact-form label { color: #111; font-size: 11px; }
-.os-contact-app .contact-form input, .os-contact-app .contact-form select, .os-contact-app .contact-form textarea { padding: 8px; border: 2px inset #fff; border-radius: 0; background: #fff; }
+/* A11Y-04: borde negro (21:1 contra el campo blanco, 11,54:1 contra el cromo #c0c0c0) con bisel Win98 por sombra. */
+.os-contact-app .contact-form input, .os-contact-app .contact-form select, .os-contact-app .contact-form textarea { padding: 8px; border: 1px solid #000; border-radius: 0; background: #fff; box-shadow: inset 1px 1px 0 #808080, 1px 1px 0 #fff; }
 .os-contact-app .contact-form .button { min-height: 36px; padding: 6px 16px; border: 2px outset #fff; border-radius: 0; background: linear-gradient(#1565d8, #002d97); box-shadow: 1px 1px #000; transform: none; }
 .os-contact-app .form-row { grid-template-columns: 1fr; }
 
@@ -356,9 +331,15 @@ body:not(:has(.desktop-os)):not(:has(.standard-home)) .final-cta .button { color
 body:not(:has(.desktop-os)):not(:has(.standard-home)) .final-cta .button:hover { color: #071b4f; background: linear-gradient(#fffbd2, #d3f56c); }
 body:not(:has(.desktop-os)):not(:has(.standard-home)) .window, body:not(:has(.desktop-os)):not(:has(.standard-home)) .project-card, body:not(:has(.desktop-os)):not(:has(.standard-home)) .service-card, body:not(:has(.desktop-os)):not(:has(.standard-home)) .testimonial, body:not(:has(.desktop-os)):not(:has(.standard-home)) .contact-form { border-radius: 0; border: 2px outset #fff; box-shadow: 5px 6px rgba(0,0,60,.18); }
 
-.experience-switch { position: fixed; z-index: 250; right: 16px; top: 86px; display: inline-flex; align-items: center; gap: 7px; min-height: 42px; padding: 8px 12px; color: #fff; font: 700 12px var(--sans); border: 1px solid #123ba7; border-radius: 12px; background: linear-gradient(180deg, #477bff, #1741ba); box-shadow: 0 8px 20px rgba(34,87,231,.25); cursor: pointer; }
-.experience-switch:hover { transform: translateY(-2px); }
-.experience-switch:focus-visible { outline: 3px solid var(--pink); outline-offset: 3px; }
+/* Botón en línea que abre el escritorio (ya no es flotante: no tapa el hero, UX-06). */
+.experience-switch { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; margin-top: 1rem; padding: 8px 14px; color: #fff; font: 700 .9rem var(--sans); border: 2px outset #b4caff; border-radius: 0; background: linear-gradient(#1565d8, #002d97); box-shadow: 2px 2px #000; cursor: pointer; }
+.experience-switch svg { width: 20px; }
+.experience-switch:hover { filter: brightness(1.1); }
+.experience-switch:active { border-style: inset; box-shadow: none; transform: translate(1px, 1px); }
+.os-loading { min-height: 100dvh; color: #fff; background: #167f9f; }
+.os-loading p { color: #fff; font: 12px var(--os-font); }
+.os-contact-links { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 10px 0 14px; padding: 0; list-style: none; }
+.os-contact-links a { color: #001b78; font-weight: 700; text-decoration: underline; }
 
 @keyframes os-window-in { from { opacity: 0; transform: scale(.92) translateY(12px); } }
 @keyframes os-menu-in { from { opacity: 0; transform: translateY(10px); } }
@@ -380,16 +361,6 @@ body:not(:has(.desktop-os)):not(:has(.standard-home)) .window, body:not(:has(.de
 @keyframes os-load { to { transform: translateX(130px); } }
 
 @media (max-width: 768px) {
-  .experience-gateway { place-items: start center; padding: 12px; }
-  .experience-gateway-panel { padding: 20px 16px; }
-  .experience-gateway-panel > header { padding-bottom: 12px; }
-  .experience-gateway-kicker { margin-top: 18px; }
-  .experience-gateway h1 { font-size: clamp(1.75rem, 9vw, 2.5rem); }
-  .experience-gateway-intro { margin-bottom: 18px; font-size: 12px; }
-  .experience-gateway-options { grid-template-columns: 1fr; }
-  .experience-gateway-options > button { min-height: 164px; padding: 16px; }
-  .experience-gateway-options > button:first-child { padding-top: 34px; }
-  .experience-gateway-recommended { display: inline-block; }
   .retro-clippy-portal { inset: 4px 4px 50px; }
   .retro-clippy { right: 4px; bottom: 4px; width: 236px; }
   .retro-clippy-character { width: 128px; height: 102.4px; }
@@ -471,7 +442,6 @@ body:not(:has(.desktop-os)):not(:has(.standard-home)) .window, body:not(:has(.de
 }
 
 @media (max-width: 430px) {
-  .experience-switch { top: 72px; right: 8px; max-width: calc(100% - 16px); }
   .os-menu-strip { height: 22px; padding-block: 3px; }
   .os-quick-launch svg { display: none; }
   .os-welcome-copy > p:not(.os-kicker) { font-size: 12px; }

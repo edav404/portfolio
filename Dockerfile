@@ -1,17 +1,20 @@
 # syntax=docker/dockerfile:1.7
 # Imagen de producción para Coolify (Ubuntu Server). Next.js en modo standalone.
+# Requiere BuildKit (Coolify lo usa por defecto) por los `RUN --mount=type=cache`.
 
-# Versión fijada para builds reproducibles; actualizar periódicamente (Fase 2 revisa la política).
-ARG NODE_VERSION=24.22.3-alpine3.24
+# Node 24 LTS (igual que `.nvmrc` y `engines`). Etiqueta + digest para builds reproducibles:
+# al actualizar, cambiar ambos (`docker buildx imagetools inspect node:<etiqueta>` da el digest).
+ARG NODE_IMAGE=node:24.22.3-alpine3.24@sha256:116b800c3754b440ee0aa3ed2f20f5bf3d99a554bfd9adeea09ea8017f6e85f5
 
 # 1) Dependencias (capa cacheable mientras no cambie el lockfile)
-FROM node:${NODE_VERSION} AS deps
+FROM ${NODE_IMAGE} AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --no-audit --no-fund --loglevel=error
 
 # 2) Build
-FROM node:${NODE_VERSION} AS builder
+FROM ${NODE_IMAGE} AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 # Variables públicas: se incrustan en el bundle en tiempo de build.
@@ -19,11 +22,16 @@ ARG NEXT_PUBLIC_SITE_URL=https://edav.com.co
 ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build
+# La caché de Next (.next/cache) persiste entre despliegues en la caché de BuildKit del servidor;
+# no entra en la imagen. `next build` sin caché sigue funcionando (solo tarda más).
+RUN --mount=type=cache,target=/app/.next/cache \
+    npm run build
 
 # 3) Runtime mínimo, usuario sin privilegios
-FROM node:${NODE_VERSION} AS runner
+FROM ${NODE_IMAGE} AS runner
 WORKDIR /app
+# Logs: la app escribe en stdout/stderr (Coolify los muestra); la rotación es del daemon de Docker
+# en el servidor (ver docs/despliegue-coolify.md). npm no interviene en el arranque.
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \

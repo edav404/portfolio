@@ -139,6 +139,12 @@ export const experience: ExperienceEntry[] = [
   },
 ];
 
+/**
+ * Año del primer rol registrado (hoy, Dávila & Trujillo Abogados, 2020).
+ * La UI dice "desde {experienceSince}" en lugar de una cifra de años que caduca.
+ */
+export const experienceSince = Math.min(...experience.map((job) => Number(job.start.slice(0, 4))));
+
 export type EducationEntry = {
   id: string;
   institution: string;

@@ -4,7 +4,8 @@
 
 import { useEffect, useState } from "react";
 import { Icon } from "@/components/icons";
-import { site } from "@/data/site";
+// Se importa `profile` y no `data/site` para no meter servicios y testimonios en el bundle cliente.
+import { profile } from "@/content/profile";
 
 type Track = { name: string; artist: string; album?: string; image?: string; url: string; nowPlaying: boolean };
 
@@ -25,7 +26,7 @@ export function MusicWidget() {
 
   const isLoading = state === "loading";
   const isError = state === "error" || !track;
-  const trackUrl = track?.url ?? `https://www.last.fm/user/${site.lastfm}`;
+  const trackUrl = track?.url ?? `https://www.last.fm/user/${profile.contact.lastfm}`;
 
   return <section className={`music-player ${isLoading ? "is-loading" : ""} ${isError ? "is-error" : ""}`} aria-label="Reproductor de música Last.fm">
     <div className="music-player-titlebar"><strong><i aria-hidden="true"/> EDAV.FM // WINAMP</strong><span>STEREO · 192 KBPS</span></div>
@@ -42,6 +43,6 @@ export function MusicWidget() {
       </div>
     </div>
     <div className="music-player-controls" aria-hidden="true"><span>◀◀</span><b>▶</b><span>▶▶</span><em>VOL</em><i/></div>
-    <div className="music-player-footer"><span>{isError ? "LAST.FM SIN RESPUESTA" : "Powered by Last.fm"}</span><a href={`https://www.last.fm/user/${site.lastfm}`} target="_blank" rel="noreferrer">ABRIR LAST.FM ↗</a></div>
+    <div className="music-player-footer"><span>{isError ? "LAST.FM SIN RESPUESTA" : "Powered by Last.fm"}</span><a href={`https://www.last.fm/user/${profile.contact.lastfm}`} target="_blank" rel="noreferrer">ABRIR LAST.FM ↗</a></div>
   </section>;
 }

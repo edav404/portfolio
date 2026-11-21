@@ -1,13 +1,14 @@
 # EDAV OS — Emmanuel Dávila
 
-> Portafolio profesional de Emmanuel Dávila, desarrollador web Full Stack y diseñador web en Medellín, Colombia.
+> Portafolio profesional de Emmanuel Dávila, desarrollador Full Stack y de automatización en Medellín, Colombia.
 
 ## Contenido principal
 
 - /: presentación, proyectos destacados, servicios, testimonios y contacto.
 - /proyectos/: catálogo de casos de estudio.
-- /servicios/: desarrollo web, WordPress, WooCommerce, Shopify y diseño web.
+- /servicios/: desarrollo web a la medida, automatización de procesos, WordPress, WooCommerce, Shopify y diseño UX/UI.
 - /sobre-mi/: perfil, experiencia y tecnologías.
+- /blog/: artículos sobre páginas web y SEO para negocios.
 - /ahora/: actividad musical reciente mediante Last.fm.
 - /contacto/: formulario para nuevos proyectos.
 

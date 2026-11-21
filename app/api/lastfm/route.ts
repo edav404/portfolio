@@ -1,14 +1,17 @@
 import { connection } from "next/server";
 import { getRecentTrack } from "@/lib/server/lastfm";
-import { clientIp, createRateLimiter } from "@/lib/server/rate-limit";
+import { clientKey, createRateLimiter } from "@/lib/server/rate-limit";
 
-const limiter = createRateLimiter({ limit: 30, windowMs: 60_000 });
+const limiter = createRateLimiter({ name: "lastfm", limit: 30, windowMs: 60_000 });
 
 export async function GET(request: Request) {
   await connection();
-  const { ok, retryAfter } = limiter(clientIp(request));
+  const { ok, retryAfter } = limiter.check(clientKey(request));
   if (!ok) {
-    return Response.json({ message: "Demasiadas solicitudes." }, { status: 429, headers: { "Retry-After": String(retryAfter) } });
+    return Response.json(
+      { message: "Demasiadas solicitudes." },
+      { status: 429, headers: { "Retry-After": String(retryAfter), "Cache-Control": "no-store" } },
+    );
   }
 
   const result = await getRecentTrack();
