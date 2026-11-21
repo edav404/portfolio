@@ -415,3 +415,35 @@ app/en/
     sin intercambio HTML/RSC.
   - Enviar el sitemap y revisar en Search Console.
 
+
+## 12. Rutas del SO (O3, Fase 4)
+
+Primera entrega de `/os/` (docs/arquitectura-os.md §1): rutas, catálogo y metadata, sin shell cliente todavía.
+
+- **Rutas nuevas** (`since: 4`, `indexable: false`, ya reservadas en `content/routes.ts`): `/os/`,
+  `/os/proyectos/<slug>/`, `/en/os/`, `/en/os/projects/<slug>/`. Árbol: `app/(es)/os/` y `app/en/os/`,
+  **hermanos de `(site)`** (layout propio por idioma, sin `template.tsx`; el `page-transition` queda en
+  `(site)`). Cuelgan del layout raíz de su idioma, como las páginas públicas.
+- **Catálogo único** `osProjectSlugs` (`content/projects.ts`; por defecto los 13 casos con portada, Q6). Lo
+  consumen `osProjectParams()` (`generateStaticParams`), `refs()` de `lib/i18n/pages.ts` (selector de
+  idioma), y las vistas (listado y detalle). `dynamicParams = false` en ambos slugs. `os` está en
+  `staticKeys`. `publicPages()` las excluye por `indexable`: fuera del sitemap y de `llms.txt`.
+- **Metadata** (`components/views/os.tsx`): `osMetadata` y `osProjectMetadata` usan `buildMetadata`, que por
+  `seoEligibility` da `robots: noindex, follow`, canonical y `og:url` propios, sin hreflang ni
+  `og:locale:alternate`. Los layouts `os/` repiten el `noindex` como red. `robots.ts` no cambia (sin
+  `Disallow: /os/`, para que el `noindex` se pueda leer).
+- **404 bajo `/os/`**: ES, `global-not-found` (HTML completo, `lang="es"`, `noindex`, sin canonical).
+  EN, el "error shell" de Next (404 + `noindex`, sin canonical; §9.1): los `/en/os/…` no pasan por el
+  `not-found.tsx` de `(site)`. Un slug excluido (p. ej. `vaulto`, sin portada) responde igual.
+- **Tests**: `route-files.test.ts` con `CURRENT_PHASE = 4` y raíz por familia (`os*` bajo `app/(es)` y
+  `app/en`, no bajo `(site)`); `app-structure.test.ts` (layout propio, sin `template.tsx`, parámetros del
+  catálogo); `route-os.test.ts` (catálogo = casos públicos, mismo conjunto en SSG, selector y detalle, slug
+  excluido sin metadata ni enlace, metadata, fuera de `publicPages`); `i18n-links.test.ts` cuenta `os` y
+  sus proyectos en `availablePages()`.
+- **Smoke**: `/os/`, `/en/os/` y un proyecto en cada idioma (200, `lang`, `noindex, follow`, canonical y
+  `og:url` propios, sin hreflang, fuera del sitemap, `os-root` y `<noscript>` en el HTML inicial, enlaces
+  reales a los proyectos) y 404 con `noindex` para slugs fuera del catálogo y rutas inexistentes.
+- **Línea base** (`tests/fixtures/routes-baseline.json`): sin cambios. El SO no entra al sitemap ni a las
+  redirecciones; el sitemap sigue en 44 URLs.
+- **Microcopy**: sección nueva `ui.osShell` (no `ui.os`) para no engordar el HTML de `/` mientras el overlay
+  siga vivo; en O9 se retira `os` y `osShell` pasa a llamarse `os`.

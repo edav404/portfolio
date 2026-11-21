@@ -58,6 +58,23 @@ describe("estructura de app/", () => {
     expect(missing).toMatch(/notFound\(\)/);
   });
 
+  it("el SO (§1.1): layout propio por idioma, sin template.tsx y fuera de (site)", () => {
+    for (const root of ["(es)/os", "en/os"]) {
+      expect(all, root).toContain(`${root}/layout.tsx`);
+      expect(all, root).toContain(`${root}/page.tsx`);
+      expect(all.filter((path) => path.startsWith(`${root}/`) && /(^|\/)template\.tsx$/.test(path)), root).toEqual([]);
+      expect(read(`${root}/layout.tsx`), root).toMatch(/index: false, follow: true/);
+    }
+    expect(all).toContain("(es)/os/proyectos/[slug]/page.tsx");
+    expect(all).toContain("en/os/projects/[slug]/page.tsx");
+  });
+
+  it("las páginas del SO toman los parámetros del catálogo autorizado (osProjectParams)", () => {
+    for (const path of ["(es)/os/proyectos/[slug]/page.tsx", "en/os/projects/[slug]/page.tsx"]) {
+      expect(read(path), path).toMatch(/return osProjectParams\(\)/);
+    }
+  });
+
   it("los recursos sin idioma siguen en la raíz de app/", () => {
     for (const path of ["api", "cv", "sitemap.ts", "robots.ts", "icon.svg"]) expect(existsSync(join(appDir, path)), path).toBe(true);
   });

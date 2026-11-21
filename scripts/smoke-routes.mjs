@@ -16,6 +16,8 @@
  *   el selector de idioma): 200, lang="en", canonical y og:url propios; desde P9 sin noindex, con
  *   hreflang recíproco y og:locale:alternate (antes, noindex y sin hreflang); 404 del catch-all EN
  *   con noindex.
+ * - SO (Fase 4): /os/, /en/os/ y un proyecto en cada idioma: 200, noindex, canonical y og:url propios,
+ *   sin hreflang, fuera del sitemap; 404 con noindex bajo /os/.
  * Sale con código 1 si algo falla.
  */
 import { readFile } from "node:fs/promises";
@@ -184,8 +186,36 @@ check(notFoundSwitch?.href === "/en/" && notFoundSwitch?.lang === "en", `/no-exi
 // El 404 EN es el "error shell" (§9.1): su selector solo existe tras hidratar; la navegación real
 // desde /en/no-existe/ se comprueba con navegador (ver docs §11.5).
 
+// 7) SO (Fase 4, docs/arquitectura-os.md §1.6): 200, noindex, canonical y og:url propios, sin hreflang
+// ni og:locale:alternate, fuera del sitemap y con enlaces reales a los proyectos autorizados.
+// Slug autorizado conocido (osProjectSlugs: casos de estudio con portada).
+const osSlug = "cia-sur";
+const osPages = [["/os/", "es"], ["/en/os/", "en"], [`/os/proyectos/${osSlug}/`, "es"], [`/en/os/projects/${osSlug}/`, "en"]];
+for (const [path, expectedLang] of osPages) {
+  const page = await get(path);
+  check(page.status === 200, `${path} → ${page.status}`);
+  check(lang(page.html) === expectedLang, `${path}: lang=${lang(page.html)}`);
+  check(/<meta name="robots" content="noindex, follow"/.test(page.html), `${path}: sin noindex, follow`);
+  check(new URL(attr(page.html, 'rel="canonical"', "href") ?? "x:", base).pathname === path, `${path}: canonical no es el propio`);
+  check(new URL(attr(page.html, 'property="og:url"', "content") ?? "x:", base).pathname === path, `${path}: og:url no es el propio`);
+  check(!/<link rel="alternate" hrefLang=/i.test(page.html), `${path}: hreflang en una ruta noindex`);
+  check(!attr(page.html, 'property="og:locale:alternate"', "content"), `${path}: og:locale:alternate en una ruta noindex`);
+  check(!paths.includes(path), `${path}: está en el sitemap`);
+  check(/class="os-root"/.test(page.html) && /<noscript>/.test(page.html), `${path}: sin os-root o <noscript> en el HTML inicial`);
+}
+for (const [path, prefix] of [["/os/", "/os/proyectos/"], ["/en/os/", "/en/os/projects/"]]) {
+  check((await get(path)).html.includes(`href="${prefix}${osSlug}/"`), `${path}: sin enlace real a ${prefix}${osSlug}/`);
+}
+// Slug fuera del catálogo (vaulto existe en content/projects.ts pero no tiene portada) y rutas inexistentes bajo /os/: 404 con noindex y sin canonical.
+for (const path of ["/os/proyectos/no-existe/", "/en/os/projects/no-existe/", "/os/proyectos/vaulto/", "/en/os/projects/vaulto/", "/os/no-existe/", "/en/os/no-existe/"]) {
+  const page = await get(path);
+  check(page.status === 404, `${path} → ${page.status} (se esperaba 404)`);
+  check(/<meta name="robots" content="noindex"/.test(page.html), `${path}: sin noindex`);
+  check(!/rel="canonical"/.test(page.html), `${path}: el 404 no debe tener canonical`);
+}
+
 if (failures.length) {
   console.error(`✗ ${failures.length} fallos:\n- ${failures.join("\n- ")}`);
   process.exit(1);
 }
-console.log(`✓ smoke de rutas: ${paths.length} URLs del sitemap, redirecciones, 404 global, ${enSeen.size} páginas EN, 404 EN y ${switchChecks} cambios de idioma`);
+console.log(`✓ smoke de rutas: ${paths.length} URLs del sitemap, redirecciones, 404 global, ${enSeen.size} páginas EN, 404 EN, ${osPages.length} páginas del SO y ${switchChecks} cambios de idioma`);

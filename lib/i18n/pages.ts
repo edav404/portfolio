@@ -9,7 +9,7 @@
  * Solo servidor: importa el contenido (proyectos y posts) para enumerar los parámetros.
  */
 import { posts } from "@/content/posts";
-import { caseStudies } from "@/content/projects";
+import { caseStudies, osProjectSlugs } from "@/content/projects";
 import { hrefFor, hreflangFor, isRouteIndexable, publishedLocales, seoEligibility, type RouteKey, type RouteRef } from "@/content/routes";
 import { locales, type Locale } from "@/content/types";
 
@@ -21,16 +21,18 @@ export type AvailablePage = {
 };
 
 /**
- * Rutas sin parámetros que ya existen (Fase 3). Las de `since > 3` se añaden en su fase.
+ * Rutas sin parámetros que ya existen (Fase 3, y `os` desde la 4). Las de `since > 4` se añaden en su fase.
  * El orden (estáticas, posts, proyectos) es el del sitemap.
  */
-const staticKeys = ["home", "projects", "services", "about", "now", "contact", "blog"] as const satisfies readonly RouteKey[];
+const staticKeys = ["home", "projects", "services", "about", "now", "contact", "blog", "os"] as const satisfies readonly RouteKey[];
 
 function refs(): RouteRef[] {
   return [
     ...staticKeys.map((route) => ({ route }) as RouteRef),
     ...posts.map(({ slug }) => ({ route: "post", params: { slug } }) as RouteRef),
     ...caseStudies.map(({ slug }) => ({ route: "project", params: { slug } }) as RouteRef),
+    // SO (Fase 4): solo el catálogo autorizado (§1.4). No indexables: `publicPages()` las excluye.
+    ...osProjectSlugs.map((slug) => ({ route: "osProject", params: { slug } }) as RouteRef),
   ];
 }
 

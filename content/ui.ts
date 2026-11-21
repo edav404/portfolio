@@ -445,6 +445,295 @@ export const ui = {
       hide: { es: "Ocultar", en: "Hide" },
     },
   },
+
+  /**
+   * EDAV OS, el escritorio con ventanas de `/os/` (docs/arquitectura-os.md, Fase 4; la fuente es O3).
+   * Sección aparte de `os` (el overlay `PortfolioExperience`, vivo hasta O9) para no engordar con
+   * estas cadenas el HTML de la portada, que resuelve `os` entera. En O9 se retira `os` y esta
+   * sección pasa a llamarse `os`.
+   */
+  osShell: {
+    productName: { es: "EDAV OS", en: "EDAV OS" },
+    /** `h1` permanente del escritorio (visualmente oculto). */
+    heading: { es: "EDAV OS: escritorio de Emmanuel Dávila", en: "EDAV OS: Emmanuel Dávila's desktop" },
+    meta: {
+      title: { es: "EDAV OS, el escritorio de Emmanuel", en: "EDAV OS, Emmanuel's desktop" },
+      description: {
+        es: "Una versión interactiva del portafolio de Emmanuel Dávila como escritorio con ventanas: proyectos, servicios, contacto y más.",
+        en: "An interactive version of Emmanuel Dávila's portfolio as a windowed desktop: projects, services, contact and more.",
+      },
+      /** `{title}` = nombre del proyecto. */
+      projectTitle: { es: "{title} en EDAV OS", en: "{title} in EDAV OS" },
+    },
+    /** Vista de servidor sin JS y mientras el escritorio se construye (se reemplaza en O4). */
+    fallback: {
+      title: { es: "EDAV OS", en: "EDAV OS" },
+      lead: {
+        es: "El escritorio interactivo está en construcción. Mientras tanto puedes ver los proyectos como páginas normales.",
+        en: "The interactive desktop is under construction. Meanwhile you can browse the projects as regular pages.",
+      },
+      projectsTitle: { es: "Proyectos", en: "Projects" },
+      projectsCount: { es: "{count} proyectos", en: "{count} projects" },
+      openPublic: { es: "Ver en la web", en: "View on the website" },
+      backToOs: { es: "Volver al escritorio", en: "Back to the desktop" },
+    },
+    /** Visible, localizado y enfocable (§1.5): el escritorio sin JS no tiene función. */
+    noscript: {
+      message: {
+        es: "EDAV OS necesita JavaScript para funcionar como escritorio.",
+        en: "EDAV OS needs JavaScript to work as a desktop.",
+      },
+      link: { es: "Ir a la vista web", en: "Go to the website view" },
+    },
+    /** Nombre y "archivo" de cada app, estilo Windows XP. */
+    apps: {
+      welcome: { title: { es: "Bienvenido", en: "Welcome" }, file: { es: "Bienvenido.exe", en: "Welcome.exe" } },
+      projects: { title: { es: "Mi trabajo", en: "My Work" }, file: { es: "Explorador de proyectos", en: "Project Explorer" } },
+      services: { title: { es: "Asistente de servicios", en: "Services Wizard" }, file: { es: "Servicios.exe", en: "Services.exe" } },
+      about: { title: { es: "Acerca de Emmanuel", en: "About Emmanuel" }, file: { es: "Acerca de.txt", en: "About.txt" } },
+      contact: { title: { es: "Nuevo mensaje", en: "New Message" }, file: { es: "Correo EDAV", en: "EDAV Mail" } },
+      media: { title: { es: "Reproductor EDAV", en: "EDAV Media Player" }, file: { es: "Reproductor.exe", en: "Player.exe" } },
+      terminal: { title: { es: "Símbolo del sistema", en: "Command Prompt" }, file: { es: "C:\\EDAV", en: "C:\\EDAV" } },
+      settings: { title: { es: "Propiedades", en: "Properties" }, file: { es: "Propiedades del sistema", en: "System Properties" } },
+      cv: { title: { es: "CV.pdf", en: "CV.pdf" }, file: { es: "Descargar CV", en: "Download CV" } },
+    },
+    /** Iconos del escritorio (lista de aplicaciones). */
+    desktop: {
+      iconsGroup: { es: "Aplicaciones del escritorio", en: "Desktop applications" },
+      skipToWindow: { es: "Ir a la ventana activa", en: "Skip to the active window" },
+      /** Globo de bandeja de primer arranque (UX-11). */
+      balloonTitle: { es: "Bienvenido a EDAV OS", en: "Welcome to EDAV OS" },
+      balloonText: { es: "Haz clic en un icono para abrirlo", en: "Click an icon to open it" },
+      balloonClose: { es: "Cerrar globo de ayuda", en: "Close help balloon" },
+      /** Pocket: el escritorio es un lanzador. */
+      launcher: { es: "Lanzador de aplicaciones", en: "App launcher" },
+    },
+    /** Ventana: cromo, menú de sistema y panel de pasos. */
+    window: {
+      minimize: { es: "Minimizar", en: "Minimize" },
+      maximize: { es: "Maximizar", en: "Maximize" },
+      restore: { es: "Restaurar", en: "Restore" },
+      close: { es: "Cerrar", en: "Close" },
+      /** aria-label de los botones de la barra de título. */
+      actionOn: { es: "{action} {title}", en: "{action} {title}" },
+      systemMenu: { es: "Menú de ventana de {title}", en: "Window menu for {title}" },
+      menuRestore: { es: "Restaurar", en: "Restore" },
+      menuMove: { es: "Mover", en: "Move" },
+      menuSize: { es: "Tamaño", en: "Size" },
+      menuMinimize: { es: "Minimizar", en: "Minimize" },
+      menuMaximize: { es: "Maximizar", en: "Maximize" },
+      menuSnapLeft: { es: "Ajustar a la izquierda", en: "Snap to the left" },
+      menuSnapRight: { es: "Ajustar a la derecha", en: "Snap to the right" },
+      menuCenter: { es: "Centrar", en: "Center" },
+      menuResetPosition: { es: "Restablecer posición", en: "Reset position" },
+      menuClose: { es: "Cerrar", en: "Close" },
+      menuMoveAndResize: { es: "Mover y cambiar tamaño…", en: "Move and resize…" },
+      /** Contenido cargando de una ventana de proyecto sin detalle todavía. */
+      loading: { es: "Cargando…", en: "Loading…" },
+    },
+    /** Panel de pasos de un solo puntero (WCAG 2.5.7). */
+    steps: {
+      title: { es: "Mover y cambiar tamaño: {title}", en: "Move and resize: {title}" },
+      moveGroup: { es: "Mover", en: "Move" },
+      sizeGroup: { es: "Tamaño", en: "Size" },
+      left: { es: "Mover a la izquierda", en: "Move left" },
+      right: { es: "Mover a la derecha", en: "Move right" },
+      up: { es: "Mover hacia arriba", en: "Move up" },
+      down: { es: "Mover hacia abajo", en: "Move down" },
+      widen: { es: "Más ancha", en: "Wider" },
+      narrow: { es: "Más estrecha", en: "Narrower" },
+      taller: { es: "Más alta", en: "Taller" },
+      shorter: { es: "Más baja", en: "Shorter" },
+      bigStep: { es: "Paso grande (x4)", en: "Large step (x4)" },
+      done: { es: "Hecho", en: "Done" },
+      cancel: { es: "Cancelar", en: "Cancel" },
+      /** Anuncio al entrar en el modo Mover por teclado. */
+      keyboardMove: {
+        es: "Moviendo la ventana {title}. Flechas para mover, Intro para confirmar, Esc para cancelar.",
+        en: "Moving window {title}. Arrow keys to move, Enter to confirm, Esc to cancel.",
+      },
+      keyboardSize: {
+        es: "Cambiando el tamaño de la ventana {title}. Flechas para cambiar, Intro para confirmar, Esc para cancelar.",
+        en: "Resizing window {title}. Arrow keys to resize, Enter to confirm, Esc to cancel.",
+      },
+      /** Anuncio agrupado tras pulsar pasos. */
+      position: { es: "Posición {x}, {y}. Tamaño {w} por {h}.", en: "Position {x}, {y}. Size {w} by {h}." },
+    },
+    /** Menú Inicio (Disclosure: grupos de botones y enlaces, no `menu`). */
+    start: {
+      button: { es: "Inicio", en: "Start" },
+      panel: { es: "Menú Inicio", en: "Start menu" },
+      programsGroup: { es: "Programas", en: "Programs" },
+      systemGroup: { es: "Sistema", en: "System" },
+      allPrograms: { es: "Todos los programas", en: "All programs" },
+      tagline: { es: "Full Stack y automatización", en: "Full Stack & automation" },
+      openCv: { es: "Descargar CV", en: "Download CV" },
+      webView: { es: "Vista web", en: "Website view" },
+      logOff: { es: "Cerrar sesión", en: "Log off" },
+      logOffNotice: { es: "Gracias por visitar mi computador personal.", en: "Thanks for visiting my personal computer." },
+      language: { es: "English", en: "Español" },
+    },
+    /** Barra de tareas y bandeja. */
+    taskbar: {
+      label: { es: "Barra de tareas", en: "Taskbar" },
+      minimized: { es: "minimizada", en: "minimized" },
+      active: { es: "activa", en: "active" },
+      tray: { es: "Área de notificación", en: "Notification area" },
+      language: { es: "Cambiar idioma", en: "Change language" },
+      sound: { es: "Sonido", en: "Sound" },
+      screenEffect: { es: "Efecto de pantalla antigua", en: "Old screen effect" },
+      assistant: { es: "Asistente ED", en: "ED assistant" },
+      /** aria-label de `<time>`; `{date}` y `{time}` ya formateados. */
+      clock: { es: "{date}, {time}", en: "{date}, {time}" },
+      clockPlaceholder: { es: "--:--", en: "--:--" },
+    },
+    /** Menú contextual del escritorio (solo sobre el fondo). */
+    contextMenu: {
+      label: { es: "Menú del escritorio", en: "Desktop menu" },
+      resetWindows: { es: "Restablecer ventanas", en: "Reset windows" },
+      showDesktop: { es: "Mostrar escritorio", en: "Show desktop" },
+      screenEffect: { es: "Efecto de pantalla antigua", en: "Old screen effect" },
+      properties: { es: "Propiedades", en: "Properties" },
+      /** Menú contextual de un icono. */
+      open: { es: "Abrir", en: "Open" },
+    },
+    /** Ayuda de atajos (opt-in, Propiedades) y Propiedades. */
+    shortcuts: {
+      title: { es: "Atajos de teclado", en: "Keyboard shortcuts" },
+      optIn: { es: "Activar atajos de teclado", en: "Turn on keyboard shortcuts" },
+      optInHelp: {
+        es: "Desactivados por defecto. Usan Alt+Shift y la posición física de la tecla.",
+        en: "Off by default. They use Alt+Shift and the physical key position.",
+      },
+      /** `{key}` = tecla física, `{layoutKey}` = lo que imprime en la distribución actual. */
+      physicalKey: { es: "tecla {key}", en: "{key} key" },
+      openStart: { es: "Abrir el menú Inicio", en: "Open the Start menu" },
+      focusTaskbar: { es: "Ir a la barra de tareas", en: "Go to the taskbar" },
+      focusDesktop: { es: "Ir al escritorio", en: "Go to the desktop" },
+      cycleWindows: { es: "Cambiar entre ventanas", en: "Cycle through windows" },
+      closeWindow: { es: "Cerrar la ventana activa", en: "Close the active window" },
+      help: { es: "Mostrar esta ayuda", en: "Show this help" },
+      keyStart: { es: "Alt+Shift+S", en: "Alt+Shift+S" },
+      keyTaskbar: { es: "Alt+Shift+T", en: "Alt+Shift+T" },
+      keyDesktop: { es: "Alt+Shift+D", en: "Alt+Shift+D" },
+      keyCycle: { es: "Alt+Shift+↑ / ↓", en: "Alt+Shift+↑ / ↓" },
+      keyClose: { es: "Alt+Shift+W", en: "Alt+Shift+W" },
+      keyHelp: { es: "Alt+Shift+H", en: "Alt+Shift+H" },
+    },
+    settings: {
+      title: { es: "Propiedades", en: "Properties" },
+      appearance: { es: "Apariencia", en: "Appearance" },
+      resetWindows: { es: "Restablecer ventanas", en: "Reset windows" },
+      screenEffect: { es: "Efecto de pantalla antigua", en: "Old screen effect" },
+      sound: { es: "Sonido del sistema", en: "System sound" },
+      assistant: { es: "Mostrar al asistente ED", en: "Show the ED assistant" },
+      assistantCorner: { es: "Cambiar de esquina", en: "Change corner" },
+      corners: { es: "Esquinas del asistente", en: "Assistant corners" },
+      cornerTopLeft: { es: "Arriba a la izquierda", en: "Top left" },
+      cornerTopRight: { es: "Arriba a la derecha", en: "Top right" },
+      cornerBottomLeft: { es: "Abajo a la izquierda", en: "Bottom left" },
+      cornerBottomRight: { es: "Abajo a la derecha", en: "Bottom right" },
+    },
+    /** Anuncios sobrios (un único `role="status"`): solo acciones del usuario. */
+    announce: {
+      minimized: { es: "Ventana {title} minimizada", en: "Window {title} minimized" },
+      maximized: { es: "Ventana {title} maximizada", en: "Window {title} maximized" },
+      restored: { es: "Ventana {title} restaurada", en: "Window {title} restored" },
+      closed: { es: "Ventana {title} cerrada", en: "Window {title} closed" },
+      moveStart: { es: "Moviendo la ventana {title}", en: "Moving window {title}" },
+      moveEnd: { es: "Ventana {title} movida", en: "Window {title} moved" },
+      moveCancel: { es: "Movimiento cancelado", en: "Move cancelled" },
+      windowsReset: { es: "Ventanas restablecidas", en: "Windows reset" },
+      desktopShown: { es: "Escritorio visible", en: "Desktop shown" },
+      soundOn: { es: "Sonido activado", en: "Sound on" },
+      soundOff: { es: "Sonido desactivado", en: "Sound off" },
+      effectOn: { es: "Efecto de pantalla antigua activado", en: "Old screen effect on" },
+      effectOff: { es: "Efecto de pantalla antigua desactivado", en: "Old screen effect off" },
+      shortcutsOn: { es: "Atajos de teclado activados", en: "Keyboard shortcuts on" },
+      shortcutsOff: { es: "Atajos de teclado desactivados", en: "Keyboard shortcuts off" },
+      started: { es: "EDAV OS listo", en: "EDAV OS ready" },
+      /** Foco/selección al llegar por Atrás/Adelante o enlace. */
+      projectSelected: { es: "Proyecto {title} abierto", en: "Project {title} opened" },
+    },
+    /** Boot decorativo (aria-hidden). */
+    boot: {
+      starting: { es: "Iniciando EDAV OS", en: "Starting EDAV OS" },
+      skipHint: { es: "Cualquier clic o tecla omite el inicio", en: "Any click or key skips the startup" },
+    },
+    /** XP Pocket (≤ 768 px). */
+    pocket: {
+      back: { es: "Atrás", en: "Back" },
+      backTo: { es: "Atrás, a {title}", en: "Back to {title}" },
+      backToLauncher: { es: "Atrás, al lanzador", en: "Back to the launcher" },
+      close: { es: "Cerrar", en: "Close" },
+      launcher: { es: "Lanzador", en: "Launcher" },
+      startSheet: { es: "Menú Inicio a pantalla completa", en: "Full-screen Start menu" },
+      activeScreen: { es: "Pantalla activa: {title}", en: "Active screen: {title}" },
+    },
+    /** Galería de proyectos (app `projects`). */
+    gallery: {
+      title: { es: "Mi trabajo", en: "My Work" },
+      filtersLabel: { es: "Filtros", en: "Filters" },
+      kindGroup: { es: "Tipo", en: "Type" },
+      ownershipGroup: { es: "Autoría", en: "Authorship" },
+      all: { es: "Todos", en: "All" },
+      /** Recuento visible junto a cada filtro. */
+      filterCount: { es: "{label}, {count}", en: "{label}, {count}" },
+      results: { es: "{count} proyectos", en: "{count} projects" },
+      resultsOne: { es: "{count} proyecto", en: "{count} project" },
+      noResults: { es: "Ningún proyecto con estos filtros.", en: "No projects match these filters." },
+      clearFilters: { es: "Quitar filtros", en: "Clear filters" },
+      list: { es: "Proyectos", en: "Projects" },
+      select: { es: "Seleccionar {title}", en: "Select {title}" },
+      open: { es: "Abrir", en: "Open" },
+      openProject: { es: "Abrir el proyecto {title}", en: "Open project {title}" },
+      selectedDetail: { es: "{category}, {year}, {status}", en: "{category}, {year}, {status}" },
+      noCover: { es: "Sin portada", en: "No cover" },
+      coverAlt: { es: "Portada del proyecto {title}", en: "{title} project cover" },
+      /** Filtros de autoría (los de tipo salen de `projectKinds`). */
+      ownership: {
+        own: { es: "Propios", en: "Own" },
+        "co-created": { es: "Cocreados", en: "Co-created" },
+        collaboration: { es: "Colaboración", en: "Collaboration" },
+        client: { es: "Cliente", en: "Client" },
+      },
+    },
+    /** Ventana de proyecto y badge de crédito. */
+    project: {
+      credit: { es: "Créditos", en: "Credits" },
+      myRole: { es: "Mi rol", en: "My role" },
+      challenge: { es: "El reto", en: "The challenge" },
+      solution: { es: "La solución", en: "The solution" },
+      services: { es: "Servicios", en: "Services" },
+      technologies: { es: "Tecnologías", en: "Technologies" },
+      links: { es: "Enlaces del proyecto", en: "Project links" },
+      client: { es: "Cliente", en: "Client" },
+      location: { es: "Ubicación", en: "Location" },
+      year: { es: "Año", en: "Year" },
+      status: { es: "Estado", en: "Status" },
+      viewPublic: { es: "Ver página pública", en: "View public page" },
+      startProject: { es: "Iniciar un proyecto", en: "Start a project" },
+      badgeOwn: { es: "Proyecto propio", en: "Own project" },
+      badgeCoCreated: { es: "Cocreado con {name}", en: "Co-created with {name}" },
+      badgeCollaboration: { es: "Colaboración · {name}", en: "Collaboration · {name}" },
+      badgeClient: { es: "Proyecto para cliente", en: "Client project" },
+      /** Nombre accesible del enlace a GitHub de un coautor. */
+      githubLink: { es: "{name} en GitHub, se abre en una pestaña nueva", en: "{name} on GitHub, opens in a new tab" },
+      externalLink: { es: "{label}, se abre en una pestaña nueva", en: "{label}, opens in a new tab" },
+    },
+    /** Errores y estados vacíos. */
+    errors: {
+      projectNotFound: { es: "No se encontró este proyecto.", en: "This project could not be found." },
+      loadFailed: { es: "No se pudo cargar el contenido. Inténtalo de nuevo.", en: "The content could not be loaded. Please try again." },
+      retry: { es: "Reintentar", en: "Retry" },
+      appCrashed: { es: "Esta aplicación tuvo un problema.", en: "This app ran into a problem." },
+      closeApp: { es: "Cerrar aplicación", en: "Close app" },
+      unsavedTitle: { es: "Hay cambios sin enviar", en: "You have unsent changes" },
+      unsavedBody: { es: "Si cierras esta ventana, perderás lo que escribiste.", en: "If you close this window, you will lose what you wrote." },
+      unsavedKeep: { es: "Seguir editando", en: "Keep editing" },
+      unsavedDiscard: { es: "Cerrar y descartar", en: "Close and discard" },
+    },
+  },
 } as const satisfies CopyTree;
 
 export type Ui = typeof ui;

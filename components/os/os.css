@@ -1,0 +1,1061 @@
+/* ==========================================================================
+   EDAV OS: cromo "Luna" propio (Fase 4, paso O2)
+   --------------------------------------------------------------------------
+   CSS puro + SVG propios (components/os/icons, logo.tsx). Sin assets de
+   Microsoft, sin Tahoma ni Bliss. Todo cuelga de `.os-root`; no redefine
+   ningún token global, así que convive con app/desktop.css (overlay) hasta
+   el corte O9. Las clases llevan prefijo `xp-` (y `os-root`, `os-wallpaper`,
+   `os-windows`, `os-desktop-icons`) para no chocar con las `.os-*` del overlay.
+
+   Regla de este archivo: SIN hex, rgba, z-index numérico ni box-shadow literal
+   fuera del bloque de tokens `.os-root { ... }` (sección 1). Los colores salen
+   de los primitivos --c-luna-* / --c-ico-* de app/styles/tokens.css, las capas
+   de --z-os-* (misma hoja, escala §5.2).
+
+   MEDIDAS LUNA (referencia propia, ver docs/arquitectura-os.md §5.1)
+     barra de título .... 30 px (44 px con puntero grueso y en Pocket)
+     marco de ventana ... 3 px, esquinas superiores de 8 px
+     botones de ventana . objetivo 24x24 (44 en táctil); cara visible 21 px
+     barra de tareas .... 30 px (44 táctil, 48 Pocket)
+     menú Inicio ........ 380 px, cabecera 54 px, dos columnas
+     tiradores .......... zona de 24x24 (44 táctil), mitad dentro/mitad fuera
+   PALETA (primitivos, tokens.css): azul de título #0997ff→#0053ee→#0050ee→#0066ff
+     →#003dd7, marco #0831d9, diálogo #ece9d8, selección #316ac5, barra de tareas
+     #3168d5…#1941a5, Inicio verde #58b640/#2d8120, bandeja #0c59b9/#139ee9/#18b5f2.
+
+   CONTRATO DE ESTADO (lo pone el shell, O4)
+     .xp-window[data-active="true"]        ventana activa; sin él = inactiva
+     .xp-window[data-minimized="true"]     oculta (o atributo hidden)
+     .xp-window[data-maximized="true"]     llena .os-windows
+     .xp-window[data-interacting="true"]   arrastrando/redimensionando
+     .xp-task[data-active] / [data-minimized], [aria-pressed], [aria-expanded]
+     .os-root.is-crt  o  .xp-crt.is-on     efecto de pantalla antigua
+   Pocket (<= 768 px) lo resuelve este CSS ya en SSR (§5.4); el JS solo espeja.
+
+   Contraste (calculado, WCAG 2.x): texto >= 4,5:1 y componentes >= 3:1. Los
+   ratios están junto a cada token y resumidos en el informe del paso O2.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. TOKENS (único sitio con valores literales de color y sombra)
+   -------------------------------------------------------------------------- */
+.os-root {
+  /* Medidas */
+  --xp-titlebar-h: 30px;
+  --xp-taskbar-h: 30px;
+  --xp-frame-w: 3px;
+  --xp-ctl: 24px;               /* objetivo de los botones de ventana */
+  --xp-caption-face: 21px;      /* cara visible del botón */
+  --xp-hit: 24px;               /* objetivo mínimo (WCAG 2.5.8); 44 con puntero grueso */
+  --xp-icon-size: 32px;
+  --xp-start-w: 380px;
+  --xp-radius-window: var(--radius-sm);   /* 8 px */
+  --xp-radius-caption: 3px;
+  --xp-radius-btn: 3px;
+
+  /* Tipografía (Q13: pila del sistema; no se redistribuye ninguna fuente) */
+  --xp-font: "Segoe UI", "Noto Sans", "Helvetica Neue", Roboto, system-ui, -apple-system, Arial, sans-serif;
+  --xp-font-mono: ui-monospace, "Cascadia Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  --xp-text-xs: 11px; --xp-text-sm: 12px; --xp-text-md: 13px; --xp-text-lg: 15px;
+  --xp-text-shadow-title: 1px 1px var(--c-luna-title-shadow);
+
+  /* Color de texto y superficies */
+  --xp-ink: var(--c-luna-ink);                    /* 15,25:1 sobre #ece9d8; 18,61:1 sobre blanco */
+  --xp-ink-muted: var(--c-luna-ink-muted);        /* 7,07:1 sobre #ece9d8; 7,81:1 sobre #f5f4ea */
+  --xp-ink-disabled: var(--c-luna-ink-disabled);  /* 2,84:1: solo estado desactivado (exento) */
+  --xp-ink-link: var(--c-luna-link);              /* 7,43:1 sobre blanco */
+  --xp-ink-ok: var(--c-luna-ok);                  /* 6,60:1 sobre blanco */
+  --xp-ink-error: var(--c-luna-error);            /* 8,15:1 sobre blanco */
+  --xp-on-accent: var(--c-white);
+  --xp-face: var(--c-luna-face);
+  --xp-content-bg: var(--c-white);
+  --xp-select-bg: var(--c-luna-select);           /* blanco encima: 5,25:1 */
+
+  /* Bordes de componente: --xp-edge-strong >= 3:1 (3,44 sobre #ece9d8; 4,20 sobre blanco) */
+  --xp-edge: var(--c-luna-edge);                  /* decorativo (1,95:1): nunca único indicador */
+  --xp-edge-strong: var(--c-luna-edge-strong);
+  --xp-edge-btn: var(--c-luna-edge-btn);
+
+  /* Foco: doble anillo blanco + negro. Para cualquier color C,
+     max(contraste(C, #000), contraste(C, #fff)) >= 4,58:1, así que el anillo supera 3:1
+     sobre cualquier fondo del SO (claro, oscuro o degradado). Ver 1.4.11 / 2.4.11. */
+  --xp-focus-light: var(--c-white);
+  --xp-focus-dark: var(--c-black);
+  --xp-focus-halo: 0 0 0 2px var(--xp-focus-light);
+  --xp-focus-halo-inset: inset 0 0 0 2px var(--xp-focus-light);
+
+  /* Ventana */
+  --xp-titlebar-active: linear-gradient(180deg, var(--c-luna-title-0) 0, var(--c-luna-title-1) 8%, var(--c-luna-title-2) 40%, var(--c-luna-title-3) 88%, var(--c-luna-title-4) 100%);
+  --xp-titlebar-active-ink: var(--c-white);        /* >= 5,06:1 en la franja del texto (20-80 % de la altura) */
+  --xp-titlebar-inactive: linear-gradient(180deg, var(--c-luna-title-off-0), var(--c-luna-title-off-1) 50%, var(--c-luna-title-off-0));
+  --xp-titlebar-inactive-ink: var(--c-luna-title-off-ink);  /* 5,18:1 sobre #7a96df; 7,55:1 sobre #9db9eb */
+  --xp-frame: var(--c-luna-frame);
+  --xp-frame-off: var(--c-luna-frame-off);
+  --xp-shadow-window: 3px 5px 14px var(--c-luna-a-shadow-50);
+  --xp-shadow-window-inactive: 2px 3px 8px var(--c-luna-a-shadow-30);
+  --xp-shadow-menu: 3px 4px 8px var(--c-luna-a-shadow-50);
+  --xp-shadow-gloss: inset 0 1px var(--c-luna-a-gloss-60);
+
+  /* Botones de ventana */
+  --xp-cap-bg: linear-gradient(145deg, var(--c-luna-cap-0), var(--c-luna-cap-1) 30%, var(--c-luna-cap-2));
+  --xp-cap-bg-hover: linear-gradient(145deg, var(--c-luna-cap-0), var(--c-luna-cap-hover-1) 30%, var(--c-luna-cap-hover-2));
+  --xp-cap-bg-press: linear-gradient(145deg, var(--c-luna-cap-press-0), var(--c-luna-cap-press-1));
+  --xp-cap-ink: var(--c-luna-cap-ink);             /* glifo: 12,91:1 / 8,03:1 / 4,28:1 sobre las paradas (>= 3) */
+  --xp-cap-edge: var(--c-white);
+  --xp-close-bg: linear-gradient(145deg, var(--c-luna-close-0), var(--c-luna-close-1) 35%, var(--c-luna-close-2));
+  --xp-close-bg-hover: linear-gradient(145deg, var(--c-luna-close-hover-0), var(--c-luna-close-1) 35%, var(--c-luna-close-2));
+  --xp-close-bg-press: linear-gradient(145deg, var(--c-luna-close-press-0), var(--c-luna-close-2));
+  --xp-close-ink: var(--c-white);                  /* glifo >= 3,74:1 en 25-75 % de la cara */
+
+  /* Botón de diálogo / campo */
+  --xp-btn-bg: linear-gradient(180deg, var(--c-white), var(--c-luna-btn) 15%, var(--c-luna-face));
+  --xp-btn-bg-press: var(--c-luna-btn-pressed);
+  --xp-btn-edge-hover: var(--c-luna-hover-edge);
+  --xp-field-bg: var(--c-white);
+
+  /* Menús */
+  --xp-menu-bg: var(--c-white);
+  --xp-menu-rule: var(--c-luna-menu-rule);
+
+  /* Barra de tareas */
+  --xp-taskbar-bg: linear-gradient(180deg, var(--c-luna-task-0) 0, var(--c-luna-task-1) 3%, var(--c-luna-task-2) 6%, var(--c-luna-task-3) 10%, var(--c-luna-task-4) 90%, var(--c-luna-task-5) 100%);
+  --xp-taskbar-ink: var(--c-white);                /* 5,33:1 (#2663e0), 5,66:1 (#245edc) */
+  --xp-task-bg: var(--c-luna-task-btn);            /* blanco: 5,43:1 */
+  --xp-task-bg-hover: var(--c-luna-task-btn-hover);/* 4,60:1 */
+  --xp-task-bg-active: var(--c-luna-task-btn-active); /* 7,13:1 */
+  --xp-task-edge: var(--c-luna-task-btn-edge);
+  --xp-start-bg: linear-gradient(180deg, var(--c-luna-start-0) 0, var(--c-luna-start-1) 14%, var(--c-luna-start-1) 80%, var(--c-luna-start-2) 100%); /* blanco 4,92:1 */
+  --xp-start-bg-hover: linear-gradient(180deg, var(--c-luna-start-hover-0) 0, var(--c-luna-start-1) 20%, var(--c-luna-start-1) 80%, var(--c-luna-start-2) 100%);
+  --xp-start-bg-press: var(--c-luna-start-2);      /* 6,59:1 */
+  --xp-tray-bg: linear-gradient(180deg, var(--c-luna-tray-0) 0, var(--c-luna-tray-1) 6%, var(--c-luna-tray-2) 50%, var(--c-luna-tray-3) 94%, var(--c-luna-tray-0) 100%);
+  --xp-tray-ink: var(--c-luna-tray-ink);           /* 5,99:1 (#139ee9) a 7,54:1 (#18b5f2) */
+  --xp-tray-edge: var(--c-luna-tray-edge);
+
+  /* Menú Inicio */
+  --xp-start-head-bg: linear-gradient(180deg, var(--c-luna-menu-head-0), var(--c-luna-menu-head-1)); /* blanco 5,61 / 6,83:1 */
+  --xp-start-right-bg: var(--c-luna-menu-right);
+  --xp-start-right-ink: var(--c-luna-menu-right-ink);        /* 10,39:1 */
+  --xp-start-right-muted: var(--c-luna-menu-right-muted);    /* 8,02:1 */
+  --xp-sheet-scrim: var(--c-luna-a-sheet-scrim);
+
+  /* Globo de bandeja */
+  --xp-balloon-bg: var(--c-luna-balloon);          /* tinta 18,29:1 */
+
+  /* Escritorio */
+  --xp-wallpaper:
+    radial-gradient(ellipse 95% 52% at 18% 112%, var(--c-luna-hill-1) 0 64%, transparent 65%),
+    radial-gradient(ellipse 80% 44% at 88% 116%, var(--c-luna-hill-2) 0 64%, transparent 65%),
+    radial-gradient(ellipse 55% 7% at 76% 22%, var(--c-luna-a-cloud), transparent 70%),
+    radial-gradient(ellipse 40% 5% at 22% 32%, var(--c-luna-a-cloud), transparent 70%),
+    linear-gradient(180deg, var(--c-luna-sky-0), var(--c-luna-sky-1) 62%, var(--c-luna-sky-2));
+  --xp-icon-label-ink: var(--c-white);
+  --xp-icon-label-bg: var(--c-luna-a-scrim);       /* >= 5,57:1 sobre cualquier zona del fondo */
+  --xp-icon-label-selected-bg: var(--c-luna-select);
+  --xp-icon-hover-bg: var(--c-luna-a-hover-icon);
+  --xp-icon-label-shadow: 1px 1px var(--c-black);
+
+  /* Efecto de pantalla antigua (apagado por defecto; solo CSS estático) */
+  --xp-crt-lines: repeating-linear-gradient(0deg, var(--c-luna-a-crt-line) 0 1px, transparent 1px 3px);
+  --xp-crt-vignette: radial-gradient(ellipse at center, transparent 62%, var(--c-luna-a-crt-vignette) 100%);
+
+  /* Animación (se anulan con prefers-reduced-motion) */
+  --xp-dur: 120ms;
+  --xp-ease: ease-out;
+
+  /* Resumen de contexto del SO */
+  position: fixed;
+  inset: 0;
+  isolation: isolate;
+  overflow: hidden;
+  color: var(--xp-ink);
+  font: var(--xp-text-sm) / 1.35 var(--xp-font);
+  background: var(--xp-wallpaper);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Puntero grueso: objetivos de 44 px (A11Y-12, 2.5.8) */
+@media (pointer: coarse) {
+  .os-root {
+    --xp-hit: 44px;
+    --xp-ctl: 44px;
+    --xp-caption-face: 28px;
+    --xp-titlebar-h: 44px;
+    --xp-taskbar-h: 44px;
+    --xp-icon-size: 40px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   2. Base, escritorio y capas
+   -------------------------------------------------------------------------- */
+.os-root *,
+.os-root *::before,
+.os-root *::after { box-sizing: border-box; }
+
+.os-root :where(button, input, select, textarea) { font: inherit; color: inherit; }
+.os-root :where(button) { cursor: default; touch-action: manipulation; }
+
+.os-wallpaper {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-os-wallpaper);
+  background: var(--xp-wallpaper);
+}
+
+/* Iconos del escritorio: columnas de arriba abajo (escritorio); lanzador en rejilla (Pocket) */
+.os-desktop-icons {
+  position: absolute;
+  top: var(--space-5);
+  left: var(--space-5);
+  bottom: calc(var(--xp-taskbar-h) + var(--space-5));
+  z-index: var(--z-os-icons);
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: var(--space-4) var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.xp-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 84px;
+  min-height: var(--xp-hit);
+  padding: var(--space-2) var(--space-1);
+  border: 1px solid transparent;
+  border-radius: var(--xp-radius-btn);
+  background: transparent;
+  color: var(--xp-icon-label-ink);
+  text-align: center;
+}
+.xp-icon svg { width: var(--xp-icon-size); height: var(--xp-icon-size); flex: none; }
+.xp-icon__label {
+  max-width: 100%;
+  padding: 1px var(--space-2);
+  border-radius: 2px;
+  background: var(--xp-icon-label-bg);
+  color: var(--xp-icon-label-ink);
+  font-size: var(--xp-text-sm);
+  line-height: 1.25;
+  text-shadow: var(--xp-icon-label-shadow);
+  overflow-wrap: anywhere;
+}
+.xp-icon:hover { background: var(--xp-icon-hover-bg); }
+.xp-icon[aria-pressed="true"],
+.xp-icon[data-selected="true"],
+.xp-icon[aria-current="true"] { background: var(--xp-icon-hover-bg); }
+.xp-icon[aria-pressed="true"] .xp-icon__label,
+.xp-icon[data-selected="true"] .xp-icon__label,
+.xp-icon[aria-current="true"] .xp-icon__label { background: var(--xp-icon-label-selected-bg); text-shadow: none; }
+
+/* Capa de ventanas: contexto propio; termina encima de la barra de tareas (2.4.11) */
+.os-windows {
+  position: absolute;
+  inset: 0 0 var(--xp-taskbar-h) 0;
+  z-index: var(--z-os-windows);
+  isolation: isolate;
+  pointer-events: none;
+}
+
+/* Enlace de salto y utilidades */
+.xp-skip-link {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  z-index: var(--z-os-skip-link);
+  padding: var(--space-3) var(--space-5);
+  border: 1px solid var(--xp-edge-btn);
+  background: var(--xp-face);
+  color: var(--xp-ink);
+  font-weight: 700;
+  transform: translateY(-300%);
+}
+.xp-skip-link:focus { transform: none; }
+
+.xp-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --------------------------------------------------------------------------
+   3. Ventana Luna
+   -------------------------------------------------------------------------- */
+.xp-window {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 var(--xp-frame-w) var(--xp-frame-w);
+  border-radius: var(--xp-radius-window) var(--xp-radius-window) 0 0;
+  background: var(--xp-frame-off);
+  box-shadow: var(--xp-shadow-window-inactive);
+  color: var(--xp-ink);
+  font: var(--xp-text-sm) / 1.4 var(--xp-font);
+  pointer-events: auto;
+  animation: xp-window-in var(--xp-dur) var(--xp-ease) both;
+}
+.xp-window[data-active="true"] { background: var(--xp-frame); box-shadow: var(--xp-shadow-window); }
+.xp-window[data-minimized="true"],
+.xp-window[hidden] { display: none; }
+.xp-window[data-maximized="true"] {
+  /* El shell pone left/top/width/height inline: la ventana maximizada los ignora. */
+  inset: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  transform: none !important;
+  border-radius: 0;
+}
+.xp-window[data-maximized="true"] .xp-titlebar { border-radius: 0; }
+.xp-window[data-interacting="true"] { user-select: none; }
+.xp-window[data-interacting="true"] .xp-window__body { pointer-events: none; }
+
+.xp-titlebar {
+  position: relative;
+  z-index: var(--z-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+  height: var(--xp-titlebar-h);
+  margin: 0 calc(var(--xp-frame-w) * -1);
+  padding: 0 var(--space-3) 0 var(--space-3);
+  border-radius: var(--xp-radius-window) var(--xp-radius-window) 0 0;
+  background: var(--xp-titlebar-active);
+  color: var(--xp-titlebar-active-ink);
+  font-size: var(--xp-text-md);
+  font-weight: 700;
+  text-shadow: var(--xp-text-shadow-title);
+  user-select: none;
+  touch-action: none;
+}
+.xp-window:not([data-active="true"]) .xp-titlebar {
+  background: var(--xp-titlebar-inactive);
+  color: var(--xp-titlebar-inactive-ink);
+  text-shadow: none;
+}
+.xp-titlebar__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.xp-titlebar__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--xp-hit);
+  height: var(--xp-hit);
+  padding: 0;
+  border: 0;
+  border-radius: var(--xp-radius-caption);
+  background: transparent;
+  color: inherit;
+}
+.xp-titlebar__icon svg { width: 16px; height: 16px; }
+.xp-titlebar__controls { display: flex; align-items: center; gap: var(--space-1); flex: none; }
+
+/* Botón de Atrás: solo Pocket */
+.xp-back { display: none; }
+
+/* Botones de ventana: objetivo --xp-ctl, cara dibujada por ::before (21 px) */
+.xp-caption {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--xp-ctl);
+  height: var(--xp-ctl);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--xp-cap-ink);
+}
+.xp-caption::before {
+  content: "";
+  position: absolute;
+  inset: calc((var(--xp-ctl) - var(--xp-caption-face)) / 2);
+  border: 1px solid var(--xp-cap-edge);
+  border-radius: var(--xp-radius-caption);
+  background: var(--xp-cap-bg);
+  box-shadow: var(--xp-shadow-gloss);
+}
+.xp-caption svg { position: relative; width: 10px; height: 10px; }
+.xp-caption:hover::before { background: var(--xp-cap-bg-hover); }
+.xp-caption:active::before { background: var(--xp-cap-bg-press); }
+.xp-caption--close { color: var(--xp-close-ink); }
+.xp-caption--close::before { background: var(--xp-close-bg); }
+.xp-caption--close:hover::before { background: var(--xp-close-bg-hover); }
+.xp-caption--close:active::before { background: var(--xp-close-bg-press); }
+/* Ventana inactiva: caras más apagadas pero con el mismo glifo */
+.xp-window:not([data-active="true"]) .xp-caption::before { background: var(--xp-cap-bg-press); }
+.xp-window:not([data-active="true"]) .xp-caption--close::before { background: var(--xp-close-bg-press); }
+.xp-window:not([data-active="true"]) .xp-caption:hover::before { background: var(--xp-cap-bg-hover); }
+.xp-window:not([data-active="true"]) .xp-caption--close:hover::before { background: var(--xp-close-bg-hover); }
+
+.xp-window__body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--xp-content-bg);
+  color: var(--xp-ink);
+  font-size: var(--xp-text-md);
+}
+.xp-window__status {
+  flex: none;
+  padding: var(--space-2) var(--space-4);
+  background: var(--xp-face);
+  color: var(--xp-ink-muted);
+  font-size: var(--xp-text-xs);
+}
+
+@keyframes xp-window-in {
+  from { opacity: 0; transform: scale(.97); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Superficie de diálogo y controles reutilizables por las apps */
+.xp-surface { background: var(--xp-face); color: var(--xp-ink); }
+.xp-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-width: 75px;
+  min-height: var(--xp-hit);
+  padding: var(--space-2) var(--space-5);
+  border: 1px solid var(--xp-edge-btn);
+  border-radius: var(--xp-radius-btn);
+  background: var(--xp-btn-bg);
+  color: var(--xp-ink);
+}
+.xp-button:hover { border-color: var(--xp-btn-edge-hover); }
+.xp-button:active,
+.xp-button[aria-pressed="true"] { background: var(--xp-btn-bg-press); }
+.xp-button:disabled,
+.xp-button[aria-disabled="true"] { color: var(--xp-ink-disabled); border-color: var(--xp-edge-strong); }
+.xp-field {
+  min-height: var(--xp-hit);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--xp-edge-strong);
+  background: var(--xp-field-bg);
+  color: var(--xp-ink);
+}
+
+/* --------------------------------------------------------------------------
+   4. Tiradores de redimensionado (>= 24x24, mitad dentro y mitad fuera)
+   Decorativos para teclado (aria-hidden, sin tab stop; §3.1). Quedan por debajo
+   de la barra de título (z 2) para no tapar sus botones.
+   -------------------------------------------------------------------------- */
+.xp-resize {
+  position: absolute;
+  z-index: var(--z-1);
+  touch-action: none;
+}
+.xp-resize[data-dir="n"],
+.xp-resize[data-dir="s"] {
+  left: calc(var(--xp-hit) / 2);
+  right: calc(var(--xp-hit) / 2);
+  height: var(--xp-hit);
+  cursor: ns-resize;
+}
+.xp-resize[data-dir="e"],
+.xp-resize[data-dir="w"] {
+  top: calc(var(--xp-hit) / 2);
+  bottom: calc(var(--xp-hit) / 2);
+  width: var(--xp-hit);
+  cursor: ew-resize;
+}
+.xp-resize[data-dir="ne"],
+.xp-resize[data-dir="nw"],
+.xp-resize[data-dir="se"],
+.xp-resize[data-dir="sw"] { width: var(--xp-hit); height: var(--xp-hit); }
+.xp-resize[data-dir="n"],
+.xp-resize[data-dir="ne"],
+.xp-resize[data-dir="nw"] { top: calc(var(--xp-hit) / -2); }
+.xp-resize[data-dir="s"],
+.xp-resize[data-dir="se"],
+.xp-resize[data-dir="sw"] { bottom: calc(var(--xp-hit) / -2); }
+.xp-resize[data-dir="e"],
+.xp-resize[data-dir="ne"],
+.xp-resize[data-dir="se"] { right: calc(var(--xp-hit) / -2); }
+.xp-resize[data-dir="w"],
+.xp-resize[data-dir="nw"],
+.xp-resize[data-dir="sw"] { left: calc(var(--xp-hit) / -2); }
+.xp-resize[data-dir="ne"], .xp-resize[data-dir="sw"] { cursor: nesw-resize; }
+.xp-resize[data-dir="nw"], .xp-resize[data-dir="se"] { cursor: nwse-resize; }
+/* Agarre visible en la esquina inferior derecha (decorativo) */
+.xp-resize[data-dir="se"]::after {
+  content: "";
+  position: absolute;
+  right: calc(var(--xp-hit) / 2 - 1px);
+  bottom: calc(var(--xp-hit) / 2 - 1px);
+  width: 10px;
+  height: 10px;
+  background: repeating-linear-gradient(135deg, transparent 0 2px, var(--xp-face) 2px 3px);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  pointer-events: none;
+}
+.xp-window[data-maximized="true"] .xp-resize { display: none; }
+
+/* --------------------------------------------------------------------------
+   5. Panel de pasos "Mover y cambiar tamaño" (un solo puntero, WCAG 2.5.7)
+   Ancla: dentro de .xp-window (position: absolute) o suelto en .os-root.
+   -------------------------------------------------------------------------- */
+.xp-nudge {
+  position: absolute;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: var(--z-3);
+  display: grid;
+  gap: var(--space-4);
+  width: max-content;
+  max-width: calc(100% - var(--space-6));
+  padding: var(--space-4);
+  border: 1px solid var(--xp-edge-btn);
+  border-radius: var(--xp-radius-window);
+  background: var(--xp-face);
+  box-shadow: var(--xp-shadow-menu);
+  color: var(--xp-ink);
+}
+.xp-nudge__title { margin: 0; font-size: var(--xp-text-md); font-weight: 700; }
+.xp-nudge__groups { display: flex; flex-wrap: wrap; gap: var(--space-5); }
+.xp-nudge__group { display: grid; gap: var(--space-3); margin: 0; padding: 0; border: 0; }
+.xp-nudge__group > legend { padding: 0; font-weight: 700; }
+.xp-nudge__dpad {
+  display: grid;
+  grid-template-columns: repeat(3, var(--xp-hit));
+  grid-template-rows: repeat(3, var(--xp-hit));
+  gap: var(--space-2);
+}
+.xp-nudge__dpad > [data-dir="up"] { grid-area: 1 / 2; }
+.xp-nudge__dpad > [data-dir="left"] { grid-area: 2 / 1; }
+.xp-nudge__dpad > [data-dir="right"] { grid-area: 2 / 3; }
+.xp-nudge__dpad > [data-dir="down"] { grid-area: 3 / 2; }
+.xp-nudge__dpad > [data-dir="step"] { grid-area: 2 / 2; }
+.xp-nudge__row { display: flex; align-items: center; gap: var(--space-3); }
+.xp-nudge__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--xp-hit);
+  min-height: var(--xp-hit);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--xp-edge-btn);
+  border-radius: var(--xp-radius-btn);
+  background: var(--xp-btn-bg);
+  color: var(--xp-ink);
+}
+.xp-nudge__btn:hover { border-color: var(--xp-btn-edge-hover); }
+.xp-nudge__btn:active,
+.xp-nudge__btn[aria-pressed="true"] { background: var(--xp-btn-bg-press); }
+.xp-nudge__status { margin: 0; color: var(--xp-ink-muted); font-size: var(--xp-text-xs); }
+.xp-nudge__actions { display: flex; justify-content: flex-end; gap: var(--space-3); }
+
+/* --------------------------------------------------------------------------
+   6. Menús (sistema, contextual, "Todos los programas")
+   -------------------------------------------------------------------------- */
+.xp-menu {
+  position: absolute;
+  z-index: var(--z-os-menu);
+  min-width: 190px;
+  margin: 0;
+  padding: var(--space-1);
+  border: 1px solid var(--xp-edge-strong);
+  background: var(--xp-menu-bg);
+  box-shadow: var(--xp-shadow-menu);
+  color: var(--xp-ink);
+  font-size: var(--xp-text-md);
+  list-style: none;
+  animation: xp-menu-in var(--xp-dur) var(--xp-ease) both;
+}
+.xp-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  min-height: var(--xp-hit);
+  padding: var(--space-2) var(--space-5) var(--space-2) var(--space-4);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.xp-menu__item svg { width: 16px; height: 16px; flex: none; }
+.xp-menu__kbd { margin-left: auto; padding-left: var(--space-6); color: inherit; font-size: var(--xp-text-xs); }
+.xp-menu__item:hover,
+.xp-menu__item[data-highlighted="true"],
+.xp-menu__item[aria-current="true"] { background: var(--xp-select-bg); color: var(--xp-on-accent); }
+.xp-menu__item[aria-disabled="true"],
+.xp-menu__item:disabled { color: var(--xp-ink-disabled); background: transparent; }
+.xp-menu__sep { height: 1px; margin: var(--space-2) var(--space-3); background: var(--xp-menu-rule); }
+
+@keyframes xp-menu-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* --------------------------------------------------------------------------
+   7. Barra de tareas, Inicio, bandeja
+   -------------------------------------------------------------------------- */
+.xp-taskbar {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: var(--z-os-taskbar);
+  display: flex;
+  align-items: stretch;
+  height: var(--xp-taskbar-h);
+  background: var(--xp-taskbar-bg);
+  color: var(--xp-taskbar-ink);
+  font-size: var(--xp-text-sm);
+}
+.xp-taskbar__tasks {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  overflow: hidden;
+}
+
+.xp-start-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: none;
+  min-width: 90px;
+  margin-right: var(--space-3);
+  padding: 0 var(--space-7) 0 var(--space-4);
+  border: 0;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: var(--xp-start-bg);
+  color: var(--xp-on-accent);
+  font-size: 17px;
+  font-style: italic;
+  font-weight: 700;
+  text-shadow: var(--xp-text-shadow-title);
+}
+.xp-start-button svg { width: 22px; height: 22px; flex: none; }
+.xp-start-button:hover { background: var(--xp-start-bg-hover); }
+.xp-start-button:active,
+.xp-start-button[aria-expanded="true"] { background: var(--xp-start-bg-press); }
+
+.xp-task {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 0 1 160px;
+  min-width: 44px;
+  height: 100%;
+  max-height: calc(var(--xp-taskbar-h) - var(--space-3));
+  min-height: var(--xp-hit);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--c-luna-task-btn-edge);
+  border-radius: var(--xp-radius-btn);
+  background: var(--xp-task-bg);
+  color: var(--xp-taskbar-ink);
+  font-size: var(--xp-text-sm);
+  text-align: left;
+}
+.xp-task svg { width: 16px; height: 16px; flex: none; }
+.xp-task__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.xp-task:hover { background: var(--xp-task-bg-hover); }
+.xp-task[data-active="true"],
+.xp-task[aria-pressed="true"] { background: var(--xp-task-bg-active); border-color: var(--xp-focus-dark); font-weight: 700; }
+/* Minimizada: línea punteada en vez de solo color */
+.xp-task[data-minimized="true"] { border-style: dashed; }
+
+.xp-tray {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+  padding: 0 var(--space-5) 0 var(--space-4);
+  border-left: 1px solid var(--xp-tray-edge);
+  background: var(--xp-tray-bg);
+  color: var(--xp-tray-ink);
+  font-size: var(--xp-text-sm);
+}
+.xp-tray__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--xp-hit);
+  min-height: var(--xp-hit);
+  padding: 0 var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--xp-radius-btn);
+  background: transparent;
+  color: inherit;
+}
+.xp-tray__btn svg { width: 16px; height: 16px; }
+.xp-tray__btn:hover { background: var(--c-luna-a-gloss-30); }
+.xp-tray__btn[aria-pressed="true"] { background: var(--c-luna-a-gloss-45); border-color: var(--xp-tray-ink); }
+.xp-tray__clock { padding: 0 var(--space-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Globo de bandeja (cola única de avisos) */
+.xp-balloon {
+  position: absolute;
+  right: var(--space-4);
+  bottom: calc(var(--xp-taskbar-h) + var(--space-5));
+  z-index: var(--z-os-balloon);
+  max-width: min(300px, calc(100% - var(--space-8)));
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--xp-ink);
+  border-radius: var(--radius-sm);
+  background: var(--xp-balloon-bg);
+  box-shadow: var(--xp-shadow-menu);
+  color: var(--xp-ink);
+  font-size: var(--xp-text-sm);
+  animation: xp-menu-in var(--xp-dur) var(--xp-ease) both;
+}
+.xp-balloon__title { display: block; margin-bottom: var(--space-2); font-weight: 700; }
+
+/* Menú Inicio (Disclosure: botón con aria-expanded + panel) */
+.xp-start {
+  position: absolute;
+  left: 0;
+  bottom: var(--xp-taskbar-h);
+  z-index: var(--z-os-menu);
+  display: flex;
+  flex-direction: column;
+  width: var(--xp-start-w);
+  max-width: 100%;
+  max-height: calc(100% - var(--xp-taskbar-h));
+  border: var(--xp-frame-w) solid var(--xp-frame);
+  border-bottom: 0;
+  border-radius: var(--xp-radius-window) var(--xp-radius-window) 0 0;
+  background: var(--xp-content-bg);
+  box-shadow: var(--xp-shadow-window);
+  color: var(--xp-ink);
+  font-size: var(--xp-text-md);
+  animation: xp-menu-in var(--xp-dur) var(--xp-ease) both;
+}
+.xp-start[hidden] { display: none; }
+.xp-start__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  flex: none;
+  height: 54px;
+  padding: 0 var(--space-5);
+  background: var(--xp-start-head-bg);
+  color: var(--xp-on-accent);
+  text-shadow: var(--xp-text-shadow-title);
+}
+.xp-start__avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border: 2px solid var(--xp-cap-edge);
+  border-radius: var(--xp-radius-btn);
+  background: var(--xp-content-bg);
+}
+.xp-start__avatar svg { width: 32px; height: 32px; }
+.xp-start__user { font-size: var(--xp-text-lg); font-weight: 700; }
+.xp-start__body { display: grid; grid-template-columns: 1fr 1fr; flex: 1; min-height: 0; overflow: auto; }
+.xp-start__left { padding: var(--space-3); background: var(--xp-content-bg); color: var(--xp-ink); }
+.xp-start__right { padding: var(--space-3); background: var(--xp-start-right-bg); color: var(--xp-start-right-ink); }
+.xp-start__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  min-height: var(--xp-hit);
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.xp-start__left .xp-start__item { min-height: 44px; }
+.xp-start__item svg { width: 32px; height: 32px; flex: none; }
+.xp-start__right .xp-start__item svg { width: 24px; height: 24px; }
+.xp-start__item-title { display: block; font-weight: 700; }
+.xp-start__item-sub { display: block; color: var(--xp-ink-muted); font-size: var(--xp-text-xs); }
+.xp-start__right .xp-start__item-sub { color: var(--xp-start-right-muted); }
+.xp-start__item:hover,
+.xp-start__item[data-highlighted="true"] { background: var(--xp-select-bg); color: var(--xp-on-accent); }
+.xp-start__item:hover .xp-start__item-sub,
+.xp-start__item[data-highlighted="true"] .xp-start__item-sub { color: inherit; }
+.xp-start__rule { height: 1px; margin: var(--space-3) var(--space-3); background: var(--xp-menu-rule); }
+.xp-start__all {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--xp-hit);
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+}
+.xp-start__all:hover { background: var(--xp-select-bg); color: var(--xp-on-accent); }
+.xp-start__all svg { width: 12px; height: 12px; transition: transform var(--xp-dur) var(--xp-ease); }
+.xp-start__all[aria-expanded="true"] svg { transform: rotate(90deg); }
+.xp-start__allpanel { padding-left: var(--space-5); }
+.xp-start__allpanel[hidden] { display: none; }
+.xp-start__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-4);
+  flex: none;
+  padding: var(--space-3) var(--space-5);
+  background: var(--xp-start-head-bg);
+  color: var(--xp-on-accent);
+}
+.xp-start__foot .xp-start__item { width: auto; min-height: var(--xp-hit); }
+.xp-start__foot .xp-start__item:hover { background: var(--xp-task-bg-active); }
+
+/* Marca "EDAV OS" (logo propio en logo.tsx) */
+.xp-brand { display: inline-flex; align-items: center; gap: var(--space-3); font-weight: 700; letter-spacing: .02em; }
+.xp-brand svg { flex: none; }
+
+/* --------------------------------------------------------------------------
+   8. Foco visible (A11Y-03): anillo doble blanco + negro, siempre.
+   Tiene la especificidad más alta de la hoja a propósito (.os-root.os-root:
+   0,3,0): ningún estado :hover/:active de arriba toca box-shadow ni outline.
+   Variante interior para elementos pegados al borde o dentro de contenedores
+   con overflow.
+   -------------------------------------------------------------------------- */
+.os-root.os-root :focus-visible {
+  outline: 2px solid var(--xp-focus-dark);
+  outline-offset: 2px;
+  box-shadow: var(--xp-focus-halo);
+}
+.os-root.os-root :is(.xp-menu__item, .xp-start__item, .xp-start__all, .xp-task, .xp-tray__btn,
+  .xp-start-button, .xp-icon, .xp-caption, .xp-titlebar__icon, .xp-back):focus-visible {
+  outline-offset: -4px;
+  box-shadow: var(--xp-focus-halo-inset);
+}
+/* Un solo anillo (el exterior) sobre el degradado del botón de ventana: más legible */
+.os-root.os-root .xp-caption:focus-visible { outline-offset: 0; box-shadow: var(--xp-focus-halo); }
+
+/* --------------------------------------------------------------------------
+   9. Efecto de pantalla antigua (CRT): apagado, solo CSS estático (Q5)
+   Conmutable con .is-crt en .os-root o .is-on en .xp-crt. Sin WebGL ni animación.
+   Con él encendido las líneas oscurecen <= 8 % (texto y fondo por igual): el peor par,
+   blanco sobre el verde de Inicio, baja de 4,92 a 4,70:1 y el título activo de 5,06
+   a 4,63:1 (siguen >= 4,5). Opcional y apagado por defecto.
+   -------------------------------------------------------------------------- */
+.xp-crt {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-os-effect);
+  display: none;
+  background: var(--xp-crt-lines), var(--xp-crt-vignette);
+  pointer-events: none;
+}
+.xp-crt.is-on,
+.os-root.is-crt .xp-crt { display: block; }
+
+/* --------------------------------------------------------------------------
+   10. "XP Pocket" (<= 768 px): lanzador, una pantalla activa, hoja de Inicio
+   (UI-05, UX-05). Se resuelve en CSS ya en SSR; el JS solo espeja el estado.
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .os-root {
+    --xp-taskbar-h: 48px;
+    --xp-titlebar-h: 44px;
+    --xp-hit: 44px;
+    --xp-ctl: 44px;
+    --xp-caption-face: 30px;
+    --xp-icon-size: 48px;
+    --xp-text-sm: 13px;
+    --xp-text-md: 15px;
+    --xp-start-w: 100%;
+  }
+
+  /* Escritorio = lanzador en rejilla de 4 columnas */
+  .os-desktop-icons {
+    inset: 0 0 var(--xp-taskbar-h) 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-rows: min-content;
+    align-content: start;
+    gap: var(--space-6) var(--space-3);
+    padding: var(--space-7) var(--space-4);
+    overflow-y: auto;
+  }
+  .xp-icon { width: 100%; min-height: 44px; }
+
+  /* Una pantalla activa a pantalla completa; el resto, fuera */
+  .os-root .xp-window {
+    position: fixed !important;
+    inset: 0 0 var(--xp-taskbar-h) 0 !important;
+    width: auto !important;
+    height: auto !important;
+    transform: none !important;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    animation: none;
+  }
+  .os-root .xp-window:not([data-active="true"]) { display: none; }
+  .os-root .xp-window .xp-titlebar {
+    margin: 0;
+    padding: 0 var(--space-3);
+    border-radius: 0;
+    background: var(--xp-titlebar-active);
+    color: var(--xp-titlebar-active-ink);
+    text-shadow: var(--xp-text-shadow-title);
+    font-size: var(--xp-text-lg);
+  }
+  .os-root .xp-window .xp-caption::before { background: var(--xp-cap-bg); }
+  .os-root .xp-window .xp-caption--close::before { background: var(--xp-close-bg); }
+  .xp-titlebar__icon,
+  .xp-caption--min,
+  .xp-caption--max,
+  .xp-resize { display: none; }
+  .xp-back {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex: none;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 var(--space-4) 0 var(--space-3);
+    border: 1px solid var(--xp-cap-edge);
+    border-radius: var(--xp-radius-btn);
+    background: var(--c-luna-a-darken-25);
+    color: var(--xp-on-accent);
+    font-size: var(--xp-text-md);
+    font-weight: 700;
+    text-shadow: var(--xp-text-shadow-title);
+  }
+  .xp-back svg { width: 14px; height: 14px; }
+
+  /* Barra de tareas de 48 px: Inicio (solo logo), título activo y reloj */
+  .xp-start-button { min-width: 64px; padding: 0 var(--space-5); }
+  .xp-start-button__label { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .xp-task:not([data-active="true"]) { display: none; }
+  .xp-task { flex: 1 1 auto; max-height: none; }
+  .xp-tray__btn--desktop-only { display: none; }
+
+  /* Hoja de Inicio a pantalla completa, columnas apiladas */
+  .xp-start {
+    position: fixed;
+    inset: 0 0 var(--xp-taskbar-h) 0;
+    width: auto;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    animation: none;
+  }
+  .xp-start__body { grid-template-columns: 1fr; }
+  .xp-start__item { min-height: 48px; }
+
+  /* Globo, nudge y menús dentro de la pantalla */
+  .xp-balloon { left: var(--space-4); max-width: none; }
+  .xp-nudge { left: var(--space-4); right: var(--space-4); width: auto; }
+
+  /* Sin efecto de pantalla antigua en Pocket */
+  .os-root.os-root .xp-crt { display: none; }
+}
+
+/* --------------------------------------------------------------------------
+   11. Preferencias del usuario
+   -------------------------------------------------------------------------- */
+/* Movimiento: sin animaciones ni transiciones (el !important es deliberado: es el
+   interruptor general de movimiento, debe ganar a cualquier regla). */
+@media (prefers-reduced-motion: reduce) {
+  .os-root *,
+  .os-root *::before,
+  .os-root *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Contraste alto: color plano, bordes sólidos de tinta, sin brillo ni degradados de texto */
+@media (prefers-contrast: more) {
+  .os-root {
+    --xp-wallpaper: linear-gradient(180deg, var(--c-luna-sky-0), var(--c-luna-sky-0));
+    --xp-titlebar-active: var(--c-luna-title-2);
+    --xp-titlebar-inactive: var(--c-luna-title-off-1);
+    --xp-text-shadow-title: none;
+    --xp-taskbar-bg: var(--c-luna-task-4);
+    --xp-start-bg: var(--c-luna-start-1);
+    --xp-tray-bg: var(--c-luna-tray-2);
+    --xp-edge: var(--xp-ink);
+    --xp-edge-strong: var(--xp-ink);
+    --xp-shadow-gloss: none;
+    --xp-icon-label-bg: var(--c-black);
+    --xp-task-bg: var(--c-luna-task-btn-active);
+    --xp-task-bg-hover: var(--c-luna-task-btn-active);
+    --xp-start-head-bg: var(--c-luna-menu-head-1);
+  }
+  .xp-window,
+  .xp-menu,
+  .xp-start,
+  .xp-nudge,
+  .xp-balloon { border: 2px solid var(--xp-ink); }
+  .xp-start { border-bottom: 0; }
+  .xp-button, .xp-field, .xp-nudge__btn { border-width: 2px; border-color: var(--xp-ink); }
+  .xp-caption::before { border-color: var(--xp-ink); }
+  .xp-task { border-color: var(--xp-taskbar-ink); }
+  .xp-crt { display: none !important; }
+}
+
+/* Colores forzados (Windows Contraste alto): sistema de colores, sin fondos decorativos.
+   Los iconos SVG conservan su color (decorativos); los glifos de sistema usan currentColor. */
+@media (forced-colors: active) {
+  .os-root { background: Canvas; color: CanvasText; }
+  .os-wallpaper { background: Canvas; }
+  .xp-window { border: 1px solid CanvasText; background: Canvas; box-shadow: none; }
+  .xp-window[data-active="true"] { border-color: Highlight; }
+  .xp-titlebar { background: ButtonFace; color: ButtonText; border-bottom: 1px solid CanvasText; text-shadow: none; }
+  .xp-window[data-active="true"] .xp-titlebar { background: Highlight; color: HighlightText; }
+  .xp-window:not([data-active="true"]) .xp-titlebar { background: ButtonFace; color: GrayText; }
+  .xp-caption { color: ButtonText; forced-color-adjust: none; }
+  .xp-caption::before { background: ButtonFace; border: 1px solid ButtonText; box-shadow: none; }
+  .xp-caption--close { color: ButtonText; }
+  .xp-window__body { background: Canvas; color: CanvasText; }
+  .xp-button, .xp-field, .xp-nudge__btn { border: 1px solid ButtonText; background: ButtonFace; color: ButtonText; }
+  .xp-button:disabled, .xp-button[aria-disabled="true"] { color: GrayText; border-color: GrayText; }
+  .xp-menu, .xp-start, .xp-nudge, .xp-balloon { border: 1px solid CanvasText; background: Canvas; color: CanvasText; box-shadow: none; }
+  .xp-start__head, .xp-start__foot { background: Highlight; color: HighlightText; text-shadow: none; }
+  .xp-start__left, .xp-start__right { background: Canvas; color: CanvasText; }
+  .xp-menu__item:hover, .xp-menu__item[data-highlighted="true"],
+  .xp-start__item:hover, .xp-start__item[data-highlighted="true"],
+  .xp-start__all:hover { background: Highlight; color: HighlightText; }
+  .xp-start__item-sub, .xp-start__right .xp-start__item-sub { color: inherit; }
+  .xp-taskbar, .xp-tray { background: ButtonFace; color: ButtonText; border-top: 1px solid CanvasText; }
+  .xp-start-button { background: ButtonFace; color: ButtonText; border: 1px solid ButtonText; text-shadow: none; }
+  .xp-task { background: ButtonFace; color: ButtonText; border: 1px solid ButtonText; }
+  .xp-task[data-active="true"], .xp-task[aria-pressed="true"] { background: Highlight; color: HighlightText; }
+  .xp-tray__btn[aria-pressed="true"] { background: Highlight; color: HighlightText; }
+  .xp-icon__label { background: Canvas; color: CanvasText; border: 1px solid CanvasText; text-shadow: none; }
+  .xp-icon[aria-pressed="true"] .xp-icon__label,
+  .xp-icon[data-selected="true"] .xp-icon__label { background: Highlight; color: HighlightText; }
+  .xp-back { background: ButtonFace; color: ButtonText; border-color: ButtonText; text-shadow: none; }
+  .xp-resize[data-dir="se"]::after { background: GrayText; }
+  .xp-crt { display: none !important; }
+  .os-root.os-root :focus-visible { outline: 2px solid Highlight; box-shadow: none; }
+  .os-root.os-root :is(.xp-menu__item, .xp-start__item, .xp-start__all, .xp-task, .xp-tray__btn,
+    .xp-start-button, .xp-icon, .xp-caption, .xp-titlebar__icon, .xp-back):focus-visible { outline-offset: -3px; box-shadow: none; }
+}

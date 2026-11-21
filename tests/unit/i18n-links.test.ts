@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { posts } from "@/content/posts";
-import { caseStudies } from "@/content/projects";
+import { caseStudies, osProjectSlugs } from "@/content/projects";
 import { href } from "@/content/routes";
 import { localizeInternalHref } from "@/lib/i18n/links";
 import { availablePages, languageIndex } from "@/lib/i18n/pages";
 
 describe("inventario de páginas (lib/i18n/pages.ts)", () => {
-  it("enumera las páginas estáticas, los casos de estudio y los posts, en ES y EN", () => {
+  it("enumera las páginas estáticas, los casos de estudio, los posts y el SO, en ES y EN", () => {
     const pages = availablePages();
-    expect(pages).toHaveLength(7 + caseStudies.length + posts.length);
+    expect(pages).toHaveLength(7 + caseStudies.length + posts.length + 1 + osProjectSlugs.length);
     for (const page of pages) expect(Object.keys(page.paths).sort()).toEqual(["en", "es"]);
   });
 

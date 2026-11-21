@@ -564,3 +564,23 @@ export function featuredCaseStudies(limit = 6): CaseStudy[] {
   const rest = caseStudies.filter((project) => !project.featured);
   return [...featured, ...rest].slice(0, limit);
 }
+
+/**
+ * Catálogo de proyectos autorizados para el SO (docs/arquitectura-os.md §1.4, DS10): ÚNICA fuente de
+ * `generateStaticParams`, `knownSlugs`, selector de idioma, galería y detalle de `/os/`.
+ * DECISIÓN DEL USUARIO (Q6): por defecto, los casos de estudio con portada. Publicar un proyecto sin
+ * portada en el SO es añadirlo aquí, a propósito (su ventana omite "Ver página pública").
+ */
+export const osProjectSlugs: readonly string[] = caseStudies.map(({ slug }) => slug);
+
+/** Proyectos del catálogo del SO, en el orden de `osProjectSlugs`. */
+export function osProjects(): CaseStudy[] {
+  return osProjectSlugs.flatMap((slug) => {
+    const project = getCaseStudy(slug);
+    return project ? [project] : [];
+  });
+}
+
+export function getOsProject(slug: string): CaseStudy | undefined {
+  return osProjectSlugs.includes(slug) ? getCaseStudy(slug) : undefined;
+}

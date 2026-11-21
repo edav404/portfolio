@@ -397,3 +397,101 @@
   --panel-border-override: 2px outset var(--c-white);
   --panel-shadow-override: 5px 6px rgba(0,0,60,.18);
 }
+
+/* ==========================================================================
+   EDAV OS (Fase 4, paso O2): primitivos Luna y escala z del SO.
+   --------------------------------------------------------------------------
+   Los primitivos son nombres nuevos (--c-luna-*, --c-ico-*): no pisan nada y los
+   lee components/os/os.css (tokens semánticos --xp-* bajo .os-root) y los SVG de
+   components/os/icons y logo.tsx. Paleta y medidas Luna "de referencia" (docs/
+   arquitectura-os.md §5.1), propias y sin assets de Microsoft.
+   La escala z (§5.2) vive bajo .os-root, NO en :root: --z-os-taskbar, --z-os-icons
+   y otros ya existen arriba con los valores del overlay actual (hasta el corte O9).
+   ========================================================================== */
+:root {
+  /* Barra de título activa (30 px): 0 / 8 / 40 / 88 / 100 % */
+  --c-luna-title-0: #0997ff; --c-luna-title-1: #0053ee; --c-luna-title-2: #0050ee;
+  --c-luna-title-3: #0066ff; --c-luna-title-4: #003dd7;
+  --c-luna-title-shadow: #0f1089;
+  --c-luna-frame: #0831d9;
+  /* Inactiva: el texto pasa a azul oscuro (el blanco de XP no llega a 4,5:1 sobre #9db9eb) */
+  --c-luna-title-off-0: #7a96df; --c-luna-title-off-1: #9db9eb; --c-luna-title-off-ink: #10215e;
+  --c-luna-frame-off: #7a96df;
+
+  /* Superficie de diálogo y tinta */
+  --c-luna-face: #ece9d8; --c-luna-btn: #f5f4ea; --c-luna-btn-pressed: #e3e0cf;
+  --c-luna-edge: #aca899; --c-luna-edge-strong: #7f7c6c; --c-luna-edge-btn: #003c74;
+  --c-luna-hover-edge: #e68b2c;
+  --c-luna-ink: #14130d; --c-luna-ink-muted: #4f4c3d; --c-luna-ink-disabled: #8d8a7c;
+  --c-luna-select: #316ac5;
+  --c-luna-ok: #1f6b1f; --c-luna-error: #a01010; --c-luna-link: #0b4cc2;
+
+  /* Botones de ventana: minimizar/maximizar (cara clara, glifo azul marino) y cerrar */
+  --c-luna-cap-0: #ffffff; --c-luna-cap-1: #b4cdfa; --c-luna-cap-2: #5b94f2;
+  --c-luna-cap-hover-1: #d3e2fd; --c-luna-cap-hover-2: #7da8f5;
+  --c-luna-cap-press-0: #8fb1f3; --c-luna-cap-press-1: #6c97ec;
+  --c-luna-cap-ink: #0b2a7a;
+  --c-luna-close-0: #ec8c6e; --c-luna-close-1: #d8461f; --c-luna-close-2: #b92f10;
+  --c-luna-close-hover-0: #f4a58b; --c-luna-close-press-0: #c4442a;
+
+  /* Barra de tareas (30 px) 0 / 3 / 6 / 10 / 90 / 100 % */
+  --c-luna-task-0: #3168d5; --c-luna-task-1: #4993e6; --c-luna-task-2: #2157d7;
+  --c-luna-task-3: #2663e0; --c-luna-task-4: #245edc; --c-luna-task-5: #1941a5;
+  --c-luna-task-btn: #2765d1; --c-luna-task-btn-hover: #2f72dc; --c-luna-task-btn-active: #1e52b7;
+  --c-luna-task-btn-edge: #1a4aa8;
+  /* Botón Inicio (verde): oscurecido respecto a XP para llegar a 4,5:1 con texto blanco */
+  --c-luna-start-0: #58b640; --c-luna-start-1: #2d8120; --c-luna-start-2: #236b19;
+  --c-luna-start-hover-0: #6ccb52;
+  /* Bandeja y su tinta */
+  --c-luna-tray-0: #0c59b9; --c-luna-tray-1: #139ee9; --c-luna-tray-2: #18b5f2;
+  --c-luna-tray-3: #139beb; --c-luna-tray-edge: #095bc9; --c-luna-tray-ink: #04153f;
+  /* Menú Inicio */
+  --c-luna-menu-head-0: #2a62cf; --c-luna-menu-head-1: #1d54bf;
+  --c-luna-menu-right: #d3e5fa; --c-luna-menu-right-ink: #0d2b6b;
+  --c-luna-menu-right-muted: #33405f; --c-luna-menu-rule: #9db9e8;
+  --c-luna-balloon: #ffffe1;
+
+  /* Escritorio: cielo y colinas propias */
+  --c-luna-sky-0: #2f7fe0; --c-luna-sky-1: #8fc8f5; --c-luna-sky-2: #dff0ff;
+  --c-luna-hill-1: #3f9a45; --c-luna-hill-2: #2f7d32; --c-luna-hill-3: #5fb957;
+
+  /* Transparencias (única fuente de rgba del SO) */
+  --c-luna-a-scrim: rgba(0,0,42,.6);          /* pastilla de etiqueta de icono */
+  --c-luna-a-shadow-30: rgba(0,0,0,.3);
+  --c-luna-a-shadow-50: rgba(0,0,0,.5);
+  --c-luna-a-gloss-60: rgba(255,255,255,.6);
+  --c-luna-a-gloss-30: rgba(255,255,255,.3);
+  --c-luna-a-gloss-45: rgba(255,255,255,.45);
+  --c-luna-a-darken-25: rgba(0,0,40,.25);
+  --c-luna-a-hover-icon: rgba(49,106,197,.45);
+  --c-luna-a-cloud: rgba(255,255,255,.55);
+  --c-luna-a-crt-line: rgba(0,0,0,.08);
+  --c-luna-a-crt-vignette: rgba(0,0,0,.18);
+  --c-luna-a-sheet-scrim: rgba(0,0,30,.45);
+
+  /* Iconos propios (SVG de components/os/icons): relleno plano + luz arriba a la izquierda */
+  --c-ico-line: #1c2b52;
+  --c-ico-yellow: #f6c433; --c-ico-yellow-dark: #d89a12; --c-ico-yellow-light: #ffe58a;
+  --c-ico-blue: #2f6fe0; --c-ico-blue-dark: #1b46a8; --c-ico-blue-light: #8fb8f7;
+  --c-ico-green: #3ea53a; --c-ico-green-dark: #26741f; --c-ico-green-light: #9ad98a;
+  --c-ico-red: #e0432f; --c-ico-red-dark: #a82a1a;
+  --c-ico-paper: #ffffff; --c-ico-paper-shade: #d9e2f2; --c-ico-gray: #8a94a8;
+  --c-ico-gray-light: #c9d0de; --c-ico-screen: #0d1b3d; --c-ico-screen-glow: #43d17a;
+  --c-ico-shadow: rgba(0,0,40,.28);
+}
+
+/* Escala z del SO (§5.2). Todo dentro de .os-root { isolation: isolate }. Las ventanas usan z inline
+   0…n-1 dentro de .os-windows (contexto propio). Creciente: wallpaper < icons < windows < assistant <
+   taskbar < menu < balloon < effect < modal < skip-link. */
+.os-root {
+  --z-os-wallpaper: 0;
+  --z-os-icons: 1;
+  --z-os-windows: 10;
+  --z-os-assistant: 20;
+  --z-os-taskbar: 30;
+  --z-os-menu: 40;
+  --z-os-balloon: 45;
+  --z-os-effect: 60;
+  --z-os-modal: 70;
+  --z-os-skip-link: 80;
+}
