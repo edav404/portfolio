@@ -7,8 +7,18 @@ out/
 npm-debug.log*
 .cloudflare-temp/
 
+# Generado por Next (dev/build/typegen); su contenido cambia según el modo, no se versiona (DX-03)
+next-env.d.ts
+
+# Configuración local de agentes y del editor (las skills de .claude/ sí se versionan)
+.claude/settings.local.json
+.agents/
+.vscode/
+coverage/
+
 # Material privado local (nunca se versiona)
 /private/
+/WordPress/
 
 # content/ solo versiona el código de contenido; cualquier otro archivo (artifacts, PDFs, notas) es privado
 /content/*
