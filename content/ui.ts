@@ -12,6 +12,7 @@
  * - Las líneas de la BIOS del escritorio van en inglés en ambos idiomas a propósito (estética retro).
  */
 import { projectKindLabels, projectOwnershipLabels, projectStatusLabels } from "./project-labels";
+import type { ContactErrorCode } from "./contact-errors";
 import type { L, Locale } from "./types";
 
 // --- Resolución --------------------------------------------------------------------------------
@@ -218,7 +219,7 @@ export const ui = {
       not_configured: { es: "El formulario aún no está conectado. Escríbeme por WhatsApp.", en: "The form isn't connected yet. Please message me on WhatsApp." },
       too_large: { es: "El mensaje es demasiado largo.", en: "The message is too long." },
       timeout: { es: "La solicitud tardó demasiado.", en: "The request took too long." },
-    },
+    } satisfies Record<ContactErrorCode, L>,
   },
 
   notFound: {
@@ -449,9 +450,8 @@ export const ui = {
 export type Ui = typeof ui;
 export type UiSection = keyof Ui;
 
-/** Código de error que devuelve `/api/contact` (`{ ok: false, code }`). */
-export type ContactErrorCode = keyof Ui["contactForm"]["errors"];
-export const contactErrorCodes = Object.keys(ui.contactForm.errors) as ContactErrorCode[];
+/** Códigos de `/api/contact` (listado único en content/contact-errors.ts). */
+export { contactErrorCodes, type ContactErrorCode } from "./contact-errors";
 
 /** Sección de microcopy resuelta para un idioma (para pasarla por props a componentes cliente). */
 export function uiFor<S extends UiSection>(locale: Locale, section: S): Resolved<Ui[S]> {

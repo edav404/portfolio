@@ -1,5 +1,5 @@
 import { resolveServiceSlug, serviceLabel } from "@/content/services";
-import type { ContactErrorCode } from "@/content/ui";
+import type { ContactErrorCode } from "@/content/contact-errors";
 import { describeSmtpError, EMAIL_RE, getMailConfig, sendMail } from "@/lib/server/mailer";
 import { clientKey, createRateLimiter } from "@/lib/server/rate-limit";
 import { isSameOriginRequest } from "@/lib/server/same-origin";
@@ -15,24 +15,27 @@ const BODY_TIMEOUT_MS = 10_000;
 const ALLOWED_TYPES = ["multipart/form-data", "application/x-www-form-urlencoded"];
 
 /**
- * Mensaje ES de cada código, solo por compatibilidad con clientes antiguos: el formulario actual
- * traduce `code` con `content/ui.ts` (`contactForm.errors`). Los códigos son `contactErrorCodes`.
+ * `message` en ES por compatibilidad con clientes antiguos: el texto exacto que devolvía cada rama
+ * antes de los códigos (P4). El formulario actual traduce `code` con `ui.contactForm.errors`.
  */
-const legacyMessages: Record<ContactErrorCode, string> = {
-  invalid: "Revisa el nombre, correo y mensaje antes de enviar.",
-  rate_limited: "Demasiados envíos. Intenta de nuevo en unos minutos.",
+const messages = {
   origin: "Origen no permitido.",
-  server: "No fue posible enviar el mensaje. Intenta por WhatsApp.",
-  not_configured: "El formulario aún no está conectado. Escríbeme por WhatsApp.",
-  too_large: "El mensaje es demasiado largo.",
+  rateLimitedIp: "Demasiados envíos. Intenta de nuevo en unos minutos.",
+  rateLimitedGlobal: "El formulario está recibiendo demasiados mensajes. Escríbeme por WhatsApp.",
+  unsupportedType: "Tipo de contenido no admitido.",
+  tooLarge: "El mensaje es demasiado largo.",
   timeout: "La solicitud tardó demasiado.",
-};
+  badRequest: "Solicitud inválida.",
+  invalidFields: "Revisa el nombre, correo y mensaje antes de enviar.",
+  notConfigured: "El formulario aún no está conectado. Escríbeme por WhatsApp.",
+  server: "No fue posible enviar el mensaje. Intenta por WhatsApp.",
+} as const;
 
 const noStore = { "Cache-Control": "no-store" };
 
 /** Error: `{ ok: false, code, message }`. */
-function fail(code: ContactErrorCode, status: number, headers?: Record<string, string>) {
-  return Response.json({ ok: false, code, message: legacyMessages[code] }, { status, headers: { ...noStore, ...headers } });
+function fail(code: ContactErrorCode, status: number, message: string, headers?: Record<string, string>) {
+  return Response.json({ ok: false, code, message }, { status, headers: { ...noStore, ...headers } });
 }
 
 /** Éxito: `{ ok: true, message }`. */
@@ -115,31 +118,31 @@ function logRejection(reason: keyof typeof rejections) {
 
 export async function POST(request: Request) {
   // Antes del rate limit: un POST cross-site no debe gastar la cuota de la IP del visitante.
-  if (!isSameOriginRequest(request)) return fail("origin", 403);
+  if (!isSameOriginRequest(request)) return fail("origin", 403, messages.origin);
 
   const key = clientKey(request);
   const { ok, retryAfter } = perIp.check(key);
   if (!ok) {
     logRejection("ip");
-    return fail("rate_limited", 429, { "Retry-After": String(retryAfter) });
+    return fail("rate_limited", 429, messages.rateLimitedIp, { "Retry-After": String(retryAfter) });
   }
 
   const contentType = request.headers.get("content-type") ?? "";
-  if (!ALLOWED_TYPES.some((type) => contentType.toLowerCase().startsWith(type))) return fail("invalid", 415);
-  if (Number(request.headers.get("content-length") || 0) > MAX_BODY_BYTES) return fail("too_large", 413);
+  if (!ALLOWED_TYPES.some((type) => contentType.toLowerCase().startsWith(type))) return fail("invalid", 415, messages.unsupportedType);
+  if (Number(request.headers.get("content-length") || 0) > MAX_BODY_BYTES) return fail("too_large", 413, messages.tooLarge);
 
   const raw = await readLimited(request, MAX_BODY_BYTES, BODY_TIMEOUT_MS);
   if (!raw.ok) {
-    if (raw.reason === "too-large") return fail("too_large", 413);
-    if (raw.reason === "timeout") return fail("timeout", 408);
-    return fail("invalid", 400);
+    if (raw.reason === "too-large") return fail("too_large", 413, messages.tooLarge);
+    if (raw.reason === "timeout") return fail("timeout", 408, messages.timeout);
+    return fail("invalid", 400, messages.badRequest);
   }
 
   let form: FormData;
   try {
     form = await new Request(request.url, { method: "POST", headers: { "content-type": contentType }, body: raw.body }).formData();
   } catch {
-    return fail("invalid", 400);
+    return fail("invalid", 400, messages.badRequest);
   }
 
   // Honeypot: los bots rellenan el campo oculto; respondemos éxito sin enviar.
@@ -153,16 +156,16 @@ export async function POST(request: Request) {
   const message = multiline(form, "message", 5_000);
 
   if (name.length < 2 || !EMAIL_RE.test(email) || message.length < 20) {
-    return fail("invalid", 422);
+    return fail("invalid", 422, messages.invalidFields);
   }
 
   const mail = getMailConfig();
-  if (!mail.ok) return fail("not_configured", 503);
+  if (!mail.ok) return fail("not_configured", 503, messages.notConfigured);
 
   const global = globalLimit.check(GLOBAL_KEY);
   if (!global.ok) {
     logRejection("global");
-    return fail("rate_limited", 429, { "Retry-After": String(global.retryAfter) });
+    return fail("rate_limited", 429, messages.rateLimitedGlobal, { "Retry-After": String(global.retryAfter) });
   }
 
   try {
@@ -176,7 +179,7 @@ export async function POST(request: Request) {
     // para que los reintentos en bucle sigan acotados).
     global.release();
     console.error(`[contact] Error SMTP: ${describeSmtpError(error)}`);
-    return fail("server", 502);
+    return fail("server", 502, messages.server);
   }
 
   return success("Mensaje enviado correctamente.");

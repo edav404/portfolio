@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { OTHER_SERVICE, otherServiceLabel, resolveServiceSlug, services } from "@/content/services";
+import { isContactErrorCode, type ContactErrorCode } from "@/content/contact-errors";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 type FormState = "idle" | "sending" | "success" | "error";
@@ -27,7 +28,7 @@ export type ContactFormCopy = {
 };
 
 /** Códigos que devuelve `/api/contact` (mismos que `contactErrorCodes` de content/ui.ts; lo comprueba un test). */
-export type ContactErrorCode = "invalid" | "rate_limited" | "origin" | "server" | "not_configured" | "too_large" | "timeout";
+export type { ContactErrorCode };
 
 function waitText(seconds: number, units: ContactFormCopy["waitUnits"]): string {
   if (seconds < 60) return seconds <= 1 ? units.second : units.seconds.replace("{n}", String(seconds));
@@ -59,7 +60,7 @@ export function ContactForm({ copy, defaultService }: ContactFormProps) {
       if (!response.ok) {
         const wait = response.status === 429 ? parseRetryAfter(response.headers.get("Retry-After")) : null;
         // El cliente traduce el código; el `message` de la API queda solo por compatibilidad.
-        const known = data.code && data.code in copy.errors ? copy.errors[data.code as ContactErrorCode] : null;
+        const known = isContactErrorCode(data.code) ? copy.errors[data.code] : null;
         throw new Error(wait !== null ? copy.rateLimitedWait.replace("{wait}", waitText(wait, copy.waitUnits)) : known ?? copy.generic);
       }
       setState("success");
