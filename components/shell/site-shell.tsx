@@ -2,6 +2,7 @@ import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { href } from "@/content/routes";
 import { cvHref } from "@/content/site";
+import { ThemeRoot } from "./theme-root";
 import type { Locale } from "@/content/types";
 import { uiFor } from "@/content/ui";
 
@@ -10,7 +11,8 @@ const navKeys = ["home", "projects", "services", "about", "blog", "now", "contac
 /**
  * Shell de las páginas públicas: cabecera, `<main>` y pie. Resuelve aquí (servidor) los textos y
  * enlaces de la cabecera, que es un componente cliente.
- * P5 añadirá aquí el wrapper `data-theme="classic"` (docs/arquitectura-rutas.md §2.1).
+ * Todo va dentro de `ThemeRoot` (`data-theme="classic"`, `data-page="home"` en la portada); el
+ * escritorio y su asistente son portales en <body> con `data-theme="xp"` (docs/arquitectura-rutas.md §2.1).
  */
 export function SiteShell({ locale, children }: { locale: Locale; children: React.ReactNode }) {
   const nav = uiFor(locale, "nav");
@@ -26,5 +28,5 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
     cvHref: cvHref[locale],
     links: navKeys.map((key) => ({ href: href(key, locale), label: nav[key] })),
   };
-  return <><Header {...header}/><main id="contenido">{children}</main><Footer locale={locale}/></>;
+  return <ThemeRoot homeHref={header.homeHref}><Header {...header}/><main id="contenido">{children}</main><Footer locale={locale}/></ThemeRoot>;
 }

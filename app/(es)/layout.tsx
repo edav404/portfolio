@@ -1,7 +1,6 @@
 import { Document } from "@/components/shell/document";
 import { rootMetadata, siteViewport } from "@/lib/metadata";
 import "../globals.css";
-import "../desktop.css";
 
 // Sin canonical ni openGraph: cada página los define completos con buildMetadata (D8).
 export const metadata = rootMetadata("es");

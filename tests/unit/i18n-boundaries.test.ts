@@ -73,8 +73,10 @@ describe("componentes cliente", () => {
 /** Fragmentos visibles permitidos en el JSX: marca y decoración (no son texto traducible). */
 const allowed = new Set(["ED", "404", "/", "·", "✦", "“", "©"]);
 
-function jsxLiterals(source: string): string[] {
+function jsxLiterals(code: string): string[] {
   const found: string[] = [];
+  // Sin comentarios de bloque ni de línea completa: pueden mencionar etiquetas (`<main>`, `<body>`).
+  const source = code.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   // Texto justo después de una etiqueta JSX de apertura o cierre y antes de la siguiente (sin llaves).
   for (const match of source.matchAll(/(?:<[A-Za-z][\w.]*(?:\s[^<>]*)?>|<>|<\/[\w.]*>)([^<>{}]*)(?=<)/g)) {
     const text = match[1].trim();

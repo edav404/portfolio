@@ -10,6 +10,8 @@ import { experienceSince } from "@/content/experience";
 import { profile, technologies } from "@/content/profile";
 import { caseStudies as projects, projectTitle } from "@/content/projects";
 import { cvHref } from "@/content/site";
+// El CSS del escritorio solo se descarga con este módulo (next/dynamic, ssr: false).
+import "@/app/desktop.css";
 import { CrtOverlay } from "./crt-overlay";
 import { DesktopIcon, type DesktopIconName, PixelLogo } from "./desktop-icons";
 import { RetroClippy, type ClippyState } from "./RetroClippy";
@@ -239,7 +241,13 @@ export function DesktopShell({ copy, onSwitchToStandard, skipBoot = false }: { c
   // Evita perder el foco cuando el botón que abrió el escritorio queda oculto o la BIOS desaparece.
   useEffect(() => { if (!booting) iconsRef.current?.querySelector("button")?.focus(); }, [booting]);
 
-  return <div className="desktop-os os-desktop" onClick={() => { setContext(null); }} onContextMenu={(event) => { event.preventDefault(); setContext({ x: event.clientX, y: event.clientY }); }}>
+  // Mientras el escritorio está montado: shell público oculto y sin scroll de fondo (globals.css).
+  useEffect(() => {
+    document.documentElement.setAttribute("data-os-open", "");
+    return () => document.documentElement.removeAttribute("data-os-open");
+  }, []);
+
+  return <div className="desktop-os os-desktop" data-theme="xp" onClick={() => { setContext(null); }} onContextMenu={(event) => { event.preventDefault(); setContext({ x: event.clientX, y: event.clientY }); }}>
     {booting && <BootScreen onFinish={finishBoot} onSwitchToStandard={onSwitchToStandard}/>}<CrtOverlay enabled={crt}/>
     {!booting && <RetroClippy state={clippyState} options={[{ label: "Ver proyectos", onSelect: () => openApp("projects") }, { label: "Contactar", onSelect: () => openApp("contact") }]}/>} 
     <div className="os-wallpaper" aria-hidden="true"><div className="os-wallpaper-sun"/><div className="os-wallpaper-grid"/><div className="os-wallpaper-word">EDAV<span>98</span></div><div className="os-wallpaper-ring ring-one"/><div className="os-wallpaper-ring ring-two"/></div>

@@ -177,7 +177,7 @@ export function RetroClippy({ state: forcedState, children, options = [] }: Retr
   if (!mounted) return null;
 
   return createPortal(
-    <div className="retro-clippy-portal" ref={boundsRef}>
+    <div className="retro-clippy-portal" data-theme="xp" ref={boundsRef}>
       {!assistantVisible ? <button className="retro-clippy-restore win-outset" type="button" onClick={() => { setAssistantVisible(true); setBubbleVisible(true); }} aria-label="Mostrar asistente ED">ED?</button> :
         <aside className="retro-clippy" ref={setNode} {...handlers} aria-label="Asistente ED" data-state={activeState}>
           {bubbleVisible && <div className="retro-clippy-bubble" role="status" aria-live="polite">

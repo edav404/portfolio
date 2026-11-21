@@ -14,6 +14,7 @@
 
 import dynamic from "next/dynamic";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { DesktopIcon } from "@/components/desktop/desktop-icons";
 import type { DesktopCopy } from "@/components/desktop/desktop-shell";
 
@@ -30,8 +31,9 @@ type DesktopControls = { open: () => void; preload: () => void; label: string };
 const DesktopContext = createContext<DesktopControls | null>(null);
 const LoadingText = createContext("");
 
+/** "Cargando…" dentro del portal: misma raíz temática que el escritorio. */
 function DesktopLoading() {
-  return <div className="loading-screen os-loading" role="status"><p>{useContext(LoadingText)}</p></div>;
+  return <div className="os-loading" data-theme="xp" role="status"><p>{useContext(LoadingText)}</p></div>;
 }
 
 const RETRO_PARAM = "retro";
@@ -51,15 +53,14 @@ export function PortfolioExperience({ copy, children }: { copy: ExperienceCopy; 
     returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setActive(true);
     setViewParam(RETRO_PARAM);
-    window.scrollTo({ top: 0, behavior: "auto" });
   }, []);
 
   const close = useCallback(() => {
     setActive(false);
     setSkipBoot(true);
     setViewParam(null);
-    // Devuelve el foco al botón que abrió el escritorio, ya visible de nuevo.
-    window.requestAnimationFrame(() => returnFocusRef.current?.focus());
+    // Devuelve el foco al botón que abrió el escritorio (la página no se movió: el scroll se conserva).
+    window.requestAnimationFrame(() => returnFocusRef.current?.focus({ preventScroll: true }));
   }, []);
 
   // Enlace profundo `/?view=retro`: se lee solo en el cliente y tras hidratar.
@@ -71,9 +72,12 @@ export function PortfolioExperience({ copy, children }: { copy: ExperienceCopy; 
 
   const controls: DesktopControls = { open, preload: () => void loadDesktop(), label: copy.open };
 
+  // El escritorio se monta en un portal en <body>, fuera del .theme-root del shell público: así lleva
+  // su propio tema (data-theme="xp") sin anidarlo. DesktopShell pone html[data-os-open] al montarse,
+  // que oculta el shell y bloquea el scroll del documento sin perder la posición.
   return <DesktopContext.Provider value={controls}><LoadingText.Provider value={copy.loading}>
-    <div hidden={active}>{children}</div>
-    {active && <DesktopShell copy={copy} skipBoot={skipBoot} onSwitchToStandard={close}/>}
+    {children}
+    {active && createPortal(<DesktopShell copy={copy} skipBoot={skipBoot} onSwitchToStandard={close}/>, document.body)}
   </LoadingText.Provider></DesktopContext.Provider>;
 }
 

@@ -1,17 +1,12 @@
 @import "./styles/theme-xp.css";
 /* EDAV Desktop: interfaz de SO en el navegador (tema xp).
    Todos los valores salen de app/styles/tokens.css y theme-xp.css; aquí no hay colores,
-   sombras ni z-index literales. Los tokens --os-* solo existen dentro de body:has(.desktop-os)
-   (mañana [data-theme="xp"]): todo lo de este archivo se pinta dentro del escritorio. */
+   sombras ni z-index literales. Los tokens --os-* solo existen dentro de [data-theme="xp"]:
+   todo lo de este archivo se pinta dentro del escritorio o del portal del asistente.
+   El bloqueo de scroll y el ocultamiento del shell (html[data-os-open]) están en globals.css. */
 
-/* Carcasa: con el escritorio abierto se ocultan cabecera, pie y fondos de la web.
-   Desaparece cuando el layout de /os deje de montar <Header/> y <Footer/> (ARQ-02). */
-body:has(.desktop-os) { overflow: hidden; }
-body:has(.desktop-os)::before, body:has(.desktop-os)::after,
-body:has(.desktop-os) > .site-header, body:has(.desktop-os) > .site-footer { display: none; }
-body:has(.desktop-os) > main { min-height: 100dvh; }
-
-.os-desktop { position: relative; width: 100%; height: 100dvh; min-height: 580px; overflow: hidden; color: var(--os-text); font: var(--text-os-md)/1.35 var(--font-os); user-select: none; isolation: isolate; background: var(--os-desktop-bg); }
+/* Portal en body: cubre la ventana por encima del shell público. */
+.os-desktop { position: fixed; inset: 0; z-index: var(--z-os-root); width: 100%; height: 100dvh; min-height: 580px; overflow: hidden; color: var(--os-text); font: var(--text-os-md)/1.35 var(--font-os); user-select: none; isolation: isolate; background: var(--os-desktop-bg); }
 .os-desktop button, .os-desktop input, .os-desktop select, .os-desktop textarea { font: inherit; }
 .os-desktop button { color: inherit; }
 /* A11Y-03: anillo doble interior (blanco + negro). Para cualquier color de fondo C, max(contraste(C,#000), contraste(C,#fff)) ≥ 4,58:1;

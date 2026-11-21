@@ -7,25 +7,21 @@
 
    1. Primitivos (--c-*, escalas): la paleta y las escalas en bruto. No
       cambian entre temas.
-   2. Semánticos del tema base (:root): lo que lee la vista web actual
+   2. Semánticos del tema base (:root, [data-theme]): el aspecto de la portada
       (superficie, texto, borde, acento, foco, campo, sombra, radio, tipo).
-   3. Temas: cada tema es UN bloque que reescribe semánticos.
-        · xp ................ escritorio (EDAV Desktop, clases .os-*), en theme-xp.css
-        · xp-pages .......... páginas interiores con cromo 98
-        · classic ........... esqueleto para /classic (Fase 5)
-
-   Selectores body:has() que existen hoy y su sustituto con route groups
-   (ARQ-02 / UI-02). Para migrar basta con cambiar el selector del bloque:
-     · body:has(.desktop-os) ......................... → [data-theme="xp"]
-         (theme-xp.css y la regla de carcasa de desktop.css que
-         oculta cabecera y pie; esta última desaparece cuando el layout de
-         /os deje de montar <Header/> y <Footer/>).
-     · body:not(:has(.desktop-os)):not(:has(.standard-home))
-                                                    → [data-theme="xp-pages"]
-         (o se borra el bloque si en la Fase 5 las páginas interiores pasan a
-         classic).
-   Ya están escritos los atributos de destino; hoy nadie los pone y no tienen
-   efecto.
+   3. Temas (atributo data-theme, sin :has() ni temas anidados; los portales
+      llevan su propio data-theme):
+        · classic ........... .theme-root del shell público (P5). En la Fase 3
+                              reproduce el aspecto actual:
+            - [data-theme="classic"][data-page="home"] → portada: tokens base.
+            - [data-theme="classic"]:not([data-page="home"]) → interiores y 404
+              con cromo 98 (antes: body sin .desktop-os ni .standard-home, con :has()).
+              En la Fase 5 cambian los valores de este bloque, no los nombres.
+        · xp ................ escritorio (EDAV Desktop, clases .os-*), en
+                              theme-xp.css (antes: body con .desktop-os, con :has()).
+   Estructura (globals.css): .theme-root hace lo que antes hacía body (color,
+   fondo, tipografía, fondos ::before/::after) y html[data-os-open] bloquea el
+   scroll y oculta el shell mientras el escritorio está abierto.
 
    Contraste (A11Y-13): los pares texto/fondo corregidos llevan el ratio
    antes→después en el comentario del token.
@@ -90,8 +86,9 @@
   --space-6: 16px; --space-7: 24px; --space-8: 32px; --space-9: 48px; --space-10: 64px;
 
   /* Tipografía: familias (antes 9 pilas, 3 variantes de Tahoma y "DM Mono" escrita a mano 4 veces) */
-  --font-sans: "Space Grotesk", "Segoe UI", sans-serif;
-  --font-mono: "DM Mono", Consolas, monospace;
+  /* --font-space-grotesk y --font-dm-mono las declara next/font (lib/fonts.ts) en <html>. */
+  --font-sans: var(--font-space-grotesk, "Space Grotesk"), "Segoe UI", sans-serif;
+  --font-mono: var(--font-dm-mono, "DM Mono"), Consolas, monospace;
   --font-serif: serif;
   --font-ui-98: Tahoma, "Segoe UI", sans-serif;
   --font-ui-retro: Tahoma, Verdana, "MS Sans Serif", sans-serif;
@@ -123,6 +120,8 @@
   /* Web */
   --z-header: 100;
   --z-skip-link: 1000;
+  /* Raíz del escritorio (portal en body, fixed): por encima de todo el shell público. */
+  --z-os-root: 2000;
   /* Escritorio. Las ventanas usan z inline creciente (1…n) sin contexto aislado: los
      iconos (5) y la etiqueta móvil (6) quedan por debajo de las ventanas ya enfocadas
      (comportamiento actual, UI-04 se corrige en la Fase 4) y el cromo empieza en 9000
@@ -265,7 +264,7 @@
   --switch-shadow: 2px 2px var(--c-black);
 
   /* Paneles: --panel-*-override solo lo definen los temas que aplanan las tarjetas
-     (xp-pages, classic). Si no existe, cada componente usa su valor base. */
+     (classic en interiores). Si no existe, cada componente usa su valor base. */
 
   /* Barra de título web (.window-bar) */
   --titlebar-web-bg: linear-gradient(180deg, #66c7ff 0%, #336fe3 18%, #1643bd 70%, #0c2e92 100%);
@@ -340,16 +339,16 @@
   --player-footer-rule: 1px solid #132e60;
 }
 
-/* 3a. Tema xp: vive en app/styles/theme-xp.css, importado desde desktop.css para que viaje
-   con el CSS del escritorio cuando este se separe (PERF-06). */
+/* 3a. Tema xp: vive en app/styles/theme-xp.css, importado desde desktop.css (que carga
+   desktop-shell.tsx), así solo se descarga con el escritorio (PERF-06). */
 
 /* --------------------------------------------------------------------------
-   3b. Tema xp-pages: páginas interiores con el cromo 98.
-   Hoy: body:not(:has(.desktop-os)):not(:has(.standard-home)).
-   Mañana: [data-theme="xp-pages"] (o se borra si pasan a classic).
+   3b. Tema classic, páginas interiores y 404: cromo 98 sobre la web.
+   La portada lleva data-page="home" en el mismo .theme-root y se queda con
+   los tokens base. Especificidad (0,2,0): gana al bloque base [data-theme].
+   La propuesta visual de la Fase 5 está en docs/auditoria/02-ui-ux-tokens.md §3.5.
    -------------------------------------------------------------------------- */
-[data-theme="xp-pages"],
-body:not(:has(.desktop-os)):not(:has(.standard-home)) {
+[data-theme="classic"]:not([data-page="home"]) {
   --page-bg: #c9e9f5;
   /* A11Y-13: el texto secundario (#54658b) y el acento (#2257e7) quedaban sobre el inicio
      del degradado (#64cbe3): 3,10 / 3,12 → inicio #c0ebf7: ≥ 4,53 / 4,57 en todo el fondo. */
@@ -397,31 +396,4 @@ body:not(:has(.desktop-os)):not(:has(.standard-home)) {
   --panel-radius-override: var(--radius-none);
   --panel-border-override: 2px outset var(--c-white);
   --panel-shadow-override: 5px 6px rgba(0,0,60,.18);
-}
-
-/* --------------------------------------------------------------------------
-   3c. Tema classic (/classic, Fase 5): esqueleto. Web limpia 2003-2006
-   (docs/auditoria/02-ui-ux-tokens.md §3.5). Nadie pone el atributo todavía.
-   -------------------------------------------------------------------------- */
-[data-theme="classic"] {
-  --page-bg: #e9eef5;
-  --page-backdrop: none;
-  --page-grid: none;
-  --color-text: #1d2733;
-  --color-text-muted: #58667a;
-  --color-accent: #2a64c5;
-  --color-accent-strong: #1a4fb5;
-  --color-surface: #f4f7fb;
-  --color-surface-solid: var(--c-white);
-  --color-surface-glass: var(--c-white);
-  --color-border: #b7c4d6;
-  --header-bg: linear-gradient(180deg, #4d87d9 0%, #2a64c5 55%, #1f4fa3 100%);
-  --header-backdrop: none;
-  --button-radius: var(--radius-xs);
-  --button-bg: linear-gradient(180deg, #7fb6f2 0%, #3f86de 50%, #2a6fcc 51%, #2f78d6 100%);
-  --button-border: 1px solid #1f4fa3;
-  --button-secondary-bg: linear-gradient(180deg, var(--c-white), #e4e9f0);
-  --panel-radius-override: var(--radius-xs);
-  --panel-shadow-override: 0 1px 0 var(--c-white) inset, 0 1px 2px rgba(29,39,51,.15);
-  --focus-ring: #1a4fb5;
 }

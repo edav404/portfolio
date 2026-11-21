@@ -20,9 +20,9 @@ const cspDirectives = [
   // 'unsafe-eval' solo en `next dev` (React Refresh / Turbopack). El JSON-LD es un bloque de datos
   // (`type="application/ld+json"`) que el navegador no ejecuta: no le afecta script-src.
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
-  // Google Fonts vía @import en app/globals.css. Quitar ambos hosts al migrar a next/font (Fase 3).
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com",
+  // Fuentes autoalojadas con next/font (lib/fonts.ts): se sirven desde /_next/static/media.
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self'",
   // Portadas de Last.fm: misma lista que valida lib/server/lastfm.ts.
   `img-src 'self' data: blob: ${LASTFM_IMAGE_HOSTS.map((host) => `https://${host}`).join(" ")}`,
   // Mascotas: audio propio; ClippyJS empaqueta los sonidos como data: URI. Los tonos del arranque

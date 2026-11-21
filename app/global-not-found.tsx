@@ -4,7 +4,6 @@ import { SiteShell } from "@/components/shell/site-shell";
 import { NotFoundView } from "@/components/views/not-found";
 import { rootMetadata, siteViewport } from "@/lib/metadata";
 import "./globals.css";
-import "./desktop.css";
 
 /**
  * 404 de toda URL sin ruta (docs/arquitectura-rutas.md §9.3): páginas ES inexistentes, slugs

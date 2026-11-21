@@ -1,12 +1,23 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap');
-/* Tokens (primitivos, semánticos y temas). Las reglas de abajo no llevan colores, sombras ni z-index literales. */
+/* Tokens (primitivos, semánticos y temas). Las reglas de abajo no llevan colores, sombras ni z-index literales.
+   Las fuentes llegan por next/font (lib/fonts.ts), sin @import a Google Fonts. */
 @import "./styles/tokens.css";
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
+/* body solo da la base del documento (tokens de :root) a lo que quede fuera de un tema. */
 body { margin: 0; color: var(--color-text); background: var(--page-bg); font-family: var(--font-sans); line-height: 1.6; overflow-x: hidden; }
-body::before { content: ""; position: fixed; inset: 0; z-index: var(--z-backdrop); background: var(--page-backdrop); }
-body::after { content: ""; position: fixed; inset: 0; z-index: var(--z-under); opacity: .22; pointer-events: none; background-image: var(--page-grid); background-size: 32px 32px; mask-image: linear-gradient(to bottom, var(--c-black), transparent 70%); }
+/* Raíz temática del shell público (<div class="theme-root" data-theme="classic">): hace lo que antes
+   calculaba body. isolation crea su contexto de apilamiento para que los fondos ::before/::after
+   (z negativo) queden por encima de su propio fondo y por debajo del contenido. */
+.theme-root { isolation: isolate; min-height: 100dvh; color: var(--color-text); background: var(--page-bg); font-family: var(--font-sans); line-height: 1.6; }
+.theme-root::before { content: ""; position: fixed; inset: 0; z-index: var(--z-backdrop); pointer-events: none; background: var(--page-backdrop); }
+.theme-root::after { content: ""; position: fixed; inset: 0; z-index: var(--z-under); opacity: .22; pointer-events: none; background-image: var(--page-grid); background-size: 32px 32px; mask-image: linear-gradient(to bottom, var(--c-black), transparent 70%); }
+/* Escritorio abierto (portal en body con data-theme="xp"): sin scroll del documento y con el shell
+   oculto (sustituye al antiguo ocultamiento de .site-header y .site-footer cuando body contenía .desktop-os).
+   visibility conserva la posición de scroll al cerrar y saca cabecera, contenido y pie del orden
+   de tabulación y del árbol de accesibilidad. */
+html[data-os-open] { overflow: hidden; }
+html[data-os-open] .theme-root { visibility: hidden; }
 ::selection { color: var(--color-on-accent); background: var(--color-accent); }
 a { color: inherit; text-decoration: none; }
 img { max-width: 100%; }
@@ -158,8 +169,8 @@ table { border-collapse: collapse; width: 100%; }
 .skill-cloud { display: flex; flex-wrap: wrap; gap: .55rem; }
 .skill-cloud span { padding: .5rem .7rem; color: var(--color-text); font: .7rem var(--font-mono); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface-glass); box-shadow: var(--shadow-inset-gloss); }
 /* Ventana stack.sys de /sobre-mi: grupos de tecnologías (título + nube) separados entre sí. */
-.window-body > div:has(> .skill-cloud) > h3 { margin-bottom: .75rem; font-size: 1.05rem; letter-spacing: -.01em; }
-.window-body > div:has(> .skill-cloud) + div:has(> .skill-cloud) { margin-top: 1.6rem; }
+.window-body > div > h3:first-child { margin-bottom: .75rem; font-size: 1.05rem; letter-spacing: -.01em; }
+.window-body > div + div > h3:first-child { margin-top: 1.6rem; }
 .testimonials-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; }
 .testimonial { position: relative; display: flex; flex-direction: column; margin: 0; padding: 1.7rem; border: var(--panel-border-override, 1px solid var(--color-border)); border-radius: var(--panel-radius-override, var(--radius-2xl)); background: var(--color-surface-glass); box-shadow: var(--panel-shadow-override, var(--shadow-card-soft)); }
 .testimonial > p { flex: 1; color: var(--color-text); font-size: .96rem; }

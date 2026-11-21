@@ -1,15 +1,13 @@
 /* Tema xp (escritorio EDAV Desktop). Ver la cabecera de app/styles/tokens.css para la arquitectura
-   de tokens y la tabla de selectores body:has() → data-theme. Depende de los primitivos de tokens.css. */
+   de tokens. Depende de los primitivos de tokens.css. */
 
 /* --------------------------------------------------------------------------
    3a. Tema xp: escritorio (EDAV Desktop, clases .os-*).
-   Hoy: body:has(.desktop-os). Mañana: [data-theme="xp"].
-   Solo define tokens --os-*, --page-* y --font-os: no toca los semánticos de
-   la web, así que la portada oculta bajo el escritorio no cambia.
+   Lo pone la raíz del escritorio (portal en body; en la Fase 4, el layout de /os)
+   y el portal del asistente (.retro-clippy-portal), que es otro portal en body.
+   Solo define tokens --os-* y --font-os: los semánticos web siguen siendo los base.
    -------------------------------------------------------------------------- */
-[data-theme="xp"],
-body:has(.desktop-os) {
-  --page-bg: var(--c-desktop-teal);
+[data-theme="xp"] {
   --font-os: var(--font-ui-98);
 
   /* Superficies y texto */
