@@ -15,7 +15,7 @@ export function ContactForm() {
     setState("sending");
     setMessage("");
     try {
-      const response = await fetch(process.env.NEXT_PUBLIC_CONTACT_ENDPOINT || "/api/contact.php", { method: "POST", body: new FormData(form) });
+      const response = await fetch("/api/contact/", { method: "POST", body: new FormData(form) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "No fue posible enviar el mensaje.");
       setState("success");

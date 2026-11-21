@@ -1,7 +1,7 @@
 export const site = {
   name: "Emmanuel Dávila",
   role: "Desarrollador Web Full Stack y Diseñador Web",
-  domain: "https://edav.com.co",
+  domain: (process.env.NEXT_PUBLIC_SITE_URL || "https://edav.com.co").replace(/\/+$/, ""),
   description:
     "Portafolio de Emmanuel Dávila: desarrollo web Full Stack, WordPress, Shopify, WooCommerce, diseño web y experiencias digitales a la medida.",
   lastfm: "edav404",

@@ -13,7 +13,7 @@ export function MusicWidget() {
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
-    const endpoint = process.env.NEXT_PUBLIC_LASTFM_ENDPOINT || "/api/lastfm.php";
+    const endpoint = "/api/lastfm/";
     fetch(endpoint, { headers: { Accept: "application/json" } })
       .then((response) => {
         if (!response.ok) throw new Error("Last.fm no disponible");
@@ -36,12 +36,12 @@ export function MusicWidget() {
       <div className="music-player-info">
         <span className="music-player-status">{isLoading ? "CARGANDO LASTFM.DRV" : track?.nowPlaying ? "● ESCUCHANDO AHORA" : isError ? "○ MODO OFFLINE" : "○ ÚLTIMA REPRODUCCIÓN"}</span>
         <strong>{isLoading ? "Buscando tu soundtrack…" : track?.name ?? "Last.fm espera conexión"}</strong>
-        <p>{isLoading ? "Consultando a edav404" : track ? `${track.artist}${track.album ? ` · ${track.album}` : ""}` : "Inicia el proxy local para conectar Last.fm."}</p>
+        <p>{isLoading ? "Consultando a edav404" : track ? `${track.artist}${track.album ? ` · ${track.album}` : ""}` : "Last.fm no está disponible en este momento."}</p>
         <div className="music-player-spectrum" aria-hidden="true">{Array.from({ length: 24 }, (_, index) => <i key={index} style={{ height: `${18 + ((index * 17) % 68)}%` }}/>)}</div>
         <div className="music-player-progress" aria-hidden="true"><span/></div>
       </div>
     </div>
     <div className="music-player-controls" aria-hidden="true"><span>◀◀</span><b>▶</b><span>▶▶</span><em>VOL</em><i/></div>
-    <div className="music-player-footer"><span>{isError ? "PROXY LAST.FM SIN RESPUESTA" : "Powered by Last.fm"}</span><a href={`https://www.last.fm/user/${site.lastfm}`} target="_blank" rel="noreferrer">ABRIR LAST.FM ↗</a></div>
+    <div className="music-player-footer"><span>{isError ? "LAST.FM SIN RESPUESTA" : "Powered by Last.fm"}</span><a href={`https://www.last.fm/user/${site.lastfm}`} target="_blank" rel="noreferrer">ABRIR LAST.FM ↗</a></div>
   </section>;
 }

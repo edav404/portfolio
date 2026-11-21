@@ -1,0 +1,82 @@
+# Despliegue en Coolify (Ubuntu Server) — edav.com.co
+
+El proyecto se despliega como **contenedor Docker** usando el `Dockerfile` de la raíz
+(Next.js `output: "standalone"`, Node 24, usuario sin privilegios, `HEALTHCHECK` en `/api/health/`).
+
+## 1. Requisitos del servidor
+
+| Recurso | Mínimo recomendado | Nota |
+|---|---|---|
+| RAM | 2 GB (+ swap 2 GB) | `next build` corre dentro del servidor; sin swap puede fallar por memoria. |
+| Disco | 10 GB libres | Capas de imagen y caché de BuildKit. |
+| Puertos | 80 y 443 abiertos | Los gestiona el proxy de Coolify (Traefik/Caddy). |
+
+## 2. DNS (en el proveedor de `edav.com.co`)
+
+| Tipo | Nombre | Valor |
+|---|---|---|
+| A | `@` | IP pública del servidor |
+| A | `www` | IP pública del servidor |
+| AAAA | `@` / `www` | IPv6 del servidor (solo si la tiene) |
+
+Si el dominio está detrás de Cloudflare, usar el modo **DNS only** (nube gris) hasta que Coolify emita
+el certificado de Let's Encrypt; luego puede activarse el proxy con SSL en modo **Full (strict)**.
+
+## 3. Crear el recurso en Coolify
+
+1. **Projects → New → Resource → Public/Private Repository (GitHub App)** y elegir `edav404/portfolio`.
+2. Rama: `main`.
+3. **Build Pack: Dockerfile** (no Nixpacks). Dockerfile location: `/Dockerfile`.
+4. **Ports Exposes:** `3000`.
+5. **Domains:** `https://edav.com.co,https://www.edav.com.co`.
+6. **Redirección www → apex:** en *Configuration → General → Direction*, elegir **Redirect to non-www**.
+7. **Health Check:** habilitar, path `/api/health/`, puerto `3000`.
+8. Activar **Auto Deploy** para que cada push a `main` despliegue.
+
+## 4. Variables de entorno
+
+En *Environment Variables* (ver `.env.example`):
+
+| Variable | Tipo | Obligatoria | Descripción |
+|---|---|---|---|
+| `NEXT_PUBLIC_SITE_URL` | **Build Variable** | Sí | `https://edav.com.co` (se incrusta en el bundle). |
+| `LASTFM_API_KEY` | Runtime, secreta | Para el reproductor | Clave de https://www.last.fm/api/account/create |
+| `LASTFM_USERNAME` | Runtime | No | `edav404` por defecto. |
+| `CONTACT_RECIPIENT` | Runtime | Para el formulario | Correo que recibe los mensajes. |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` | Runtime, secretas | Para el formulario | Servidor SMTP (465 = TLS, 587 = STARTTLS). |
+| `SMTP_FROM` | Runtime | No | Remitente; por defecto `EDAV OS <SMTP_USER>`. |
+| `TRUSTED_PROXY_HOPS` | Runtime | No | `1` con solo Coolify; `2` si Cloudflare (proxy naranja) va delante. |
+
+Sin las variables de Last.fm o SMTP el sitio funciona igual: el reproductor muestra modo offline y el
+formulario responde con el aviso de WhatsApp (HTTP 503).
+
+> Para que el correo no caiga en spam, el dominio del remitente debe tener **SPF, DKIM y DMARC**
+> configurados en el proveedor SMTP.
+
+## 5. Verificación tras el despliegue
+
+```bash
+curl -I https://edav.com.co/                 # 200 + cabeceras de seguridad
+curl -I https://www.edav.com.co/             # 301/308 → https://edav.com.co/
+curl https://edav.com.co/api/health/         # {"status":"ok",...}
+curl https://edav.com.co/api/lastfm/         # JSON de la última canción
+curl https://edav.com.co/sitemap.xml
+curl https://edav.com.co/robots.txt
+```
+
+## 6. Notas operativas
+
+- **No exponer el puerto 3000** del contenedor (no usar *Ports Mappings* en Coolify): todo el tráfico
+  debe entrar por el proxy, o el rate limit podría evadirse con cabeceras falsificadas.
+- **HSTS** arranca en `max-age=86400` sin `includeSubDomains`. En la Fase 8, tras verificar que todos
+  los subdominios de `edav.com.co` tienen HTTPS válido, se sube a un año.
+- Producción arranca **solo vía la imagen Docker** (`node server.js`); `npm start` (`next start`) es
+  para pruebas locales y no es el modo de producción.
+- Las rutas antiguas `/api/lastfm.php` y `/api/contact.php` se reescriben internamente a las nuevas.
+
+- **Rate limit** de `/api/contact` (5 envíos / 10 min por IP) y `/api/lastfm` (30 / min) vive en memoria:
+  válido para **una sola réplica**. Si se escala, moverlo a Redis.
+- La IP del cliente se lee del **último** valor de `X-Forwarded-For` (el que añade el proxy de
+  Coolify); los valores iniciales los puede falsificar el cliente. Ver `TRUSTED_PROXY_HOPS`.
+- Rollback: *Deployments* → elegir un despliegue anterior → **Redeploy**.
+- Probar la imagen en local: `docker build -t edav-portfolio . && docker run -p 3000:3000 --env-file .env.local edav-portfolio`.

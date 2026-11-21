@@ -1,0 +1,17 @@
+.git
+.github
+.next
+out
+node_modules
+npm-debug.log*
+*.tsbuildinfo
+.env*
+!.env.example
+.claude
+.agents
+.cloudflare-temp
+WordPress
+docs
+Dockerfile
+.dockerignore
+README.md

@@ -1,6 +1,6 @@
 # EDAV Desktop 98
 
-Portafolio profesional experimental de Emmanuel Dávila, construido con Next.js, TypeScript y una salida estática compatible con hosting cPanel. La portada funciona como un sistema operativo retro interactivo inspirado en Windows 98/XP y la estética Y2K.
+Portafolio profesional experimental de Emmanuel Dávila, construido con Next.js 16 y TypeScript, desplegado como contenedor Docker en Coolify (`edav.com.co`). La portada funciona como un sistema operativo retro interactivo inspirado en Windows 98/XP y la estética Y2K.
 
 ## Experiencia principal
 
@@ -32,32 +32,29 @@ npm run typecheck
 npm run build
 ```
 
-El build genera la versión publicable en `out/`.
+El build genera un servidor autocontenido en `.next/standalone/` (Next.js `output: "standalone"`).
 
 ## Variables de entorno
 
-Copia `.env.example` como `.env.local` y completa solo las variables necesarias. Nunca confirmes `.env.local` en Git.
+Copia `.env.example` como `.env.local` y completa solo lo necesario. Nunca confirmes `.env.local` en Git.
+Con `npm run dev`, Last.fm (`/api/lastfm/`) y el formulario (`/api/contact/`) funcionan directamente como Route Handlers; no hace falta un proxy aparte.
 
-- `LASTFM_API_KEY`: clave creada en la cuenta de API de Last.fm.
-- `LASTFM_USERNAME`: `edav404` por defecto.
-- `CONTACT_RECIPIENT`: correo que recibirá el formulario en producción.
-- `NEXT_PUBLIC_LASTFM_ENDPOINT`: ruta pública del proxy PHP.
-- `NEXT_PUBLIC_CONTACT_ENDPOINT`: ruta pública del formulario PHP.
+| Variable | Uso |
+|---|---|
+| `NEXT_PUBLIC_SITE_URL` | URL canónica del sitio (build). |
+| `LASTFM_API_KEY`, `LASTFM_USERNAME` | Reproductor EDAV.FM. |
+| `CONTACT_RECIPIENT`, `SMTP_*` | Envío del formulario de contacto por SMTP. |
 
-Los secretos usados por PHP deben configurarse en el servidor; no deben incorporarse a los archivos publicados.
+## Despliegue
 
-## Publicación en cPanel
+Producción: **Ubuntu Server + Coolify** con el `Dockerfile` de la raíz. Guía paso a paso en
+[`docs/despliegue-coolify.md`](docs/despliegue-coolify.md).
 
-1. Ejecuta `npm run build`.
-2. Haz una copia de seguridad del sitio actual y valida el cambio primero en un subdominio de pruebas.
-3. Sube el contenido de `out/` a `public_html`.
-4. Configura `LASTFM_API_KEY`, `LASTFM_USERNAME` y `CONTACT_RECIPIENT` mediante el mecanismo de variables aprobado por el hosting.
-5. Comprueba `/robots.txt`, `/sitemap.xml`, `/llms.txt`, el formulario y la integración con Last.fm.
-6. Valida redirecciones desde las URLs antiguas antes de cambiar el dominio principal.
+```powershell
+docker build -t edav-portfolio .
+docker run -p 3000:3000 --env-file .env.local edav-portfolio
+```
 
 ## Contenido
 
 Los proyectos se administran en `data/projects.ts`. La identidad, servicios, testimonios y tecnologías se encuentran en `data/site.ts`.
-## Last.fm en localhost
-
-El frontend consulta `http://127.0.0.1:8787/api/lastfm.php` durante el desarrollo. En una terminal, ejecuta `npm run lastfm:dev` y, en otra, `npm run dev`. El proxy Node lee `LASTFM_API_KEY` y `LASTFM_USERNAME` desde `.env` sin enviarlos al navegador. En producción se puede utilizar `public/api/lastfm.php` desde un hosting con PHP.
