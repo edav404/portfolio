@@ -27,7 +27,7 @@ const DesktopShell = dynamic(loadDesktop, {
 /** Textos ya resueltos por el servidor: el cliente no importa content/ui.ts. */
 export type ExperienceCopy = DesktopCopy & { loading: string; open: string };
 
-type DesktopControls = { open: () => void; preload: () => void; label: string };
+type DesktopControls = { open: () => void; preload: () => void; label: string; registerLauncher: (element: HTMLElement | null) => void };
 const DesktopContext = createContext<DesktopControls | null>(null);
 const LoadingText = createContext("");
 
@@ -48,19 +48,37 @@ export function PortfolioExperience({ copy, children }: { copy: ExperienceCopy; 
   const [active, setActive] = useState(false);
   const [skipBoot, setSkipBoot] = useState(false);
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  // Botón de apertura de la portada: destino de respaldo cuando el escritorio se abrió por
+  // enlace profundo (`?view=retro`) y no hay un elemento previo al que volver.
+  const launcherRef = useRef<HTMLElement | null>(null);
+  const restoreFocusRef = useRef(false);
 
   const open = useCallback(() => {
-    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    returnFocusRef.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null;
     setActive(true);
     setViewParam(RETRO_PARAM);
   }, []);
 
   const close = useCallback(() => {
+    restoreFocusRef.current = true;
     setActive(false);
     setSkipBoot(true);
     setViewParam(null);
-    // Devuelve el foco al botón que abrió el escritorio (la página no se movió: el scroll se conserva).
-    window.requestAnimationFrame(() => returnFocusRef.current?.focus({ preventScroll: true }));
+  }, []);
+
+  // Foco de vuelta tras el commit que desmonta el escritorio (determinista, sin rAF): para entonces
+  // DesktopShell ya quitó html[data-os-open] en su limpieza y el shell vuelve a ser visible.
+  // preventScroll: la página no se movió y el scroll se conserva.
+  useEffect(() => {
+    if (active || !restoreFocusRef.current) return;
+    restoreFocusRef.current = false;
+    const target = [returnFocusRef.current, launcherRef.current].find((element) => element?.isConnected);
+    target?.focus({ preventScroll: true });
+  }, [active]);
+
+  const registerLauncher = useCallback((element: HTMLElement | null) => {
+    if (element) launcherRef.current ??= element;
+    else launcherRef.current = null;
   }, []);
 
   // Enlace profundo `/?view=retro`: se lee solo en el cliente y tras hidratar.
@@ -70,7 +88,7 @@ export function PortfolioExperience({ copy, children }: { copy: ExperienceCopy; 
     return () => window.clearTimeout(timer);
   }, []);
 
-  const controls: DesktopControls = { open, preload: () => void loadDesktop(), label: copy.open };
+  const controls: DesktopControls = { open, preload: () => void loadDesktop(), label: copy.open, registerLauncher };
 
   // El escritorio se monta en un portal en <body>, fuera del .theme-root del shell público: así lleva
   // su propio tema (data-theme="xp") sin anidarlo. DesktopShell pone html[data-os-open] al montarse,
@@ -85,7 +103,7 @@ export function PortfolioExperience({ copy, children }: { copy: ExperienceCopy; 
 export function DesktopLaunchButton() {
   const controls = useContext(DesktopContext);
   if (!controls) return null;
-  return <button type="button" className="experience-switch" onClick={controls.open} onPointerEnter={controls.preload} onFocus={controls.preload}>
+  return <button type="button" className="experience-switch" ref={controls.registerLauncher} onClick={controls.open} onPointerEnter={controls.preload} onFocus={controls.preload}>
     <DesktopIcon name="terminal"/> {controls.label}
   </button>;
 }
