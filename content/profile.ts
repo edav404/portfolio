@@ -24,13 +24,13 @@ export const profile = {
       "Soy Emmanuel Dávila, técnico profesional en Sistemas y estudiante del sexto y último semestre de Tecnología en Sistemas en el Tecnológico de Antioquia. Vivo en el área metropolitana de Medellín.",
       "Empecé construyendo sitios y tiendas en WordPress, WooCommerce y Shopify para marcas de Colombia, México y Estados Unidos. Con el tiempo pasé al desarrollo a la medida con React, Next.js y TypeScript, y a la automatización de procesos.",
       "Durante mi práctica como Acelerador Digital en Servicios Nutresa participé en la migración y modernización de soluciones internas con Microsoft 365: apps en Power Apps, tableros en Power BI y portales en SharePoint. Esa experiencia reforzó mi enfoque: entender el proceso antes de construir, documentar y dejar a los equipos con autonomía.",
-      "En paralelo construyo productos propios con otros desarrolladores y uso agentes de IA en mi flujo de trabajo. Fuera del código, la música es parte de mi proceso: por eso este portafolio muestra lo que estoy escuchando.",
+      "Aprendo de forma autodidacta y me gusta proponer mejoras más allá de lo que me asignan: en Servicios Nutresa, una propuesta mía para usar agentes de IA terminó convertida en un encargo del equipo de Automatización. En paralelo construyo productos propios con otros desarrolladores. Fuera del código, la música es parte de mi proceso: por eso este portafolio muestra lo que estoy escuchando.",
     ],
     en: [
       "I'm Emmanuel Dávila. I'm completing the final semester of the Tecnología en Sistemas (Systems Technology) program at Tecnológico de Antioquia, where I also completed the Técnico Profesional en Sistemas program. I live in the Medellín metropolitan area, Colombia.",
       "I started out building WordPress, WooCommerce and Shopify sites and stores for brands in Colombia, Mexico and the United States. Over time I moved into custom development with React, Next.js and TypeScript, and into process automation.",
       "During my Digital Accelerator internship at Servicios Nutresa, I contributed to migrating and modernizing internal solutions with Microsoft 365: Power Apps, Power BI dashboards and SharePoint portals. That experience reinforced my approach: understand the process before building, document the work and leave teams able to work independently.",
-      "On the side I build my own products with other developers and use AI agents in my day-to-day workflow. Outside of code, music is part of my process, which is why this portfolio shows what I'm listening to.",
+      "I'm self-taught at heart and like to propose improvements beyond what I'm assigned: at Servicios Nutresa, my proposal to use AI agents turned into a request from the Automation team. On the side I build my own products with other developers. Outside of code, music is part of my process, which is why this portfolio shows what I'm listening to.",
     ],
   } satisfies L<string[]>,
   /** Qué ofrezco, en una lista corta (hero / CV). */
@@ -58,8 +58,7 @@ export const profile = {
     linkedin: "https://www.linkedin.com/in/edav404",
     github: "https://github.com/edav404",
     lastfm: "edav404",
-    /** Correo público para el CV. Pendiente de confirmar cuál usar. */
-    email: "",
+    email: "contacto@edav.com.co",
   },
   stats: [
     { value: "12", label: { es: "Proyectos web para clientes", en: "Client web projects" } satisfies L },
@@ -71,7 +70,7 @@ export const profile = {
 export const skills = {
   web: ["TypeScript", "JavaScript", "React", "Next.js", "Node.js", "HTML", "CSS", "REST APIs"],
   cms: ["WordPress", "WooCommerce", "Elementor", "Shopify", "Liquid"],
-  automation: ["Power Apps", "Power BI", "SharePoint", "Microsoft 365", "n8n", "UiPath", "BotCity", "Telegram Bot API"],
+  automation: ["Power Apps", "Power Automate", "Power BI", "SharePoint", "n8n", "UiPath", "BotCity", "Groq"],
   data: ["PostgreSQL", "Supabase", "SQLite"],
   tools: ["Git", "GitHub", "Docker", "Coolify", "Figma", "Claude Code", "Codex"],
 } as const;

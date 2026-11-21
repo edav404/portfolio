@@ -9,3 +9,7 @@ npm-debug.log*
 
 # Material privado local (nunca se versiona)
 /private/
+
+# content/ solo versiona el código de contenido; cualquier otro archivo (artifacts, PDFs, notas) es privado
+/content/*
+!/content/*.ts

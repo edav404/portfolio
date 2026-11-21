@@ -181,13 +181,12 @@ export const projects: Project[] = [
       en: "Capture to-dos in seconds, even by voice, without opening a task app.",
     },
     solution: {
-      es: "Flujo que recibe el mensaje, transcribe y sintetiza con IA, persiste en PostgreSQL y programa avisos diarios y consultas a demanda.",
-      en: "A flow that receives the message, transcribes and summarizes it with AI, stores it in PostgreSQL and schedules daily and on-demand reminders.",
+      es: "Flujo en n8n que recibe el mensaje, transcribe y sintetiza con IA mediante Groq (en su nivel gratuito), guarda los recordatorios en PostgreSQL y programa avisos diarios y consultas a demanda.",
+      en: "An n8n workflow that receives the message, transcribes and summarizes it with AI through Groq (on its free tier), stores reminders in PostgreSQL and schedules daily and on-demand notifications.",
     },
     myRole: { es: "Diseño y desarrollo completos", en: "End-to-end design and build" },
     services: { es: ["Automatización", "Integración de IA", "Bot conversacional"], en: ["Automation", "AI integration", "Chatbot"] },
-    // Pendiente confirmar si corre en n8n y qué modelo de IA usa.
-    technologies: ["Telegram Bot API", "n8n", "Speech-to-text AI", "PostgreSQL"],
+    technologies: ["n8n", "Telegram Bot API", "Groq", "PostgreSQL"],
     credits: [{ person: "edav", role: { es: "Autor", en: "Author" }, owner: true }],
   },
 

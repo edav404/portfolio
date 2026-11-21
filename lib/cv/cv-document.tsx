@@ -44,15 +44,15 @@ const copy = {
   es: {
     contact: "Contacto", skills: "Habilidades", education: "Formación", languages: "Idiomas",
     profile: "Perfil", experience: "Experiencia", projects: "Proyectos seleccionados",
-    present: "Actualidad", inProgress: "En curso",
-    langs: ["Español: nativo", "Inglés: lectura técnica y comunicación escrita"],
+    present: "Actualidad", inProgress: "En curso", ongoing: "en curso",
+    langs: ["Español: nativo", "Inglés: B2 (MCER)"],
     credits: "Con", by: "Proyecto de", contributor: "colaborador", footer: "CV generado desde edav.com.co",
   },
   en: {
     contact: "Contact", skills: "Skills", education: "Education", languages: "Languages",
     profile: "Profile", experience: "Experience", projects: "Selected projects",
-    present: "Present", inProgress: "In progress",
-    langs: ["Spanish: native", "English: technical reading and written communication"],
+    present: "Present", inProgress: "In progress", ongoing: "in progress",
+    langs: ["Spanish: native", "English: B2 (CEFR)"],
     credits: "With", by: "Project by", contributor: "contributor", footer: "CV generated from edav.com.co",
   },
 } as const;
@@ -67,10 +67,19 @@ function formatDate(value: YearMonth, locale: Locale) {
   return month ? `${months[locale][Number(month) - 1]} ${year}` : year;
 }
 
+/** "YYYY-MM" del mes actual (en build). */
+function currentMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
 function range(start: YearMonth, end: YearMonth | null, locale: Locale) {
   const from = formatDate(start, locale);
   const to = end ? formatDate(end, locale) : copy[locale].present;
-  return from === to ? from : `${from} – ${to}`;
+  const text = from === to ? from : `${from} – ${to}`;
+  // Fecha de fin futura (p. ej. una práctica que aún no termina): se marca "en curso".
+  // Al reconstruir tras esa fecha, la marca desaparece sola.
+  return end && String(end).padEnd(7, "-12") > currentMonth() ? `${text} (${copy[locale].ongoing})` : text;
 }
 
 function Bullet({ children }: { children: string }) {
@@ -118,8 +127,10 @@ export function CvDocument({ locale, siteUrl }: { locale: Locale; siteUrl: strin
             </View>
           ))}
 
-          <Text style={styles.sideTitle}>{c.languages}</Text>
-          {c.langs.map((lang) => <Text key={lang} style={styles.small}>{lang}</Text>)}
+          <View wrap={false}>
+            <Text style={styles.sideTitle}>{c.languages}</Text>
+            {c.langs.map((lang) => <Text key={lang} style={styles.small}>{lang}</Text>)}
+          </View>
         </View>
 
         <View style={styles.main}>
@@ -134,7 +145,7 @@ export function CvDocument({ locale, siteUrl }: { locale: Locale; siteUrl: strin
                 <Text style={styles.jobDates}>{range(job.start, job.end, locale)}</Text>
               </View>
               <Text style={styles.jobOrg}>{job.organization} <Text style={{ color: MUTED, fontFamily: "Helvetica" }}>· {job.location[locale]}</Text></Text>
-              {job.highlights[locale].slice(0, job.id === "servicios-nutresa" ? 6 : 3).map((item) => <Bullet key={item}>{item}</Bullet>)}
+              {(job.cvHighlights ?? [0, 1, 2]).map((index) => job.highlights[locale][index]).filter(Boolean).map((item) => <Bullet key={item}>{item}</Bullet>)}
             </View>
           ))}
 

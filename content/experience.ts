@@ -13,6 +13,8 @@ export type ExperienceEntry = {
   stack: string[];
   /** Si se muestra en el CV en PDF (la web siempre la muestra). */
   inCv: boolean;
+  /** Índices de `highlights` que van al CV (por defecto, los 3 primeros). */
+  cvHighlights?: number[];
 };
 
 export const experience: ExperienceEntry[] = [
@@ -21,42 +23,49 @@ export const experience: ExperienceEntry[] = [
     organization: "Servicios Nutresa",
     role: { es: "Acelerador Digital (práctica profesional)", en: "Digital Accelerator Intern" },
     location: { es: "Medellín, Colombia", en: "Medellín, Colombia" },
-    // Pendiente confirmar mes de inicio y de fin.
-    start: "2026",
-    end: "2026",
+    // Práctica de 6 meses: 1 jul. – 31 dic. 2026.
+    start: "2026-07",
+    end: "2026-12",
     summary: {
-      es: "Participé en el programa One Leap to Microsoft 365 del centro de servicios compartidos de Grupo Nutresa, apoyando la transición de soluciones de Google Workspace a Microsoft 365 junto a TI, equipos de datos y dueños de proceso.",
-      en: "Took part in the One Leap to Microsoft 365 program at Grupo Nutresa's shared services center, supporting the move of internal solutions from Google Workspace to Microsoft 365 alongside IT, data teams and process owners.",
+      es: "Práctica de seis meses en el programa One Leap to Microsoft 365, que migra las soluciones de Servicios Nutresa de Google Workspace a Microsoft 365. Con base en el área de Impuestos, trabajé con TI (automatizaciones), Analítica y Datos y dueños de proceso de otras gerencias.",
+      en: "Six-month internship in the One Leap to Microsoft 365 program, which moves Servicios Nutresa's solutions from Google Workspace to Microsoft 365. Based in the Tax department, I worked with IT (automation), Analytics & Data and process owners across other departments.",
     },
-    // Versión pública prudente: sin cifras internas ni nombres. La versión detallada
-    // vive solo en local, en private/nutresa-detallado.md (ignorado por git).
+    // Redactado como un CV: logros y alcance, sin nombres de personas, IDs internos ni datos
+    // del negocio. La versión con todo el detalle vive solo en local (private/, ignorado por git).
     highlights: {
       es: [
-        "Levanté y documenté requisitos para migrar soluciones internas, incluso con ingeniería inversa cuando no había documentación.",
-        "Construí tableros en Power BI para anticipar vencimientos y hacer seguimiento a obligaciones.",
-        "Rediseñé la experiencia de un portal interno con menos opciones por pantalla y menos clics; el rediseño fue aprobado para producción.",
-        "Reconstruí una app de presupuestos de AppSheet y Google Sheets en Power Apps (Canvas) y SharePoint, con cálculos automáticos y exportación a Excel.",
-        "Habilité un entorno de desarrollo con roles y acompañé sesiones semanales de construcción guiada para que los usuarios ganaran autonomía.",
-        "Propuse incorporar agentes de IA y MCP al flujo de desarrollo y migración de soluciones.",
+        "Levanté y documenté 8 requisitos funcionales y 3 no funcionales para migrar una solución tributaria de más de 3.000 registros, con ingeniería inversa donde no había documentación.",
+        "Construí un tablero en Power BI que reemplazó un reporte de Looker Studio, para anticipar vencimientos y hacer seguimiento a responsables, pagos y revisiones.",
+        "Rediseñé la experiencia de un portal interno usado por 30 a 60 personas de varias gerencias, aplicando la Ley de Hick (menos opciones por pantalla, menos clics). El rediseño fue aprobado para producción.",
+        "Reconstruí en Power Apps (Canvas) y SharePoint una app de presupuestación hecha en AppSheet y Google Sheets, con cálculo automático de AIU e IVA y exportación a Excel, sin licencias Premium.",
+        "Apoyé a otras áreas con apps Canvas que reemplazan soluciones heredadas en Apps Script y AppSheet.",
+        "Habilité un entorno de desarrollo con roles y separación de ambientes, y guié sesiones semanales de construcción para que los usuarios ganaran autonomía.",
+        "Consolidé 10 iniciativas activas en un portafolio central en SharePoint, con vistas de tablero y calendario.",
+        "Por iniciativa propia, propuse evaluar agentes de IA (Claude Code, GitHub Copilot, Kiro) con MCP para acelerar las migraciones. La propuesta derivó en un encargo del equipo de Automatización: diseñar un agente de Claude para el desarrollo de bots en BotCity.",
+        "Mi aprendizaje autodidacta y mi iniciativa fueron reconocidos por el liderazgo de TI en automatizaciones.",
       ],
       en: [
-        "Gathered and documented requirements to migrate internal solutions, reverse-engineering them when no documentation existed.",
-        "Built Power BI dashboards to anticipate deadlines and track obligations.",
-        "Redesigned an internal portal's UX with fewer options per screen and fewer clicks; the redesign was approved for production.",
-        "Rebuilt a budgeting app from AppSheet and Google Sheets into Power Apps (Canvas) and SharePoint, with automatic calculations and Excel export.",
-        "Set up a role-based development environment and led weekly guided build sessions so users could work more independently.",
-        "Proposed bringing AI agents and MCP into the solution development and migration workflow.",
+        "Gathered and documented 8 functional and 3 non-functional requirements to migrate a tax solution with 3,000+ records, reverse-engineering it where no documentation existed.",
+        "Built a Power BI dashboard that replaced a Looker Studio report, helping teams anticipate deadlines and track owners, payments and reviews.",
+        "Redesigned the UX of an internal portal used by 30–60 people across departments, applying Hick's law (fewer options per screen, fewer clicks). The redesign was approved for production.",
+        "Rebuilt an AppSheet and Google Sheets budgeting app in Power Apps (Canvas) and SharePoint, with automatic AIU and VAT calculation and Excel export, without Premium licenses.",
+        "Supported other departments with Canvas apps replacing legacy Apps Script and AppSheet solutions.",
+        "Set up a role-based development environment with separate stages, and led weekly guided build sessions to help users work more independently.",
+        "Consolidated 10 active initiatives into a central SharePoint portfolio with board and calendar views.",
+        "On my own initiative, proposed evaluating AI agents (Claude Code, GitHub Copilot, Kiro) with MCP to speed up migrations. It led to a request from the Automation team to design a Claude agent for BotCity bot development.",
+        "IT automation leadership recognized my initiative and ability to learn independently.",
       ],
     },
-    stack: ["Power Apps", "Power BI", "SharePoint", "Microsoft 365", "UiPath", "BotCity", "Claude"],
+    stack: ["Power Apps", "Power Automate", "Power BI", "SharePoint", "Microsoft 365", "UiPath", "BotCity", "Claude", "Gemini"],
     inCv: true,
+    // Requisitos, Power BI, portal, Power Apps, propuesta de IA y reconocimiento autodidacta.
+    cvHighlights: [0, 1, 2, 3, 7, 8],
   },
   {
     id: "freelance",
     organization: "EDAV · Freelance",
     role: { es: "Desarrollador web y diseñador", en: "Web developer & designer" },
     location: { es: "Remoto · Colombia, México y EE. UU.", en: "Remote · Colombia, Mexico & USA" },
-    // Pendiente confirmar año de inicio.
     start: "2023",
     end: null,
     summary: {

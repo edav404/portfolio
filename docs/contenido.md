@@ -38,8 +38,8 @@ Los personales no tienen capturas públicas (repos privados): la Fase 4 diseñar
 
 ## Confidencialidad (Servicios Nutresa)
 
-La versión pública se limita al rol, el programa, las contribuciones generales y las tecnologías: **sin nombres
-de personas, volúmenes, número de usuarios, requisitos o iniciativas, ni herramientas en evaluación**.
+Se redacta como un CV: logros, alcance y propuestas, **sin nombres de personas, IDs internos, grupos de
+acceso ni datos del negocio**.
 La versión detallada vive solo en local (`private/nutresa-detallado.md`, ignorado por git) por si se autoriza publicarla.
 
 Los testimonios son citas de clientes en español; la versión en inglés se marca como traducción (`translatedFrom`).
@@ -48,11 +48,8 @@ Los testimonios son citas de clientes en español; la versión en inglés se mar
 
 | # | Dato | Dónde | Valor provisional |
 |---|---|---|---|
-| 1 | Mes de inicio y fin en Servicios Nutresa | `experience.ts` | `2026` |
-| 2 | Año de inicio como freelance | `experience.ts` | `2023` |
-| 3 | Año de grado como Técnico Profesional en Sistemas | `experience.ts` | «Graduado» |
-| 4 | Nivel de inglés | `cv-document.tsx` | «Lectura técnica y comunicación escrita» |
-| 5 | Correo público para el CV | `profile.ts` | (vacío) |
-| 6 | ¿El bot de recordatorios corre en n8n? ¿Qué IA usa? | `projects.ts` | n8n + «Speech-to-text AI» |
-| 7 | ¿«jdicans» es su usuario de GitHub? | `people.ts` | sin enlace |
-| 8 | ¿Se autoriza publicar el detalle de Nutresa (cifras, áreas, agente para BotCity)? | `experience.ts` | versión general |
+| 1 | Año de grado como Técnico Profesional en Sistemas | `experience.ts` | «Graduado» |
+
+Confirmado (2026-11-20): Servicios Nutresa del 1 jul. al 31 dic. 2026 · freelance desde 2023 · inglés B2 (MCER) ·
+correo `contacto@edav.com.co` · bot en n8n con Groq (nivel gratuito) · jdicans se menciona sin enlace ·
+Nutresa redactado como un CV normal (logros, propuestas y aprendizaje autodidacta, sin nombres ni IDs internos).

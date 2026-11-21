@@ -9,7 +9,7 @@ export type Person = {
 export const people = {
   edav: { id: "edav", name: "Emmanuel Dávila", github: "edav404" },
   lmilo: { id: "lmilo", name: "lmilo", github: "lmilo" },
-  // Pendiente confirmar si "jdicans" es su usuario de GitHub.
+  // Se menciona por su usuario, sin enlace (preferencia del usuario).
   jdicans: { id: "jdicans", name: "jdicans" },
 } as const satisfies Record<string, Person>;
 
