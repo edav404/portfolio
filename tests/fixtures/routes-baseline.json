@@ -407,19 +407,19 @@
       "status": 404,
       "location": null,
       "lang": "es",
-      "title": "Emmanuel Dávila | Desarrollador Full Stack y de automatización",
-      "canonical": "https://edav.com.co/",
-      "ogUrl": "https://edav.com.co/"
+      "title": "Página no encontrada | Emmanuel Dávila",
+      "canonical": null,
+      "ogUrl": null
     },
     {
       "path": "/proyectos/no-existe/",
       "kind": "probe",
       "status": 404,
       "location": null,
-      "lang": null,
-      "title": "Emmanuel Dávila | Desarrollador Full Stack y de automatización",
-      "canonical": "https://edav.com.co/",
-      "ogUrl": "https://edav.com.co/"
+      "lang": "es",
+      "title": "Página no encontrada | Emmanuel Dávila",
+      "canonical": null,
+      "ogUrl": null
     }
   ]
 }

@@ -1,11 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Footer } from "@/components/footer";
-import { Header } from "@/components/header";
-import { JsonLd } from "@/components/ui";
-import { knowsAbout, profile } from "@/content/profile";
-import { cvHref, siteName, siteUrl } from "@/content/site";
-import "./globals.css";
-import "./desktop.css";
+import { Document } from "@/components/shell/document";
+import { profile } from "@/content/profile";
+import { siteName, siteUrl } from "@/content/site";
+import "../globals.css";
+import "../desktop.css";
 
 // Posicionamiento único desde content/profile.ts (CNT-01): "Desarrollador Full Stack y de automatización".
 const defaultTitle = `${profile.name} | ${profile.headline.es}`;
@@ -25,12 +23,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#167ea5", colorScheme: "light" };
 
+// Layout raíz ES (D1): `<html lang="es">`. El árbol EN tendrá su propio layout raíz (P6).
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const person = {
-    "@context": "https://schema.org", "@type": "Person", "@id": `${siteUrl}/#person`, name: profile.name, url: siteUrl, email: `mailto:${profile.contact.email}`,
-    jobTitle: profile.headline.es, address: { "@type": "PostalAddress", addressLocality: "Medellín", addressCountry: "CO" },
-    sameAs: [profile.contact.linkedin, profile.contact.github],
-    knowsAbout: knowsAbout.es,
-  };
-  return <html lang="es"><body><JsonLd data={person}/><Header cvHref={cvHref.es}/><main id="contenido">{children}</main><Footer/></body></html>;
+  return <Document locale="es">{children}</Document>;
 }

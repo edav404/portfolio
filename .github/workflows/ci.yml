@@ -51,3 +51,13 @@ jobs:
       # Sin secretos: NEXT_PUBLIC_SITE_URL cae en https://edav.com.co y Last.fm/SMTP solo se usan en runtime.
       - name: Build
         run: npm run build
+
+      # Smoke contra el artefacto que se despliega (servidor standalone, como en el Dockerfile):
+      # sitemap en 200 con lang="es", redirecciones 308 de un salto y 404 global en el HTML inicial.
+      - name: Smoke de rutas
+        run: |
+          cp -r public .next/standalone/public
+          cp -r .next/static .next/standalone/.next/static
+          PORT=3111 HOSTNAME=127.0.0.1 node .next/standalone/server.js &
+          for i in $(seq 1 30); do curl -sf -o /dev/null http://127.0.0.1:3111/api/health/ && break; sleep 1; done
+          npm run smoke -- http://127.0.0.1:3111

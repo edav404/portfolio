@@ -67,6 +67,9 @@ const nextConfig: NextConfig = {
   // Solo afecta a `next dev` (túneles de prueba).
   allowedDevOrigins: ["127.0.0.1", "localhost", "*.trycloudflare.com"],
   turbopack: { root: process.cwd() },
+  // 404 de URLs sin ruta renderizado en servidor con lang="es" (app/global-not-found.tsx; spike en
+  // docs/arquitectura-rutas.md §9). Experimental: scripts/smoke-routes.mjs vigila que siga funcionando.
+  experimental: { globalNotFound: true },
   // Compatibilidad temporal con los endpoints PHP antiguos (rewrite interno: conserva el POST).
   async rewrites() {
     return [

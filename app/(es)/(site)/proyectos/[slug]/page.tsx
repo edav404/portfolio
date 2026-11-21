@@ -10,6 +10,9 @@ import { siteUrl } from "@/content/site";
 // Vista ES; la versión /en/ llegará con el árbol de rutas i18n.
 const locale = "es";
 
+// Catálogo finito: un slug desconocido no se renderiza (lo atiende app/global-not-found.tsx).
+export const dynamicParams = false;
+
 export function generateStaticParams() { return caseStudies.map(({ slug }) => ({ slug })); }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {

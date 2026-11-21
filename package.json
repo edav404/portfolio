@@ -13,7 +13,9 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "npm run typecheck && npm run lint && npm run test"
+    "check": "npm run typecheck && npm run lint && npm run test",
+    "smoke": "node scripts/smoke-routes.mjs",
+    "snapshot:routes": "node scripts/snapshot-routes.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.9.0",
