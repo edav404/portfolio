@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { posts } from "@/content/posts";
-import { projects } from "@/data/projects";
-import { site } from "@/data/site";
+import { caseStudies } from "@/content/projects";
+import { siteUrl } from "@/content/site";
 
 export const dynamic = "force-static";
 
@@ -11,7 +11,7 @@ export const dynamic = "force-static";
  */
 function absoluteUrl(path: string): string {
   const withSlash = path.endsWith("/") ? path : `${path}/`;
-  return `${site.domain}${withSlash}`;
+  return `${siteUrl}${withSlash}`;
 }
 
 /**
@@ -26,6 +26,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     ...pages.map((path) => ({ url: absoluteUrl(path), ...(path === "/blog/" && latestPost ? { lastModified: latestPost } : {}) })),
     ...posts.map((post) => ({ url: absoluteUrl(`/blog/${post.slug.es}/`), lastModified: post.updated })),
-    ...projects.map((project) => ({ url: absoluteUrl(`/proyectos/${project.slug}/`) })),
+    ...caseStudies.map((project) => ({ url: absoluteUrl(`/proyectos/${project.slug}/`) })),
   ];
 }

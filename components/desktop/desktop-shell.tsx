@@ -6,26 +6,32 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ContactForm } from "@/components/contact-form";
 import { MusicWidget } from "@/components/music-widget";
-import { projects } from "@/data/projects";
 import { experienceSince } from "@/content/experience";
-import { site, technologies } from "@/data/site";
+import { profile, technologies } from "@/content/profile";
+import { caseStudies as projects, projectTitle } from "@/content/projects";
+import { cvHref } from "@/content/site";
 import { CrtOverlay } from "./crt-overlay";
 import { DesktopIcon, type DesktopIconName, PixelLogo } from "./desktop-icons";
 import { RetroClippy, type ClippyState } from "./RetroClippy";
 import { ServicesWizard } from "./services-wizard";
 import { TerminalApp } from "./terminal-app";
 
+/** "Desarrollador Full Stack…" → "desarrollador Full Stack…" para usarlo dentro de una frase. */
+function lowerFirst(text: string): string {
+  return text.charAt(0).toLowerCase() + text.slice(1);
+}
+
 type AppId = "welcome" | "projects" | "services" | "about" | "contact" | "media" | "terminal";
 type WindowState = { id: AppId; open: boolean; minimized: boolean; maximized: boolean; z: number; x: number; y: number; width: number; height: number };
 
 const appMeta: Record<AppId, { title: string; file: string; icon: DesktopIconName }> = {
-  welcome: { title: "Bienvenido", file: "Welcome.exe", icon: "welcome" },
-  projects: { title: "Mi trabajo", file: "Project Explorer", icon: "folder" },
-  services: { title: "Mis servicios", file: "Services Wizard", icon: "services" },
+  welcome: { title: "Bienvenido", file: "Bienvenido.exe", icon: "welcome" },
+  projects: { title: "Mi trabajo", file: "Explorador de proyectos", icon: "folder" },
+  services: { title: "Mis servicios", file: "Asistente de servicios", icon: "services" },
   about: { title: "Sobre Emmanuel", file: "About.txt", icon: "about" },
-  contact: { title: "Contacto", file: "New Message", icon: "contact" },
-  media: { title: "Reproductor", file: "EDAV Media Player", icon: "music" },
-  terminal: { title: "Command Prompt", file: "C:\\EDAV", icon: "terminal" },
+  contact: { title: "Contacto", file: "Nuevo mensaje", icon: "contact" },
+  media: { title: "Reproductor", file: "Reproductor multimedia EDAV", icon: "music" },
+  terminal: { title: "Símbolo del sistema", file: "C:\\EDAV", icon: "terminal" },
 };
 
 const initialWindows: WindowState[] = [
@@ -150,7 +156,7 @@ function BootScreen({ onFinish, onSwitchToStandard }: { onFinish: () => void; on
       </div>
     </div>}
 
-    {phase >= 4 && <div className="os-boot-brand" aria-hidden="true"><div className="os-boot-logo-wrap"><PixelLogo/><span className="os-boot-orbit"/></div><strong>EDAV Desktop <i>98</i></strong><span>Personal portfolio system</span><div className="os-boot-loader"><b style={{ transform: `translateX(${Math.max(0, progress - 60) * 2.5}px)` }}/></div><small>Preparando tu escritorio...</small></div>}
+    {phase >= 4 && <div className="os-boot-brand" aria-hidden="true"><div className="os-boot-logo-wrap"><PixelLogo/><span className="os-boot-orbit"/></div><strong>EDAV Desktop <i>98</i></strong><span>Sistema de portafolio personal</span><div className="os-boot-loader"><b style={{ transform: `translateX(${Math.max(0, progress - 60) * 2.5}px)` }}/></div><small>Preparando tu escritorio...</small></div>}
 
     <div className="os-boot-footer"><span>{started ? `POST ${Math.round(progress)}% · ${soundStatus === "on" ? "AUDIO ON" : soundStatus === "unavailable" ? "AUDIO N/A" : "AUDIO..."}` : "ENTER: iniciar · ESC: omitir"}</span><div className="os-boot-footer-actions">{onSwitchToStandard && <button type="button" className="os-boot-accessible" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.preventDefault(); event.stopPropagation(); onSwitchToStandard(); }}>Vista web accesible</button>}<button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.preventDefault(); event.stopPropagation(); finishBoot(true); }}>Omitir inicio <kbd>Esc</kbd></button></div></div>
   </div>;
@@ -161,21 +167,21 @@ function ProjectExplorer() {
   const [selected, setSelected] = useState(projects[0]);
   return <div className="os-explorer">
     <div className="os-toolbar"><button>←</button><button>→</button><button>↑</button><span>Dirección</span><div>C:\Mi trabajo\Todos</div></div>
-    <div className="os-explorer-body"><aside><strong>Carpetas</strong><ul><li>▾ Escritorio</li><li className="active">　Mi trabajo</li><li>　Desarrollo web</li><li>　E-commerce</li><li>　Identidad visual</li></ul><div className="os-file-details"><small>SELECCIONADO</small><strong>{selected.title}</strong><span>{selected.category} · {selected.year}</span></div></aside><section><div className="os-file-grid">{projects.map((project) => <button className={selected.slug === project.slug ? "is-selected" : ""} key={project.slug} onClick={() => setSelected(project)} onDoubleClick={() => router.push(`/proyectos/${project.slug}`)} aria-label={`Seleccionar ${project.title}. Doble clic para abrir el caso.`}><span className="os-file-thumb"><Image src={project.image} alt={`Vista previa del proyecto ${project.title}`} fill sizes="120px"/></span><strong>{project.title}</strong><small>{project.category}</small></button>)}</div></section></div>
-    <div className="os-preview-bar"><div><strong>{selected.title}</strong><span>{selected.summary}</span></div><Link className="os-98-button is-primary" href={`/proyectos/${selected.slug}`}>Abrir caso</Link></div>
+    <div className="os-explorer-body"><aside><strong>Carpetas</strong><ul><li>▾ Escritorio</li><li className="active">　Mi trabajo</li><li>　Desarrollo web</li><li>　E-commerce</li><li>　Identidad visual</li></ul><div className="os-file-details"><small>SELECCIONADO</small><strong>{projectTitle(selected, "es")}</strong><span>{selected.category.es} · {selected.year}</span></div></aside><section><div className="os-file-grid">{projects.map((project) => <button className={selected.slug === project.slug ? "is-selected" : ""} key={project.slug} onClick={() => setSelected(project)} onDoubleClick={() => router.push(`/proyectos/${project.slug}`)} aria-label={`Seleccionar ${projectTitle(project, "es")}. Doble clic para abrir el caso.`}><span className="os-file-thumb"><Image src={project.image} alt={`Vista previa del proyecto ${projectTitle(project, "es")}`} fill sizes="120px"/></span><strong>{projectTitle(project, "es")}</strong><small>{project.category.es}</small></button>)}</div></section></div>
+    <div className="os-preview-bar"><div><strong>{projectTitle(selected, "es")}</strong><span>{selected.summary.es}</span></div><Link className="os-98-button is-primary" href={`/proyectos/${selected.slug}`}>Abrir caso</Link></div>
   </div>;
 }
 
 function WelcomeApp({ openApp }: { openApp: (id: AppId) => void }) {
   return <div className="os-welcome">
-    <div className="os-welcome-copy"><p className="os-kicker">WELCOME TO MY PERSONAL COMPUTER</p><h1>Sitios, productos y automatizaciones hechos a la medida.</h1><p>Soy <strong>{site.name}</strong>, {site.role.charAt(0).toLowerCase() + site.role.slice(1)}. Construyo sitios, tiendas y productos digitales, y automatizo procesos para reducir el trabajo repetitivo.</p><div className="os-button-row"><button className="os-98-button is-primary" onClick={() => openApp("projects")}>Explorar mi trabajo</button><button className="os-98-button" onClick={() => openApp("contact")}>Iniciar proyecto</button></div></div>
+    <div className="os-welcome-copy"><p className="os-kicker">BIENVENIDO A MI PC</p><h1>Sitios, productos y automatizaciones hechos a la medida.</h1><p>Soy <strong>{profile.name}</strong>, {lowerFirst(profile.headline.es)}. Construyo sitios, tiendas y productos digitales, y automatizo procesos para reducir el trabajo repetitivo.</p><div className="os-button-row"><button className="os-98-button is-primary" onClick={() => openApp("projects")}>Explorar mi trabajo</button><button className="os-98-button" onClick={() => openApp("contact")}>Iniciar proyecto</button></div></div>
     <div className="os-welcome-art" aria-hidden="true"><div className="os-chrome-disc"><span>ED</span></div><div className="os-orbit orbit-a"/><div className="os-orbit orbit-b"/><p>FULL STACK<br/><i>AUTOMATION</i><br/>SYSTEM</p></div>
-    <div className="os-quick-launch"><button onClick={() => openApp("projects")}><DesktopIcon name="folder"/><span>{projects.length} proyectos</span></button><button onClick={() => openApp("services")}><DesktopIcon name="services"/><span>Servicios</span></button><button onClick={() => openApp("terminal")}><DesktopIcon name="terminal"/><span>Modo developer</span></button></div>
+    <div className="os-quick-launch"><button onClick={() => openApp("projects")}><DesktopIcon name="folder"/><span>{projects.length} proyectos</span></button><button onClick={() => openApp("services")}><DesktopIcon name="services"/><span>Servicios</span></button><button onClick={() => openApp("terminal")}><DesktopIcon name="terminal"/><span>Modo desarrollador</span></button></div>
   </div>;
 }
 
 function AboutApp() {
-  return <div className="os-about"><aside><div className="os-user-card"><span>ED</span></div><strong>Emmanuel Dávila</strong><small>Medellín, Colombia</small><div className="os-online"><i/> Disponible para proyectos</div></aside><section><p className="os-kicker">ABOUT_EMMANUEL.TXT</p><h2>Curioso por naturaleza.<br/>Práctico por oficio.</h2><p>Estudio Tecnología en Sistemas, desarrollo proyectos web freelance y automatizo procesos con Power Platform y n8n. Busco soluciones fáciles de entender y mantener.</p><div className="os-system-specs"><div><span>Rol</span><strong>{site.role}</strong></div><div><span>Experiencia</span><strong>Desde {experienceSince}</strong></div><div><span>Proyectos</span><strong>{projects.length} documentados</strong></div></div><ul className="os-contact-links" aria-label="CV y contacto directo"><li><a href={site.cv.es} type="application/pdf">CV (ES, PDF)</a></li><li><a href={site.cv.en} type="application/pdf" hrefLang="en" lang="en">CV (EN, PDF)</a></li><li><a href={`mailto:${site.email}`}>{site.email}</a></li><li><a href={site.linkedin} target="_blank" rel="me noreferrer">LinkedIn</a></li><li><a href={site.github} target="_blank" rel="me noreferrer">GitHub</a></li></ul><div className="os-tech-marquee">{technologies.map((item) => <span key={item}>{item}</span>)}</div><Link className="os-98-button" href="/sobre-mi">Abrir perfil completo</Link></section></div>;
+  return <div className="os-about"><aside><div className="os-user-card"><span>ED</span></div><strong>{profile.name}</strong><small>{profile.location.es}</small><div className="os-online"><i/> Disponible para proyectos</div></aside><section><p className="os-kicker">ABOUT_EMMANUEL.TXT</p><h2>Curioso por naturaleza.<br/>Práctico por oficio.</h2><p>{profile.tagline.es}</p><div className="os-system-specs"><div><span>Rol</span><strong>{profile.headline.es}</strong></div><div><span>Experiencia</span><strong>Desde {experienceSince}</strong></div><div><span>Proyectos</span><strong>{projects.length} documentados</strong></div></div><ul className="os-contact-links" aria-label="CV y contacto directo"><li><a href={cvHref.es} type="application/pdf">CV (ES, PDF)</a></li><li><a href={cvHref.en} type="application/pdf" hrefLang="en" lang="en">CV (EN, PDF)</a></li><li><a href={`mailto:${profile.contact.email}`}>{profile.contact.email}</a></li><li><a href={profile.contact.linkedin} target="_blank" rel="me noreferrer">LinkedIn</a></li><li><a href={profile.contact.github} target="_blank" rel="me noreferrer">GitHub</a></li></ul><div className="os-tech-marquee">{technologies.map((item) => <span key={item}>{item}</span>)}</div><Link className="os-98-button" href="/sobre-mi">Abrir perfil completo</Link></section></div>;
 }
 
 function WindowContent({ id, openApp }: { id: AppId; openApp: (id: AppId) => void }) {
@@ -236,7 +242,7 @@ export function DesktopShell({ onSwitchToStandard, skipBoot = false }: { onSwitc
     <div className="os-wallpaper" aria-hidden="true"><div className="os-wallpaper-sun"/><div className="os-wallpaper-grid"/><div className="os-wallpaper-word">EDAV<span>98</span></div><div className="os-wallpaper-ring ring-one"/><div className="os-wallpaper-ring ring-two"/></div>
     <a className="os-skip-link" href="#welcome-content" onClick={() => openApp("welcome")}>Ir al contenido principal</a>
     <div className="os-desktop-icons" ref={iconsRef} role="group" aria-label="Aplicaciones del escritorio">{(["projects", "services", "about", "contact", "media", "terminal"] as AppId[]).map((id) => <button key={id} onClick={(event) => { event.stopPropagation(); openApp(id); }}><span className={`os-icon-art icon-${id}`}><DesktopIcon name={appMeta[id].icon}/></span><span>{appMeta[id].title}</span></button>)}{onSwitchToStandard && <button onClick={(event) => { event.stopPropagation(); onSwitchToStandard(); }}><span className="os-icon-art icon-accessible-web"><DesktopIcon name="welcome"/></span><span>Vista web accesible</span></button>}</div>
-    <div className="os-mobile-label"><PixelLogo/><div><strong>EDAV Desktop 98</strong><span>Mobile launcher</span></div></div>
+    <div className="os-mobile-label"><PixelLogo/><div><strong>EDAV Desktop 98</strong><span>Accesos rápidos</span></div></div>
     <div className="os-window-layer">{windows.filter((item) => item.open && !item.minimized).map((item) => <section id={item.id === "welcome" ? "welcome-content" : undefined} className={`os-window ${item.maximized ? "is-maximized" : ""} ${item.z === topVisibleZ ? "is-active" : "is-inactive"} app-${item.id}`} style={{ left: item.x, top: item.y, width: item.width, height: item.height, zIndex: item.z }} key={item.id} onPointerDown={() => focus(item.id)} aria-label={appMeta[item.id].file}>
       <div className="os-titlebar" onPointerDown={(event) => beginDrag(event, item)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} onLostPointerCapture={endDrag} onDoubleClick={() => updateWindow(item.id, { maximized: !item.maximized })}><div><DesktopIcon name={appMeta[item.id].icon}/><strong>{appMeta[item.id].file}</strong></div><div className="os-window-buttons" onPointerDown={(event) => event.stopPropagation()} onDoubleClick={(event) => event.stopPropagation()}><button type="button" title="Minimizar" aria-label={`Minimizar ${appMeta[item.id].title}`} onClick={(event) => { event.stopPropagation(); updateWindow(item.id, { minimized: true }); beep(360); }}>_</button><button type="button" title={item.maximized ? "Restaurar" : "Maximizar"} aria-label={`${item.maximized ? "Restaurar" : "Maximizar"} ${appMeta[item.id].title}`} onClick={(event) => { event.stopPropagation(); updateWindow(item.id, { maximized: !item.maximized }); beep(450); }}>{item.maximized ? "❐" : "□"}</button><button type="button" title="Cerrar" className="close" aria-label={`Cerrar ${appMeta[item.id].title}`} onClick={(event) => { event.stopPropagation(); updateWindow(item.id, { open: false }); beep(260); }}>×</button></div></div>
       <div className="os-menu-strip"><span>Archivo</span><span>Editar</span><span>Ver</span><span>Ayuda</span></div><div className="os-window-content"><WindowContent id={item.id} openApp={openApp}/></div><div className="os-statusbar"><span>{appMeta[item.id].title}</span><span>EDAV Desktop 98</span></div>

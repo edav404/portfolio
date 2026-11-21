@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { Icon } from "@/components/icons";
-// Se importa `profile` y no `data/site` para no meter servicios y testimonios en el bundle cliente.
+// Solo `content/profile.ts` (pequeño): nada de proyectos, servicios ni testimonios en el bundle cliente.
 import { profile } from "@/content/profile";
 
 type Track = { name: string; artist: string; album?: string; image?: string; url: string; nowPlaying: boolean };
@@ -37,12 +37,12 @@ export function MusicWidget() {
       <div className="music-player-info">
         <span className="music-player-status">{isLoading ? "CARGANDO LASTFM.DRV" : track?.nowPlaying ? "● ESCUCHANDO AHORA" : isError ? "○ MODO OFFLINE" : "○ ÚLTIMA REPRODUCCIÓN"}</span>
         <strong>{isLoading ? "Buscando tu soundtrack…" : track?.name ?? "Last.fm espera conexión"}</strong>
-        <p>{isLoading ? "Consultando a edav404" : track ? `${track.artist}${track.album ? ` · ${track.album}` : ""}` : "Last.fm no está disponible en este momento."}</p>
+        <p>{isLoading ? `Consultando a ${profile.contact.lastfm}` : track ? `${track.artist}${track.album ? ` · ${track.album}` : ""}` : "Last.fm no está disponible en este momento."}</p>
         <div className="music-player-spectrum" aria-hidden="true">{Array.from({ length: 24 }, (_, index) => <i key={index} style={{ height: `${18 + ((index * 17) % 68)}%` }}/>)}</div>
         <div className="music-player-progress" aria-hidden="true"><span/></div>
       </div>
     </div>
     <div className="music-player-controls" aria-hidden="true"><span>◀◀</span><b>▶</b><span>▶▶</span><em>VOL</em><i/></div>
-    <div className="music-player-footer"><span>{isError ? "LAST.FM SIN RESPUESTA" : "Powered by Last.fm"}</span><a href={`https://www.last.fm/user/${profile.contact.lastfm}`} target="_blank" rel="noreferrer">ABRIR LAST.FM ↗</a></div>
+    <div className="music-player-footer"><span>{isError ? "LAST.FM SIN RESPUESTA" : "Datos de Last.fm"}</span><a href={`https://www.last.fm/user/${profile.contact.lastfm}`} target="_blank" rel="noreferrer">ABRIR LAST.FM ↗</a></div>
   </section>;
 }

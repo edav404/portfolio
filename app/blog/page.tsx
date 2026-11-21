@@ -4,7 +4,7 @@ import { Icon } from "@/components/icons";
 import { Cta, JsonLd, SectionHeading } from "@/components/ui";
 import { sortedPosts } from "@/content/posts";
 import { profile } from "@/content/profile";
-import { site } from "@/data/site";
+import { siteName, siteUrl } from "@/content/site";
 import { formatPostDate } from "./format-date";
 
 const description = "Artículos de Emmanuel Dávila sobre páginas web para negocios, SEO, WordPress, Shopify y automatización de procesos, escritos para dueños de negocio.";
@@ -13,23 +13,23 @@ export const metadata: Metadata = {
   title: "Blog: desarrollo web, SEO y automatización",
   description,
   alternates: { canonical: "/blog/" },
-  openGraph: { type: "website", url: "/blog/", title: "Blog: desarrollo web, SEO y automatización | Emmanuel Dávila", description, locale: "es_CO", siteName: "EDAV OS" },
+  openGraph: { type: "website", url: "/blog/", title: "Blog: desarrollo web, SEO y automatización | Emmanuel Dávila", description, locale: "es_CO", siteName },
 };
 
 export default function BlogPage() {
   const schema = {
     "@context": "https://schema.org",
     "@type": "Blog",
-    "@id": `${site.domain}/blog/#blog`,
-    url: `${site.domain}/blog/`,
+    "@id": `${siteUrl}/blog/#blog`,
+    url: `${siteUrl}/blog/`,
     name: "Blog de Emmanuel Dávila",
     description,
     inLanguage: "es-CO",
-    author: { "@type": "Person", "@id": `${site.domain}/#person`, name: profile.name, url: `${site.domain}/sobre-mi/` },
+    author: { "@type": "Person", "@id": `${siteUrl}/#person`, name: profile.name, url: `${siteUrl}/sobre-mi/` },
     blogPost: sortedPosts.map((post) => ({
       "@type": "BlogPosting",
-      "@id": `${site.domain}/blog/${post.slug.es}/#article`,
-      url: `${site.domain}/blog/${post.slug.es}/`,
+      "@id": `${siteUrl}/blog/${post.slug.es}/#article`,
+      url: `${siteUrl}/blog/${post.slug.es}/`,
       headline: post.title.es,
       datePublished: post.published,
       dateModified: post.updated,

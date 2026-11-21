@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ContactKit } from "@/components/ui";
-import { site } from "@/data/site";
+import { profile } from "@/content/profile";
 
 export function Footer() {
   return (
@@ -8,7 +8,7 @@ export function Footer() {
       <div className="footer-grid">
         <div>
           <p className="eyebrow">EDAV OS · ONLINE</p>
-          <p className="footer-title">{site.name} · {site.role}.</p>
+          <p className="footer-title">{profile.name} · {profile.headline.es}.</p>
           <ContactKit className="contact-kit-dark" label="Contacto directo y CV"/>
         </div>
         <nav className="footer-links" aria-label="Enlaces del pie">
@@ -20,10 +20,10 @@ export function Footer() {
           {/* Carga completa a propósito: así la portada monta de nuevo y abre el escritorio aunque ya se esté en "/". */}
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a href="/?view=retro">Modo escritorio (EDAV Desktop 98)</a>
-          <a href={`https://www.last.fm/user/${site.lastfm}`} target="_blank" rel="noreferrer">Last.fm</a>
+          <a href={`https://www.last.fm/user/${profile.contact.lastfm}`} target="_blank" rel="noreferrer">Last.fm</a>
         </nav>
       </div>
-      <div className="footer-bottom"><span>© {new Date().getFullYear()} {site.name}</span><span>Medellín, Colombia · Hecho con código y curiosidad.</span></div>
+      <div className="footer-bottom"><span>© {new Date().getFullYear()} {profile.name}</span><span>{profile.location.es} · Hecho con código y curiosidad.</span></div>
     </footer>
   );
 }

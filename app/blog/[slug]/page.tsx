@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Cta, JsonLd } from "@/components/ui";
 import { getPostBySlug, posts } from "@/content/posts";
 import { profile } from "@/content/profile";
-import { site } from "@/data/site";
+import { siteName, siteUrl } from "@/content/site";
 import { formatPostDate } from "../format-date";
 import { PostBody, plainText } from "../post-body";
 
@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: { absolute: title },
     description: post.description.es,
-    authors: [{ name: profile.name, url: `${site.domain}/sobre-mi/` }],
+    authors: [{ name: profile.name, url: `${siteUrl}/sobre-mi/` }],
     alternates: { canonical: path },
     openGraph: {
       type: "article",
@@ -35,10 +35,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description: post.description.es,
       locale: "es_CO",
-      siteName: "EDAV OS",
+      siteName,
       publishedTime: post.published,
       modifiedTime: post.updated,
-      authors: [`${site.domain}/sobre-mi/`],
+      authors: [`${siteUrl}/sobre-mi/`],
       tags: post.tags.es,
     },
   };
@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function BlogPostPage({ params }: Props) {
   const post = getPostBySlug((await params).slug, "es");
   if (!post) notFound();
-  const url = `${site.domain}/blog/${post.slug.es}/`;
+  const url = `${siteUrl}/blog/${post.slug.es}/`;
   const schema = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -62,8 +62,8 @@ export default async function BlogPostPage({ params }: Props) {
     keywords: post.tags.es.join(", "),
     articleBody: plainText(post.body.es),
     // `@id` alineado con el Person del layout cuando se complete el @graph (SEO-08, Fase 7).
-    author: { "@type": "Person", "@id": `${site.domain}/#person`, name: profile.name, url: `${site.domain}/sobre-mi/` },
-    publisher: { "@type": "Person", "@id": `${site.domain}/#person`, name: profile.name, url: site.domain },
+    author: { "@type": "Person", "@id": `${siteUrl}/#person`, name: profile.name, url: `${siteUrl}/sobre-mi/` },
+    publisher: { "@type": "Person", "@id": `${siteUrl}/#person`, name: profile.name, url: siteUrl },
   };
   return (
     <>

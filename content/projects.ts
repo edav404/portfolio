@@ -549,3 +549,30 @@ export function projectTitle(project: Pick<Project, "title">, locale: Locale): s
 export function getProject(slug: string) {
   return projects.find((project) => project.slug === slug);
 }
+
+/** Proyecto con portada: el único que hoy tiene página de caso de estudio (`/proyectos/<slug>/`). */
+export type CaseStudy = Project & { image: string };
+
+function hasCover(project: Project): project is CaseStudy {
+  return Boolean(project.image);
+}
+
+/**
+ * Casos de estudio publicados. Los personales y las automatizaciones sin portada
+ * se mostrarán cuando la galería con filtros esté lista (Fase 4).
+ */
+export const caseStudies: CaseStudy[] = projects.filter(hasCover);
+
+export function getCaseStudy(slug: string): CaseStudy | undefined {
+  return caseStudies.find((project) => project.slug === slug);
+}
+
+/**
+ * Casos para la portada (COD-03): primero los marcados con `featured` y, si no llegan
+ * a `limit`, se completa con el resto en el orden de `projects`.
+ */
+export function featuredCaseStudies(limit = 6): CaseStudy[] {
+  const featured = caseStudies.filter((project) => project.featured);
+  const rest = caseStudies.filter((project) => !project.featured);
+  return [...featured, ...rest].slice(0, limit);
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useRef, useState } from "react";
-import { profile } from "@/content/profile";
+import { profile, technologies } from "@/content/profile";
 
 type Line = { type: "command" | "output" | "error"; text: string };
 
@@ -9,7 +9,7 @@ const help = ["help", "whoami", "skills", "projects", "services", "contact", "mu
 
 export function TerminalApp({ onOpen }: { onOpen: (id: string) => void }) {
   const [lines, setLines] = useState<Line[]>([
-    { type: "output", text: "EDAV Command Prompt [Version 98.04.04]" },
+    { type: "output", text: "EDAV Símbolo del sistema [Versión 98.04.04]" },
     { type: "output", text: "Escribe HELP para listar los comandos disponibles." },
   ]);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -23,10 +23,10 @@ export function TerminalApp({ onOpen }: { onOpen: (id: string) => void }) {
     if (command === "clear" || command === "cls") setLines([]);
     else if (command === "help") next.push({ type: "output", text: help.join("  ·  ") });
     else if (command === "whoami") next.push({ type: "output", text: `${profile.name} — ${profile.headline.es}, ${profile.location.es}.` });
-    else if (command === "skills") next.push({ type: "output", text: "TypeScript · React · Next.js · Node.js · WordPress · WooCommerce · Shopify · Power Platform · n8n · PostgreSQL" });
+    else if (command === "skills") next.push({ type: "output", text: technologies.join(" · ") });
     else if (command === "date") next.push({ type: "output", text: new Intl.DateTimeFormat("es-CO", { dateStyle: "full", timeStyle: "medium" }).format(new Date()) });
     else if (["projects", "services", "contact", "music"].includes(command)) { onOpen(command === "music" ? "media" : command); next.push({ type: "output", text: `Abriendo ${command}.exe...` }); }
-    else if (command.startsWith("open ")) { const id = command.slice(5).replace("work", "projects").replace("about", "about"); onOpen(id); next.push({ type: "output", text: `Solicitud enviada: ${id}.exe` }); }
+    else if (command.startsWith("open ")) { const id = command.slice(5).replace("work", "projects"); onOpen(id); next.push({ type: "output", text: `Solicitud enviada: ${id}.exe` }); }
     else next.push({ type: "error", text: `'${input}' no se reconoce como comando. Escribe HELP.` });
     if (command !== "clear" && command !== "cls") setLines((current) => [...current, ...next]);
     event.currentTarget.reset();

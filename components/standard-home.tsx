@@ -5,9 +5,11 @@ import { Icon } from "@/components/icons";
 import { MusicWidget } from "@/components/music-widget";
 import { ContactKit, Cta, ProjectCard, SectionHeading, Window } from "@/components/ui";
 import { experienceSince } from "@/content/experience";
-import { profile } from "@/content/profile";
-import { featuredProjects, projects } from "@/data/projects";
-import { services, site, technologies, testimonials } from "@/data/site";
+import { profile, technologies } from "@/content/profile";
+import { caseStudies, featuredCaseStudies } from "@/content/projects";
+import { services, testimonials } from "@/content/services";
+import { cvHref } from "@/content/site";
+import { stats } from "@/content/stats";
 
 /**
  * Portada (Server Component): todo su contenido sale en el HTML inicial (SEO-01 / PERF-01).
@@ -17,7 +19,7 @@ import { services, site, technologies, testimonials } from "@/data/site";
 export function StandardHome() {
   const facts = [
     { value: `Desde ${experienceSince}`, label: "trabajando con clientes y equipos" },
-    ...profile.stats.map((stat) => ({ value: stat.value, label: stat.label.es })),
+    ...stats.map((stat) => ({ value: stat.value, label: stat.label.es })),
   ];
 
   return <div className="standard-home">
@@ -29,7 +31,7 @@ export function StandardHome() {
           <p className="hero-lead">{profile.tagline.es}</p>
           <div className="button-row">
             <Cta href="/contacto">Hablemos de tu proyecto</Cta>
-            <a className="button button-secondary" href={site.cv.es} type="application/pdf">Descargar CV<Icon name="download"/></a>
+            <a className="button button-secondary" href={cvHref.es} type="application/pdf">Descargar CV<Icon name="download"/></a>
           </div>
           <ContactKit className="hero-contact"/>
           <ul className="hero-facts">{facts.map((fact) => <li key={fact.label}><strong>{fact.value}</strong> {fact.label}</li>)}</ul>
@@ -38,7 +40,7 @@ export function StandardHome() {
           <div className="orb orb-one" aria-hidden="true"/><div className="orb orb-two" aria-hidden="true"/>
           <Window title="edav_desktop_98.exe" className="hero-window">
             <div className="terminal-line"><span>C:\EDAV&gt;</span> whoami</div>
-            <div className="profile-chip"><div className="avatar" aria-hidden="true">ED</div><div><strong>{profile.name}</strong><p>Full Stack · Automatización · {profile.location.es}</p></div></div>
+            <div className="profile-chip"><div className="avatar" aria-hidden="true">ED</div><div><strong>{profile.name}</strong><p>{profile.shortHeadline.es} · {profile.location.es}</p></div></div>
             <div className="terminal-line"><span>C:\EDAV&gt;</span> start desktop98</div>
             <p className="terminal-output">Este portafolio también funciona como un escritorio retro con ventanas, terminal y reproductor. Es opcional: el contenido es el mismo.</p>
             <DesktopLaunchButton/>
@@ -56,13 +58,13 @@ export function StandardHome() {
 
     <section className="section-shell section-block" id="proyectos" aria-labelledby="proyectos-title">
       <div className="section-heading"><p className="eyebrow">Proyectos destacados</p><h2 id="proyectos-title">Proyectos que resuelven algo real.</h2><p>E-commerce, sitios corporativos y rediseños para clientes en Colombia, México y Estados Unidos.</p></div>
-      <div className="project-grid">{featuredProjects.map((project) => <ProjectCard key={project.slug} project={project}/>)}</div>
-      <div className="center-action"><Cta href="/proyectos">Ver los {projects.length} proyectos</Cta></div>
+      <div className="project-grid">{featuredCaseStudies().map((project) => <ProjectCard key={project.slug} project={project}/>)}</div>
+      <div className="center-action"><Cta href="/proyectos">Ver los {caseStudies.length} proyectos</Cta></div>
     </section>
 
     <section className="services-section section-block" aria-labelledby="servicios-title"><div className="section-shell">
       <div className="section-heading"><p className="eyebrow">Servicios</p><h2 id="servicios-title">Una web que trabaja para ti, y procesos que se hacen solos.</h2><p>Del sitio o la tienda a la automatización del trabajo repetitivo: entiendo el proceso antes de construir y dejo todo documentado.</p></div>
-      <div className="services-grid">{services.map((service, index) => <article className="service-card" key={service.slug}><Icon name={index === 1 ? "folder" : index === 3 ? "spark" : "code"}/><h3>{service.title}</h3><p>{service.description}</p><Link className="text-link" href={`/servicios#${service.slug}`}>Conocer el servicio <Icon name="arrow"/></Link></article>)}</div>
+      <div className="services-grid">{services.map((service, index) => <article className="service-card" key={service.slug}><Icon name={index === 1 ? "folder" : index === 3 ? "spark" : "code"}/><h3>{service.title.es}</h3><p>{service.description.es}</p><Link className="text-link" href={`/servicios#${service.slug}`}>Conocer el servicio <Icon name="arrow"/></Link></article>)}</div>
     </div></section>
 
     <section className="section-shell section-block split-section">
@@ -70,9 +72,9 @@ export function StandardHome() {
       <Window title="skills.sys" className="skills-window"><p className="eyebrow">Stack cargado</p><div className="skill-cloud">{technologies.map((tech) => <span key={tech}>{tech}</span>)}</div></Window>
     </section>
 
-    <section className="section-shell section-block"><SectionHeading eyebrow="Lo que dicen" title="Buenas relaciones, mejores resultados."/><div className="testimonials-grid">{testimonials.map((item) => <blockquote className="testimonial" key={item.name}><div className="quote-mark" aria-hidden="true">“</div><p>{item.quote}</p><footer><Image src={item.logo} alt={`Logo de ${item.name}`} width={52} height={52}/><div><cite>{item.name}</cite><span>{item.project}</span></div></footer></blockquote>)}</div></section>
+    <section className="section-shell section-block"><SectionHeading eyebrow="Lo que dicen" title="Buenas relaciones, mejores resultados."/><div className="testimonials-grid">{testimonials.map((item) => <blockquote className="testimonial" key={item.name}><div className="quote-mark" aria-hidden="true">“</div><p>{item.quote.es}</p><footer><Image src={item.logo} alt={`Logo de ${item.name}`} width={52} height={52}/><div><cite>{item.name}</cite><span>{item.project.es}</span></div></footer></blockquote>)}</div></section>
 
-    <section className="section-shell section-block now-section"><div><SectionHeading eyebrow="Now playing" title="El soundtrack detrás del código."/><p>Una pequeña ventana a lo que suena mientras programo y resuelvo problemas.</p><Link className="text-link" href="/ahora">Ver mi página “Ahora” <Icon name="arrow"/></Link></div><MusicWidget/></section>
+    <section className="section-shell section-block now-section"><div><SectionHeading eyebrow="Sonando ahora" title="El soundtrack detrás del código."/><p>Una pequeña ventana a lo que suena mientras programo y resuelvo problemas.</p><Link className="text-link" href="/ahora">Ver mi página “Ahora” <Icon name="arrow"/></Link></div><MusicWidget/></section>
 
     <section className="section-shell final-cta" aria-labelledby="cta-title"><div><p className="eyebrow">Nuevo proyecto.exe</p><h2 id="cta-title">¿Tienes una idea dando vueltas?</h2><p>Cuéntame qué quieres construir o qué proceso quieres automatizar. Si prefieres revisar mi perfil primero, aquí tienes el CV y mis canales directos.</p><ContactKit className="contact-kit-dark"/></div><Cta href="/contacto">Iniciar una conversación</Cta></section>
   </div>;
