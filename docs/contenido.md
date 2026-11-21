@@ -44,12 +44,8 @@ La versión detallada vive solo en local (`private/nutresa-detallado.md`, ignora
 
 Los testimonios son citas de clientes en español; la versión en inglés se marca como traducción (`translatedFrom`).
 
-## Pendiente de confirmar
+## Datos confirmados
 
-| # | Dato | Dónde | Valor provisional |
-|---|---|---|---|
-| 1 | Año de grado como Técnico Profesional en Sistemas | `experience.ts` | «Graduado» |
-
-Confirmado (2026-11-20): Servicios Nutresa del 1 jul. al 31 dic. 2026 · freelance desde 2023 · inglés B2 (MCER) ·
+Confirmado (2026-11-20): técnico profesional graduado en 2026 · tecnólogo con grado previsto en marzo de 2027 · Servicios Nutresa del 1 jul. al 31 dic. 2026 · freelance desde 2023 · inglés B2 (MCER) ·
 correo `contacto@edav.com.co` · bot en n8n con Groq (nivel gratuito) · jdicans se menciona sin enlace ·
 Nutresa redactado como un CV normal (logros, propuestas y aprendizaje autodidacta, sin nombres ni IDs internos).

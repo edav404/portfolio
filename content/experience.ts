@@ -155,16 +155,16 @@ export const education: EducationEntry[] = [
     institution: "Tecnológico de Antioquia",
     title: { es: "Tecnología en Sistemas", en: "Tecnología en Sistemas (Systems Technology program)" },
     status: "in-progress",
-    detail: { es: "6.º semestre (último)", en: "Final (6th) semester" },
-    year: "2026",
+    detail: { es: "6.º semestre (último) · grado previsto en marzo de 2027", en: "Final (6th) semester · expected graduation March 2027" },
+    year: "2027",
   },
   {
     id: "tdea-tecnico",
     institution: "Tecnológico de Antioquia",
     title: { es: "Técnico Profesional en Sistemas", en: "Técnico Profesional en Sistemas (Systems Technician program)" },
     status: "completed",
-    // Pendiente confirmar año de grado.
-    detail: { es: "Graduado", en: "Completed" },
+    detail: { es: "Graduado en 2026", en: "Completed in 2026" },
+    year: "2026",
   },
   {
     id: "talento-tech",
