@@ -7,7 +7,7 @@ import { ContactKit, Cta, JsonLd, ProjectCard, SectionHeading, Window } from "@/
 import { experienceSince } from "@/content/experience";
 import { pageFor } from "@/content/pages";
 import { profile, technologies } from "@/content/profile";
-import { caseStudies, featuredCaseStudies } from "@/content/projects";
+import { caseStudies, featuredCaseStudies, projectTitle } from "@/content/projects";
 import { href } from "@/content/routes";
 import { services, testimonials } from "@/content/services";
 import { cvHref, siteUrl } from "@/content/site";
@@ -45,7 +45,14 @@ export function HomeView({ locale }: { locale: Locale }) {
     { value: format(common.since, { year: experienceSince }), label: page.hero.sinceLabel },
     ...stats.map((stat) => ({ value: stat.value, label: stat.label[locale] })),
   ];
-  const experienceCopy = { loading: os.loading, open: os.open, contactForm: uiFor(locale, "contactForm"), music: uiFor(locale, "music"), os };
+  // Microcopy del escritorio (ui.os, ~5,5 KB / 2,6 KB gzip en ES) en el payload de la portada: el
+  // módulo diferido no puede resolverlo (es cliente y no importa content/ui.ts). Los proyectos van
+  // proyectados (solo lo que pinta el explorador, en este idioma).
+  const desktopProjects = caseStudies.map((project) => ({
+    slug: project.slug, title: projectTitle(project, locale), category: project.category[locale], year: String(project.year),
+    summary: project.summary[locale], image: project.image, href: href("project", locale, { slug: project.slug }),
+  }));
+  const experienceCopy = { loading: os.loading, open: os.open, contactForm: uiFor(locale, "contactForm"), music: uiFor(locale, "music"), os, projects: desktopProjects };
   const music = uiFor(locale, "music");
 
   return <>

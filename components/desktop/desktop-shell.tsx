@@ -9,7 +9,6 @@ import { MusicWidget, type MusicCopy } from "@/components/music-widget";
 import { experienceSince } from "@/content/experience";
 import { format, roleInSentence } from "@/content/format";
 import { profile, technologies } from "@/content/profile";
-import { caseStudies as projects, projectTitle } from "@/content/projects";
 import { href, intlLocale } from "@/content/routes";
 import { cvHref } from "@/content/site";
 import type { Locale } from "@/content/types";
@@ -34,7 +33,13 @@ const appIcons: Record<AppId, DesktopIconName> = {
 export type OsCopy = Resolved<Ui["os"]>;
 
 /** Textos del escritorio + idioma, para los subcomponentes sin pasar props en cadena. */
-const OsContext = createContext<{ os: OsCopy; locale: Locale } | null>(null);
+/**
+ * Proyecto tal como lo pinta el explorador: solo esos campos y ya en el idioma de la página. El
+ * servidor (HomeView) hace la proyección; así el chunk del escritorio no arrastra content/projects.ts.
+ */
+export type DesktopProject = { slug: string; title: string; category: string; year: string; summary: string; image: string; href: string };
+
+const OsContext = createContext<{ os: OsCopy; locale: Locale; projects: DesktopProject[] } | null>(null);
 function useOs() {
   const value = useContext(OsContext);
   if (!value) throw new Error("useOs fuera de DesktopShell");
@@ -52,7 +57,7 @@ const initialWindows: WindowState[] = [
 ];
 
 function BootScreen({ onFinish, onSwitchToStandard }: { onFinish: () => void; onSwitchToStandard?: () => void }) {
-  const { os } = useOs();
+  const { os, projects } = useOs();
   const boot = os.boot;
   const [started, setStarted] = useState(false);
   const [phase, setPhase] = useState(0);
@@ -181,19 +186,18 @@ function BootScreen({ onFinish, onSwitchToStandard }: { onFinish: () => void; on
 
 function ProjectExplorer() {
   const router = useRouter();
-  const { os, locale } = useOs();
+  const { os, projects } = useOs();
   const copy = os.explorer;
-  const caseHref = (slug: string) => href("project", locale, { slug });
   const [selected, setSelected] = useState(projects[0]);
   return <div className="os-explorer">
     <div className="os-toolbar"><button>←</button><button>→</button><button>↑</button><span>{copy.address}</span><div>{copy.path}</div></div>
-    <div className="os-explorer-body"><aside><strong>{copy.folders}</strong><ul><li>▾ {copy.desktop}</li><li className="active">　{os.apps.projects.title}</li><li>　{copy.folderWeb}</li><li>　{copy.folderCommerce}</li><li>　{copy.folderBrand}</li></ul><div className="os-file-details"><small>{copy.selected}</small><strong>{projectTitle(selected, locale)}</strong><span>{selected.category[locale]} · {selected.year}</span></div></aside><section><div className="os-file-grid">{projects.map((project) => <button className={selected.slug === project.slug ? "is-selected" : ""} key={project.slug} onClick={() => setSelected(project)} onDoubleClick={() => router.push(caseHref(project.slug))} aria-label={format(copy.selectItem, { title: projectTitle(project, locale) })}><span className="os-file-thumb"><Image src={project.image} alt={format(copy.previewAlt, { title: projectTitle(project, locale) })} fill sizes="120px"/></span><strong>{projectTitle(project, locale)}</strong><small>{project.category[locale]}</small></button>)}</div></section></div>
-    <div className="os-preview-bar"><div><strong>{projectTitle(selected, locale)}</strong><span>{selected.summary[locale]}</span></div><Link className="os-98-button is-primary" href={caseHref(selected.slug)}>{copy.openCase}</Link></div>
+    <div className="os-explorer-body"><aside><strong>{copy.folders}</strong><ul><li>▾ {copy.desktop}</li><li className="active">　{os.apps.projects.title}</li><li>　{copy.folderWeb}</li><li>　{copy.folderCommerce}</li><li>　{copy.folderBrand}</li></ul><div className="os-file-details"><small>{copy.selected}</small><strong>{selected.title}</strong><span>{selected.category} · {selected.year}</span></div></aside><section><div className="os-file-grid">{projects.map((project) => <button className={selected.slug === project.slug ? "is-selected" : ""} key={project.slug} onClick={() => setSelected(project)} onDoubleClick={() => router.push(project.href)} aria-label={format(copy.selectItem, { title: project.title })}><span className="os-file-thumb"><Image src={project.image} alt={format(copy.previewAlt, { title: project.title })} fill sizes="120px"/></span><strong>{project.title}</strong><small>{project.category}</small></button>)}</div></section></div>
+    <div className="os-preview-bar"><div><strong>{selected.title}</strong><span>{selected.summary}</span></div><Link className="os-98-button is-primary" href={selected.href}>{copy.openCase}</Link></div>
   </div>;
 }
 
 function WelcomeApp({ openApp }: { openApp: (id: AppId) => void }) {
-  const { os, locale } = useOs();
+  const { os, locale, projects } = useOs();
   const copy = os.welcome;
   // El nombre va en <strong>: se parte la plantilla por `{name}`.
   const [beforeName, afterName = ""] = copy.intro.split("{name}");
@@ -205,14 +209,14 @@ function WelcomeApp({ openApp }: { openApp: (id: AppId) => void }) {
 }
 
 function AboutApp() {
-  const { os, locale } = useOs();
+  const { os, locale, projects } = useOs();
   const copy = os.about;
   const other: Locale = locale === "es" ? "en" : "es";
   return <div className="os-about"><aside><div className="os-user-card"><span>ED</span></div><strong>{profile.name}</strong><small>{profile.location[locale]}</small><div className="os-online"><i/> {copy.available}</div></aside><section><p className="os-kicker">{copy.kicker}</p><h2>{copy.titleLine1}<br/>{copy.titleLine2}</h2><p>{profile.tagline[locale]}</p><div className="os-system-specs"><div><span>{copy.role}</span><strong>{profile.headline[locale]}</strong></div><div><span>{copy.experience}</span><strong>{format(copy.since, { year: experienceSince })}</strong></div><div><span>{copy.projects}</span><strong>{format(copy.projectsValue, { count: projects.length })}</strong></div></div><ul className="os-contact-links" aria-label={copy.contactLinks}><li><a href={cvHref[locale]} type="application/pdf">{locale === "es" ? copy.cvEs : copy.cvEn}</a></li><li><a href={cvHref[other]} type="application/pdf" hrefLang={other} lang={other}>{other === "es" ? copy.cvEs : copy.cvEn}</a></li><li><a href={`mailto:${profile.contact.email}`}>{profile.contact.email}</a></li><li><a href={profile.contact.linkedin} target="_blank" rel="me noreferrer">LinkedIn</a></li><li><a href={profile.contact.github} target="_blank" rel="me noreferrer">GitHub</a></li></ul><div className="os-tech-marquee">{technologies.map((item) => <span key={item}>{item}</span>)}</div><Link className="os-98-button" href={href("about", locale)}>{copy.openProfile}</Link></section></div>;
 }
 
 /** Textos de los componentes compartidos con la web, resueltos por el servidor (portada). */
-export type DesktopCopy = { contactForm: ContactFormCopy; music: MusicCopy; os: OsCopy };
+export type DesktopCopy = { contactForm: ContactFormCopy; music: MusicCopy; os: OsCopy; projects: DesktopProject[] };
 
 function WindowContent({ id, openApp, copy }: { id: AppId; openApp: (id: AppId) => void; copy: DesktopCopy }) {
   if (id === "welcome") return <WelcomeApp openApp={openApp}/>;
@@ -229,7 +233,7 @@ export function DesktopShell({ copy, onSwitchToStandard, skipBoot = false }: { c
   const os = copy.os;
   const desk = os.desktop;
   const win = os.window;
-  const osContext = useMemo(() => ({ os, locale }), [os, locale]);
+  const osContext = useMemo(() => ({ os, locale, projects: copy.projects }), [os, locale, copy.projects]);
   const [windows, setWindows] = useState(initialWindows);
   const [startOpen, setStartOpen] = useState(false);
   const [crt, setCrt] = useState(true);
