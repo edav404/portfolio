@@ -23,5 +23,5 @@ export const metadata: Metadata = {
 export const viewport = siteViewport;
 
 export default function GlobalNotFound() {
-  return <Document locale="es"><SiteShell locale="es"><NotFoundView/></SiteShell></Document>;
+  return <Document locale="es"><SiteShell locale="es"><NotFoundView locale="es"/></SiteShell></Document>;
 }

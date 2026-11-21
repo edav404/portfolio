@@ -15,15 +15,24 @@
 import dynamic from "next/dynamic";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { DesktopIcon } from "@/components/desktop/desktop-icons";
+import type { DesktopCopy } from "@/components/desktop/desktop-shell";
 
 const loadDesktop = () => import("@/components/desktop/desktop-shell").then((module) => module.DesktopShell);
 const DesktopShell = dynamic(loadDesktop, {
   ssr: false,
-  loading: () => <div className="loading-screen os-loading" role="status"><p>Cargando EDAV Desktop 98…</p></div>,
+  loading: () => <DesktopLoading/>,
 });
 
-type DesktopControls = { open: () => void; preload: () => void };
+/** Textos ya resueltos por el servidor: el cliente no importa content/ui.ts. */
+export type ExperienceCopy = DesktopCopy & { loading: string; open: string };
+
+type DesktopControls = { open: () => void; preload: () => void; label: string };
 const DesktopContext = createContext<DesktopControls | null>(null);
+const LoadingText = createContext("");
+
+function DesktopLoading() {
+  return <div className="loading-screen os-loading" role="status"><p>{useContext(LoadingText)}</p></div>;
+}
 
 const RETRO_PARAM = "retro";
 
@@ -33,7 +42,7 @@ function setViewParam(view: string | null) {
   window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
-export function PortfolioExperience({ children }: { children: ReactNode }) {
+export function PortfolioExperience({ copy, children }: { copy: ExperienceCopy; children: ReactNode }) {
   const [active, setActive] = useState(false);
   const [skipBoot, setSkipBoot] = useState(false);
   const returnFocusRef = useRef<HTMLElement | null>(null);
@@ -60,12 +69,12 @@ export function PortfolioExperience({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(timer);
   }, []);
 
-  const controls: DesktopControls = { open, preload: () => void loadDesktop() };
+  const controls: DesktopControls = { open, preload: () => void loadDesktop(), label: copy.open };
 
-  return <DesktopContext.Provider value={controls}>
+  return <DesktopContext.Provider value={controls}><LoadingText.Provider value={copy.loading}>
     <div hidden={active}>{children}</div>
-    {active && <DesktopShell skipBoot={skipBoot} onSwitchToStandard={close}/>}
-  </DesktopContext.Provider>;
+    {active && <DesktopShell copy={copy} skipBoot={skipBoot} onSwitchToStandard={close}/>}
+  </LoadingText.Provider></DesktopContext.Provider>;
 }
 
 /** Botón en línea (no flotante: no tapa contenido) que abre el escritorio. */
@@ -73,6 +82,6 @@ export function DesktopLaunchButton() {
   const controls = useContext(DesktopContext);
   if (!controls) return null;
   return <button type="button" className="experience-switch" onClick={controls.open} onPointerEnter={controls.preload} onFocus={controls.preload}>
-    <DesktopIcon name="terminal"/> Abrir EDAV Desktop 98
+    <DesktopIcon name="terminal"/> {controls.label}
   </button>;
 }

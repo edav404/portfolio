@@ -7,24 +7,16 @@
  * Ver node_modules/next/dist/docs/01-app/03-api-reference/04-functions/generate-metadata.md (Merging).
  */
 import type { Metadata, Viewport } from "next";
+import { siteKeywords, titleTemplate, withTitleSuffix } from "@/content/pages";
 import { profile } from "@/content/profile";
 import { alternatesFor, hrefFor, hreflangFor, ogLocale, publishedLocales, type RouteRef } from "@/content/routes";
 import { siteName, siteUrl } from "@/content/site";
-import type { L, Locale } from "@/content/types";
+import type { Locale } from "@/content/types";
 
 /** Título por defecto (portada): nombre + posicionamiento único (CNT-01). */
 export function defaultTitle(locale: Locale): string {
   return `${profile.name} | ${profile.headline[locale]}`;
 }
-
-/** Plantilla de `<title>`: "Página | Emmanuel Dávila". */
-const titleTemplate = `%s | ${profile.name}`;
-
-// TODO P4: mover a content/pages.ts junto al resto del SEO por idioma.
-const keywords: L<string[]> = {
-  es: ["desarrollador Full Stack Medellín", "automatización de procesos", "desarrollador web Medellín", "Next.js", "Power Platform", "WordPress", "WooCommerce", "Shopify"],
-  en: ["Full-Stack developer Medellín", "business process automation", "web developer Colombia", "Next.js", "Power Platform", "WordPress", "WooCommerce", "Shopify"],
-};
 
 /** URL absoluta del dominio canónico para una ruta interna (`/x/` → `https://edav.com.co/x/`). */
 export function absoluteUrl(path: string): string {
@@ -43,7 +35,7 @@ export function rootMetadata(locale: Locale): Metadata {
     applicationName: siteName,
     authors: [{ name: profile.name, url: siteUrl }],
     creator: profile.name,
-    keywords: keywords[locale],
+    keywords: [...siteKeywords[locale]],
   };
 }
 
@@ -72,7 +64,7 @@ export function buildMetadata(options: BuildMetadataOptions): Metadata {
   const { locale, title, absoluteTitle = false, description, image, type = "website", article, index = true } = options;
   const path = hrefFor(options, locale);
   const canonical = options.canonicalTo ? hrefFor(options.canonicalTo, locale) : path;
-  const fullTitle = absoluteTitle ? title : titleTemplate.replace("%s", title);
+  const fullTitle = absoluteTitle ? title : withTitleSuffix(title);
   const others = Object.keys(alternatesFor(options)).filter((other) => other !== locale) as Locale[];
   const images = image ? [{ ...image, url: absoluteUrl(image.url) }] : undefined;
   const indexable = index && publishedLocales.includes(locale);

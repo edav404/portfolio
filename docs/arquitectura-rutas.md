@@ -273,5 +273,8 @@ Variante híbrida medida (global + solo el catch-all EN):
 | P2 | `/proyectos/no-existe/` | lang, title, canonical, og:url | `lang` null (error shell) → `"es"`; resto igual que la fila anterior | El slug rechazado por `dynamicParams=false` lo atiende `global-not-found` en SSR |
 | P3 | `/proyectos/`, `/servicios/`, `/sobre-mi/`, `/ahora/`, `/contacto/` | og:url | `https://edav.com.co/` → su propia URL | `buildMetadata` devuelve `openGraph` completo (D8, SEO-02) |
 | P3 | 13 × `/proyectos/<slug>/` | og:url | ausente → su propia URL | Igual |
+| P4 | `/servicios/` | title | "Servicios de desarrollo Full Stack y automatización \| Emmanuel Dávila" (69) → "Servicios Full Stack y de automatización \| Emmanuel Dávila" (58) | Títulos SEO desde `content/pages.ts` (≤ 60 caracteres) |
+| P4 | `/sobre-mi/` | title | "Sobre mí — Desarrollador Full Stack y de automatización \| Emmanuel Dávila" (73) → "Sobre mí: desarrollador Full Stack \| Emmanuel Dávila" (52) | Igual |
+| P4 | `/ahora/` | description (fuera del snapshot) | descripción corta → la de `content/pages.ts` | Igual |
 
-Sin cambios en status, `Location`, `lang`, `<title>` ni canonical de las 22 URLs del sitemap ni de las 18 redirecciones. `npm run smoke` lo vigila contra el servidor standalone (CI incluido).
+Sin más cambios en status, `Location`, `lang`, `<title>` ni canonical de las 22 URLs del sitemap ni de las 18 redirecciones. La portada conserva su título absoluto (62 caracteres, excepción deliberada). En P4 el texto visible (y `aria-label`/`alt`/`placeholder`/`title`) de las 23 páginas medidas es idéntico al de P3. `npm run smoke` lo vigila contra el servidor standalone (CI incluido).

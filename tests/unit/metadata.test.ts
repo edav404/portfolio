@@ -89,3 +89,12 @@ describe("buildMetadata", () => {
     expect(meta.openGraph?.url).toBe("/");
   });
 });
+
+describe("títulos SEO", () => {
+  it("la portada conserva su título absoluto (CNT-01): única excepción al límite de 60 caracteres", () => {
+    const title = m.defaultTitle("es");
+    expect(title).toBe("Emmanuel Dávila | Desarrollador Full Stack y de automatización");
+    // Excepción deliberada: el resto de títulos (content/pages.ts) se comprueban ≤ 60 en ui-pages.test.ts.
+    expect(title.length).toBeGreaterThan(60);
+  });
+});

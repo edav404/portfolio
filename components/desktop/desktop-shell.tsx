@@ -4,8 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ContactForm } from "@/components/contact-form";
-import { MusicWidget } from "@/components/music-widget";
+import { ContactForm, type ContactFormCopy } from "@/components/contact-form";
+import { MusicWidget, type MusicCopy } from "@/components/music-widget";
 import { experienceSince } from "@/content/experience";
 import { profile, technologies } from "@/content/profile";
 import { caseStudies as projects, projectTitle } from "@/content/projects";
@@ -184,17 +184,20 @@ function AboutApp() {
   return <div className="os-about"><aside><div className="os-user-card"><span>ED</span></div><strong>{profile.name}</strong><small>{profile.location.es}</small><div className="os-online"><i/> Disponible para proyectos</div></aside><section><p className="os-kicker">ABOUT_EMMANUEL.TXT</p><h2>Curioso por naturaleza.<br/>Práctico por oficio.</h2><p>{profile.tagline.es}</p><div className="os-system-specs"><div><span>Rol</span><strong>{profile.headline.es}</strong></div><div><span>Experiencia</span><strong>Desde {experienceSince}</strong></div><div><span>Proyectos</span><strong>{projects.length} documentados</strong></div></div><ul className="os-contact-links" aria-label="CV y contacto directo"><li><a href={cvHref.es} type="application/pdf">CV (ES, PDF)</a></li><li><a href={cvHref.en} type="application/pdf" hrefLang="en" lang="en">CV (EN, PDF)</a></li><li><a href={`mailto:${profile.contact.email}`}>{profile.contact.email}</a></li><li><a href={profile.contact.linkedin} target="_blank" rel="me noreferrer">LinkedIn</a></li><li><a href={profile.contact.github} target="_blank" rel="me noreferrer">GitHub</a></li></ul><div className="os-tech-marquee">{technologies.map((item) => <span key={item}>{item}</span>)}</div><Link className="os-98-button" href="/sobre-mi">Abrir perfil completo</Link></section></div>;
 }
 
-function WindowContent({ id, openApp }: { id: AppId; openApp: (id: AppId) => void }) {
+/** Textos de los componentes compartidos con la web, resueltos por el servidor (portada). */
+export type DesktopCopy = { contactForm: ContactFormCopy; music: MusicCopy };
+
+function WindowContent({ id, openApp, copy }: { id: AppId; openApp: (id: AppId) => void; copy: DesktopCopy }) {
   if (id === "welcome") return <WelcomeApp openApp={openApp}/>;
   if (id === "projects") return <ProjectExplorer/>;
   if (id === "services") return <ServicesWizard/>;
   if (id === "about") return <AboutApp/>;
-  if (id === "contact") return <div className="os-contact-app"><div><p className="os-kicker">NUEVO MENSAJE</p><h2>Cuéntame qué quieres construir.</h2><p>Objetivo, alcance, público y referencias: con eso podemos comenzar una conversación útil.</p></div><ContactForm/></div>;
-  if (id === "media") return <div className="os-media-player"><MusicWidget/></div>;
+  if (id === "contact") return <div className="os-contact-app"><div><p className="os-kicker">NUEVO MENSAJE</p><h2>Cuéntame qué quieres construir.</h2><p>Objetivo, alcance, público y referencias: con eso podemos comenzar una conversación útil.</p></div><ContactForm copy={copy.contactForm}/></div>;
+  if (id === "media") return <div className="os-media-player"><MusicWidget copy={copy.music}/></div>;
   return <TerminalApp onOpen={(value) => { if (value in appMeta) openApp(value as AppId); }}/>;
 }
 
-export function DesktopShell({ onSwitchToStandard, skipBoot = false }: { onSwitchToStandard?: () => void; skipBoot?: boolean }) {
+export function DesktopShell({ copy, onSwitchToStandard, skipBoot = false }: { copy: DesktopCopy; onSwitchToStandard?: () => void; skipBoot?: boolean }) {
   const [windows, setWindows] = useState(initialWindows);
   const [startOpen, setStartOpen] = useState(false);
   const [crt, setCrt] = useState(true);
@@ -245,7 +248,7 @@ export function DesktopShell({ onSwitchToStandard, skipBoot = false }: { onSwitc
     <div className="os-mobile-label"><PixelLogo/><div><strong>EDAV Desktop 98</strong><span>Accesos rápidos</span></div></div>
     <div className="os-window-layer">{windows.filter((item) => item.open && !item.minimized).map((item) => <section id={item.id === "welcome" ? "welcome-content" : undefined} className={`os-window ${item.maximized ? "is-maximized" : ""} ${item.z === topVisibleZ ? "is-active" : "is-inactive"} app-${item.id}`} style={{ left: item.x, top: item.y, width: item.width, height: item.height, zIndex: item.z }} key={item.id} onPointerDown={() => focus(item.id)} aria-label={appMeta[item.id].file}>
       <div className="os-titlebar" onPointerDown={(event) => beginDrag(event, item)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} onLostPointerCapture={endDrag} onDoubleClick={() => updateWindow(item.id, { maximized: !item.maximized })}><div><DesktopIcon name={appMeta[item.id].icon}/><strong>{appMeta[item.id].file}</strong></div><div className="os-window-buttons" onPointerDown={(event) => event.stopPropagation()} onDoubleClick={(event) => event.stopPropagation()}><button type="button" title="Minimizar" aria-label={`Minimizar ${appMeta[item.id].title}`} onClick={(event) => { event.stopPropagation(); updateWindow(item.id, { minimized: true }); beep(360); }}>_</button><button type="button" title={item.maximized ? "Restaurar" : "Maximizar"} aria-label={`${item.maximized ? "Restaurar" : "Maximizar"} ${appMeta[item.id].title}`} onClick={(event) => { event.stopPropagation(); updateWindow(item.id, { maximized: !item.maximized }); beep(450); }}>{item.maximized ? "❐" : "□"}</button><button type="button" title="Cerrar" className="close" aria-label={`Cerrar ${appMeta[item.id].title}`} onClick={(event) => { event.stopPropagation(); updateWindow(item.id, { open: false }); beep(260); }}>×</button></div></div>
-      <div className="os-menu-strip"><span>Archivo</span><span>Editar</span><span>Ver</span><span>Ayuda</span></div><div className="os-window-content"><WindowContent id={item.id} openApp={openApp}/></div><div className="os-statusbar"><span>{appMeta[item.id].title}</span><span>EDAV Desktop 98</span></div>
+      <div className="os-menu-strip"><span>Archivo</span><span>Editar</span><span>Ver</span><span>Ayuda</span></div><div className="os-window-content"><WindowContent copy={copy} id={item.id} openApp={openApp}/></div><div className="os-statusbar"><span>{appMeta[item.id].title}</span><span>EDAV Desktop 98</span></div>
       {!item.maximized && <button type="button" className="os-resize-handle" aria-label={`Redimensionar ${appMeta[item.id].title}`} title="Arrastra para redimensionar" onPointerDown={(event) => beginResize(event, item)} onPointerMove={moveResize} onPointerUp={endResize} onPointerCancel={endResize} onLostPointerCapture={endResize} onKeyDown={(event) => { const step = event.shiftKey ? 50 : 20; if (event.key === "ArrowRight") updateWindow(item.id, { width: item.width + step }); else if (event.key === "ArrowLeft") updateWindow(item.id, { width: Math.max(320, item.width - step) }); else if (event.key === "ArrowDown") updateWindow(item.id, { height: item.height + step }); else if (event.key === "ArrowUp") updateWindow(item.id, { height: Math.max(220, item.height - step) }); else return; event.preventDefault(); }}/>} 
     </section>)}</div>
     {notification && <div className="os-notification" role="status"><PixelLogo small/><div><strong>EDAV Desktop 98</strong><p>{notification}</p></div><button onClick={() => setNotification("")} aria-label="Cerrar notificación">×</button></div>}

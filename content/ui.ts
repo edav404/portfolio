@@ -11,6 +11,7 @@
  * - Los componentes cliente NO importan este módulo: el servidor resuelve la sección y la pasa por props.
  * - Las líneas de la BIOS del escritorio van en inglés en ambos idiomas a propósito (estética retro).
  */
+import { projectKindLabels, projectOwnershipLabels, projectStatusLabels } from "./project-labels";
 import type { L, Locale } from "./types";
 
 // --- Resolución --------------------------------------------------------------------------------
@@ -156,26 +157,10 @@ export const ui = {
     similarCta: { es: "Quiero un proyecto similar", en: "I want a similar project" },
     nextTitle: { es: "Tu proyecto podría ser el próximo caso.", en: "Your project could be the next case study." },
     nextCta: { es: "Cuéntame tu idea", en: "Tell me your idea" },
-    /** Mismos valores que `statusLabels` de `content/projects.ts` (aquí para no cargar proyectos en cliente). */
-    statusLabels: {
-      delivered: { es: "Entregado", en: "Delivered" },
-      live: { es: "En uso", en: "In use" },
-      "in-development": { es: "En desarrollo", en: "In development" },
-      academic: { es: "Académico", en: "Academic" },
-    },
-    /** Mismos valores que `ownershipLabels` de `content/projects.ts`. */
-    ownershipLabels: {
-      own: { es: "Proyecto propio", en: "Own project" },
-      "co-created": { es: "Cocreado", en: "Co-created" },
-      collaboration: { es: "Colaboración", en: "Collaboration" },
-      client: { es: "Proyecto para cliente", en: "Client project" },
-    },
-    /** Mismos valores que `projectKinds` de `content/projects.ts`. */
-    kindLabels: {
-      client: { es: "Clientes", en: "Clients" },
-      personal: { es: "Personales", en: "Personal" },
-      automation: { es: "Automatizaciones", en: "Automation" },
-    },
+    /** Fuente única en content/project-labels.ts (la comparten projects.ts y el escritorio). */
+    statusLabels: projectStatusLabels,
+    ownershipLabels: projectOwnershipLabels,
+    kindLabels: projectKindLabels,
   },
 
   post: {
@@ -275,6 +260,8 @@ export const ui = {
   /** Escritorio EDAV Desktop 98 (componentes de `components/desktop/`). */
   os: {
     loading: { es: "Cargando EDAV Desktop 98…", en: "Loading EDAV Desktop 98…" },
+    /** Botón de la portada que abre el escritorio. */
+    open: { es: "Abrir EDAV Desktop 98", en: "Open EDAV Desktop 98" },
     productName: { es: "EDAV Desktop 98", en: "EDAV Desktop 98" },
     /** Título de ventana/icono y nombre de "archivo" de cada aplicación. */
     apps: {

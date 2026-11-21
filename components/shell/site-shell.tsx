@@ -1,12 +1,30 @@
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
+import { href } from "@/content/routes";
 import { cvHref } from "@/content/site";
 import type { Locale } from "@/content/types";
+import { uiFor } from "@/content/ui";
+
+const navKeys = ["home", "projects", "services", "about", "blog", "now", "contact"] as const;
 
 /**
- * Shell de las páginas públicas: cabecera, `<main>` y pie.
+ * Shell de las páginas públicas: cabecera, `<main>` y pie. Resuelve aquí (servidor) los textos y
+ * enlaces de la cabecera, que es un componente cliente.
  * P5 añadirá aquí el wrapper `data-theme="classic"` (docs/arquitectura-rutas.md §2.1).
  */
 export function SiteShell({ locale, children }: { locale: Locale; children: React.ReactNode }) {
-  return <><Header cvHref={cvHref[locale]}/><main id="contenido">{children}</main><Footer/></>;
+  const nav = uiFor(locale, "nav");
+  const a11y = uiFor(locale, "a11y");
+  const header = {
+    copy: {
+      skipToContent: a11y.skipToContent, homeLink: a11y.homeLink, openMenu: a11y.openMenu, closeMenu: a11y.closeMenu,
+      mainNav: a11y.mainNav, downloadCvPdf: a11y.downloadCvPdf,
+      brandName: nav.brandName, brandTagline: nav.brandTagline, cv: nav.cv, startProject: nav.startProject,
+    },
+    homeHref: href("home", locale),
+    contactHref: href("contact", locale),
+    cvHref: cvHref[locale],
+    links: navKeys.map((key) => ({ href: href(key, locale), label: nav[key] })),
+  };
+  return <><Header {...header}/><main id="contenido">{children}</main><Footer locale={locale}/></>;
 }

@@ -43,6 +43,7 @@ export const pages = {
       },
     },
     summary: {
+      windowTitle: { es: "quick_read.txt", en: "quick_read.txt" },
       eyebrow: { es: "Resumen", en: "Summary" },
       title: { es: "Desarrollo a la medida y automatización de procesos.", en: "Custom development and process automation." },
     },
@@ -376,6 +377,12 @@ export const pages = {
 } as const satisfies Record<StaticPageKey, PageCopy>;
 
 export type Pages = typeof pages;
+
+/** Palabras clave del sitio (`<meta name="keywords">` del layout raíz de cada idioma). */
+export const siteKeywords = {
+  es: ["desarrollador Full Stack Medellín", "automatización de procesos", "desarrollador web Medellín", "Next.js", "Power Platform", "WordPress", "WooCommerce", "Shopify"],
+  en: ["Full-Stack developer Medellín", "business process automation", "web developer Colombia", "Next.js", "Power Platform", "WordPress", "WooCommerce", "Shopify"],
+} as const satisfies L<readonly string[]>;
 
 /** Textos de una página resueltos para un idioma. */
 export function pageFor<K extends StaticPageKey>(locale: Locale, key: K): Resolved<Pages[K]> {
