@@ -16,6 +16,8 @@ Severidad: 🔴 crítico · 🟠 importante · 🟡 menor. Los IDs remiten al an
 | 5 | Años de experiencia | Contar desde 2020 (Dávila & Trujillo Abogados); preferir "desde 2020" a una cifra |
 | 6 | Posicionamiento | "Desarrollador Full Stack y de automatización" en todo el sitio (sustituye "diseño web") |
 | 7 | Mascota | Clippy por defecto; descartable y el descarte persiste; sonidos apagados |
+| 9 | "Diseño web y UX/UI" | Se mantiene como uno de los servicios; no es el posicionamiento |
+| 10 | Cifras de `content/profile.ts` | Derivarlas de `content/` (p. ej. nº de proyectos de cliente) en la Fase 3 |
 | 8 | MCP | Context7 y Firecrawl solo cuando sea estrictamente necesario (consumo de créditos). Perplexity no instalado |
 
 ## Fase 2 — Dependencias y fixes críticos
@@ -45,7 +47,17 @@ Cerrada en la rama `fase/2-dependencias-fixes` (commits `a172005`…). Notas: la
 - [x] 🟡 PERF-04 `priority` deprecado en Next 16
 - [x] 🟡 DX-03 Ignorados · `next-env.d.ts` cambia al compilar: decidir si se versiona
 
+## Revisiones pendientes del usuario (de la Fase 2)
+
+- [ ] Portada `/` (vista web + botón "Abrir EDAV Desktop 98") y `/?view=retro`
+- [ ] `docs/seo-blog.md`: mejoras aplicadas a los 2 artículos; títulos con sufijo "| edav"
+- [ ] `docs/seguridad-proxies.md`: elegir escenario Cloudflare/Traefik (se cierra en la Fase 8)
+- [ ] CSP: revisar consola en todas las vistas y pasar `CSP_ENFORCE` a `true`
+- [ ] Formulario: honeypot, 422 y envío SMTP real; escritorio completo en navegador
+
 ## Fase 3 — Arquitectura compartida, tokens e i18n
+
+- [ ] 🟡 Derivar las cifras de `content/profile.ts` (decisión 10)
 
 - [ ] 🟠 Árbol de rutas concreto (idioma × variante × caché) antes de tocar layouts
 - [ ] 🟠 ARQ-02 / UI-02 Route groups con layouts propios y `data-theme`; eliminar `body:has()`
