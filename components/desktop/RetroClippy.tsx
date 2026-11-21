@@ -91,6 +91,11 @@ function useClippyDrag() {
   const onPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
     const current = drag.current;
     if (!current || current.id !== event.pointerId) return;
+    // Si se soltó fuera antes de capturar el puntero, no llegó `pointerup`: se cancela el arrastre.
+    if ((event.buttons & 1) === 0) {
+      drag.current = null;
+      return;
+    }
     const dx = event.clientX - current.startX;
     const dy = event.clientY - current.startY;
     if (!current.moved) {

@@ -96,8 +96,10 @@ Sin el paso 1, `cf-connecting-ip` hace la IP **falsificable**: es peor que el va
 `lib/server/same-origin.ts` rechaza con 403 los POST que un navegador envía desde otra web:
 
 - `Sec-Fetch-Site: cross-site` → 403.
-- `Origin` presente: debe tener el host de `NEXT_PUBLIC_SITE_URL` o el mismo host que la cabecera
-  `Host` de la petición (cubre `localhost` en desarrollo, túneles y previews). `Origin: null` → 403.
+- `Origin` presente: se compara el origen completo (esquema + host + puerto). Debe ser el de
+  `NEXT_PUBLIC_SITE_URL` o `https://<Host de la petición>` (túneles y previews); `http://` solo se
+  admite en `localhost`/`127.0.0.1`/`[::1]` (desarrollo). Así `Origin: http://edav.com.co` no pasa.
+  `Origin: null` → 403.
 - `Sec-Fetch-Site: same-site` (otro subdominio) solo pasa con un `Origin` válido.
 - Sin `Origin` ni `Sec-Fetch-Site` (navegadores antiguos, curl) → se acepta; el rate limit lo acota.
 

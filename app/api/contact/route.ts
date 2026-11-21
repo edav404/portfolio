@@ -75,13 +75,31 @@ function multiline(form: FormData, name: string, max: number): string {
   return typeof value === "string" ? value.replace(CONTROL_CHARS, "").replace(/\r\n?/g, "\n").trim().slice(0, max) : "";
 }
 
+/**
+ * INF-09: deja constancia de los 429 sin registrar IP ni datos del visitante.
+ * Como mucho una línea por motivo y minuto, con el número de rechazos acumulados.
+ */
+const rejections = { ip: { count: 0, loggedAt: 0 }, global: { count: 0, loggedAt: 0 } };
+function logRejection(reason: keyof typeof rejections) {
+  const entry = rejections[reason];
+  entry.count += 1;
+  const now = Date.now();
+  if (now - entry.loggedAt < 60_000) return;
+  console.warn(`[contact] 429 por límite ${reason === "ip" ? "por IP" : "global"}: ${entry.count} rechazo(s) desde el último aviso.`);
+  entry.loggedAt = now;
+  entry.count = 0;
+}
+
 export async function POST(request: Request) {
   // Antes del rate limit: un POST cross-site no debe gastar la cuota de la IP del visitante.
   if (!isSameOriginRequest(request)) return json("Origen no permitido.", 403);
 
   const key = clientKey(request);
   const { ok, retryAfter } = perIp.check(key);
-  if (!ok) return json("Demasiados envíos. Intenta de nuevo en unos minutos.", 429, { "Retry-After": String(retryAfter) });
+  if (!ok) {
+    logRejection("ip");
+    return json("Demasiados envíos. Intenta de nuevo en unos minutos.", 429, { "Retry-After": String(retryAfter) });
+  }
 
   const contentType = request.headers.get("content-type") ?? "";
   if (!ALLOWED_TYPES.some((type) => contentType.toLowerCase().startsWith(type))) return json("Tipo de contenido no admitido.", 415);
@@ -120,6 +138,7 @@ export async function POST(request: Request) {
 
   const global = globalLimit.check(GLOBAL_KEY);
   if (!global.ok) {
+    logRejection("global");
     return json("El formulario está recibiendo demasiados mensajes. Escríbeme por WhatsApp.", 429, { "Retry-After": String(global.retryAfter) });
   }
 
@@ -132,7 +151,7 @@ export async function POST(request: Request) {
   } catch (error) {
     // El fallo es del SMTP, no del visitante: se devuelve el cupo global (el de la IP se mantiene
     // para que los reintentos en bucle sigan acotados).
-    globalLimit.refund(GLOBAL_KEY);
+    global.release();
     console.error(`[contact] Error SMTP: ${describeSmtpError(error)}`);
     return json("No fue posible enviar el mensaje. Intenta por WhatsApp.", 502);
   }

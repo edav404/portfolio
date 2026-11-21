@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { LASTFM_IMAGE_HOSTS } from "./lib/server/lastfm-hosts";
+import { wordpressRedirects } from "./lib/redirects";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -50,7 +51,7 @@ const securityHeaders = [
   // Redundante con frame-ancestors, pero lo respetan navegadores antiguos.
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), browsing-topics=()" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
   // HSTS corto y sin includeSubDomains hasta verificar todos los subdominios (se amplía en la Fase 8).
   { key: "Strict-Transport-Security", value: "max-age=86400" },
 ];
@@ -72,6 +73,10 @@ const nextConfig: NextConfig = {
       { source: "/api/lastfm.php", destination: "/api/lastfm/" },
       { source: "/api/contact.php", destination: "/api/contact/" },
     ];
+  },
+  // 301/308 de las URLs del WordPress antiguo (anexo 07 de la auditoría).
+  async redirects() {
+    return wordpressRedirects;
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

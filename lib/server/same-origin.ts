@@ -36,20 +36,33 @@ export function isSameOriginRequest(request: Request): boolean {
   }
   if (originUrl.protocol !== "https:" && originUrl.protocol !== "http:") return false;
 
-  return allowedHosts(request).has(originUrl.host.toLowerCase());
+  return allowedOrigins(request).has(originUrl.origin.toLowerCase());
 }
 
-function allowedHosts(request: Request): Set<string> {
-  const hosts = new Set<string>();
+/** Hosts locales en los que se admite `http:` (next dev / next start en la máquina). */
+const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+/**
+ * Orígenes completos (esquema + host + puerto) admitidos. Comparar solo el host aceptaría
+ * `Origin: http://edav.com.co` en una petición HTTPS (degradación de esquema).
+ */
+function allowedOrigins(request: Request): Set<string> {
+  const origins = new Set<string>();
   // Mismo valor por defecto que data/site.ts. NEXT_PUBLIC_* se fija en el build.
   try {
-    hosts.add(new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://edav.com.co").host.toLowerCase());
+    origins.add(new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://edav.com.co").origin.toLowerCase());
   } catch {
     // URL mal formada: se ignora; queda la comparación con Host.
   }
   // Traefik y Cloudflare conservan Host por defecto. No se usa X-Forwarded-Host: no hace falta y
-  // depende de que cada proxy lo sobrescriba.
+  // depende de que cada proxy lo sobrescriba. Detrás del proxy Node recibe HTTP, así que el esquema
+  // no se deduce de la petición: en hosts públicos solo se admite https (túneles, previews) y
+  // `http:` únicamente en localhost.
   const host = request.headers.get("host")?.trim().toLowerCase();
-  if (host) hosts.add(host);
-  return hosts;
+  if (host) {
+    origins.add(`https://${host}`);
+    const hostname = host.startsWith("[") ? host.slice(0, host.indexOf("]") + 1) : host.split(":")[0];
+    if (LOCAL_HOSTNAMES.has(hostname)) origins.add(`http://${host}`);
+  }
+  return origins;
 }

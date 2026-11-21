@@ -3,13 +3,19 @@ import { isIP } from "node:net";
 
 type Bucket = { count: number; resetAt: number };
 
-export type RateLimitResult = { ok: boolean; retryAfter: number };
+export type RateLimitResult = {
+  ok: boolean;
+  retryAfter: number;
+  /**
+   * Devuelve este intento concreto (p. ej. si el envío falló por causas ajenas al cliente).
+   * Solo descuenta del bucket en el que se contó: si la ventana ya se reinició, no hace nada.
+   */
+  release(): void;
+};
 
 export type RateLimiter = {
   /** Cuenta un intento para la clave y dice si sigue dentro del límite. */
   check(key: string): RateLimitResult;
-  /** Devuelve un intento ya contado (p. ej. si el envío falló por causas ajenas al cliente). */
-  refund(key: string): void;
 };
 
 /** Clave compartida por las claves nuevas cuando el mapa está lleno (ver `check`). */
@@ -59,19 +65,25 @@ export function createRateLimiter({ limit, windowMs, maxKeys = 10_000, name = "r
         }
         return check(OVERFLOW_KEY);
       }
-      buckets.set(key, { count: 1, resetAt: now + windowMs });
-      return { ok: true, retryAfter: 0 };
+      bucket = { count: 1, resetAt: now + windowMs };
+      buckets.set(key, bucket);
+      return { ok: true, retryAfter: 0, release: releaser(bucket) };
     }
     bucket.count += 1;
-    return { ok: bucket.count <= limit, retryAfter: Math.max(1, Math.ceil((bucket.resetAt - now) / 1000)) };
+    return { ok: bucket.count <= limit, retryAfter: Math.max(1, Math.ceil((bucket.resetAt - now) / 1000)), release: releaser(bucket) };
   }
 
-  function refund(key: string) {
-    const bucket = buckets.get(key) ?? buckets.get(OVERFLOW_KEY);
-    if (bucket && bucket.resetAt > Date.now() && bucket.count > 0) bucket.count -= 1;
+  /** El reembolso queda ligado al objeto bucket original: una ventana nueva es otro objeto. */
+  function releaser(bucket: Bucket) {
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      if (bucket.resetAt > Date.now() && bucket.count > 0) bucket.count -= 1;
+    };
   }
 
-  return { check, refund };
+  return { check };
 }
 
 // ---------------------------------------------------------------------------
