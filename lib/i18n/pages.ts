@@ -10,7 +10,7 @@
  */
 import { posts } from "@/content/posts";
 import { caseStudies } from "@/content/projects";
-import { hrefFor, hreflangFor, publishedLocales, routes, type RouteKey, type RouteRef } from "@/content/routes";
+import { hrefFor, hreflangFor, isRouteIndexable, publishedLocales, seoEligibility, type RouteKey, type RouteRef } from "@/content/routes";
 import { locales, type Locale } from "@/content/types";
 
 export type AvailablePage = {
@@ -51,7 +51,7 @@ export function availablePages(): AvailablePage[] {
   return refs().map((ref) => ({
     ref,
     paths: pathsOf(ref),
-    indexable: (routes[ref.route] as { indexable?: boolean }).indexable !== false,
+    indexable: isRouteIndexable(ref.route),
   }));
 }
 
@@ -85,8 +85,9 @@ export function publicPages(): PublicPage[] {
     .flatMap(({ ref, paths }) => {
       const languages = hreflangFor(ref);
       const multiple = Object.keys(languages).filter((key) => key !== "x-default").length > 1;
+      // Mismo criterio que buildMetadata (seoEligibility): solo lo que emitiría alternas.
       return publishedLocales
-        .filter((locale) => paths[locale])
+        .filter((locale) => paths[locale] && seoEligibility({ route: ref.route, locale }).alternates)
         .map((locale) => ({ ref, locale, path: paths[locale]!, languages: multiple ? languages : {} }));
     });
 }

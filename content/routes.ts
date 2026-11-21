@@ -194,3 +194,20 @@ export function canonicalPath(pathname: string): string | null {
   const match = matchPath(pathname);
   return match ? build(match.key, match.locale, match.params) : null;
 }
+
+/** La ruta admite indexación (`RouteDef.indexable`, por defecto sí). */
+export function isRouteIndexable(key: RouteKey): boolean {
+  return (routes[key] as RouteDef).indexable !== false;
+}
+
+/**
+ * Criterio único de elegibilidad SEO de una página, compartido por `buildMetadata` (robots,
+ * hreflang, `og:locale:alternate`) y el sitemap (`publicPages`):
+ * - `indexable`: la ruta es indexable, la página no pide `index: false` y su idioma está publicado;
+ * - `alternates`: además, no delega el canonical en otra ruta (`canonicalTo`). Solo entonces la
+ *   página entra en el sitemap y emite o recibe alternativas de idioma.
+ */
+export function seoEligibility(options: { route: RouteKey; locale: Locale; index?: boolean; canonicalTo?: unknown }): { indexable: boolean; alternates: boolean } {
+  const indexable = options.index !== false && isRouteIndexable(options.route) && publishedLocales.includes(options.locale);
+  return { indexable, alternates: indexable && options.canonicalTo === undefined };
+}

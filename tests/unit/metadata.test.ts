@@ -127,3 +127,31 @@ describe("EN antes y después de publicarlo (P6 / P9)", () => {
     vi.doUnmock("@/content/publication");
   });
 });
+
+describe("elegibilidad compartida con el sitemap (Codex 8)", () => {
+  it("con EN publicado: rutas no indexables, index:false y canonicalTo no emiten alternas", async () => {
+    vi.resetModules();
+    vi.doMock("@/content/publication", () => ({ publishedLocales: ["es", "en"] }));
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://edav.com.co");
+    const p9 = await import("@/lib/metadata");
+    const { publicPages } = await import("@/lib/i18n/pages");
+    vi.unstubAllEnvs();
+
+    const os = p9.buildMetadata({ route: "os", locale: "en", title: "OS", description: "d" });
+    expect(os.robots).toEqual({ index: false, follow: true });
+    expect(os.alternates).toEqual({ canonical: "/en/os/" });
+    expect(os.openGraph).not.toHaveProperty("alternateLocale");
+
+    const hidden = p9.buildMetadata({ route: "about", locale: "es", title: "t", description: "d", index: false });
+    expect(hidden.robots).toEqual({ index: false, follow: true });
+    expect(hidden.alternates).toEqual({ canonical: "/sobre-mi/" });
+
+    const classic = p9.buildMetadata({ route: "about", locale: "en", title: "t", description: "d", canonicalTo: { route: "home" } });
+    expect(classic.alternates).toEqual({ canonical: "/en/" });
+    expect(classic.openGraph).not.toHaveProperty("alternateLocale");
+
+    // El sitemap aplica el mismo criterio: ninguna ruta no indexable.
+    expect(publicPages().every(({ ref }) => !["os", "osProject", "classic"].includes(ref.route))).toBe(true);
+    vi.doUnmock("@/content/publication");
+  });
+});

@@ -9,7 +9,7 @@
 import type { Metadata, Viewport } from "next";
 import { siteKeywords, titleTemplate, withTitleSuffix } from "@/content/pages";
 import { profile } from "@/content/profile";
-import { alternatesFor, hrefFor, hreflangFor, ogLocale, publishedLocales, type RouteRef } from "@/content/routes";
+import { alternatesFor, hrefFor, hreflangFor, ogLocale, seoEligibility, type RouteRef } from "@/content/routes";
 import { siteName, siteUrl } from "@/content/site";
 import type { Locale } from "@/content/types";
 
@@ -61,15 +61,16 @@ export type BuildMetadataOptions = RouteRef & {
  * publicado para esa ruta), `openGraph` y `twitter` con su URL y título, y robots.
  */
 export function buildMetadata(options: BuildMetadataOptions): Metadata {
-  const { locale, title, absoluteTitle = false, description, image, type = "website", article, index = true } = options;
+  const { locale, title, absoluteTitle = false, description, image, type = "website", article } = options;
   const path = hrefFor(options, locale);
   const canonical = options.canonicalTo ? hrefFor(options.canonicalTo, locale) : path;
   const fullTitle = absoluteTitle ? title : withTitleSuffix(title);
-  // Hreflang y og:locale:alternate solo entre idiomas publicados, y solo si esta página también lo
-  // está: una página EN en revisión (noindex) no anuncia ni recibe alternativas hasta P9.
-  const others = publishedLocales.includes(locale) ? Object.keys(alternatesFor(options)).filter((other) => other !== locale) as Locale[] : [];
+  // Criterio compartido con el sitemap (content/routes.ts, seoEligibility): noindex para rutas no
+  // indexables, `index: false` e idiomas sin publicar (EN en revisión hasta P9); además, sin hreflang
+  // ni og:locale:alternate cuando la página delega el canonical (`canonicalTo`).
+  const eligibility = seoEligibility(options);
+  const others = eligibility.alternates ? Object.keys(alternatesFor(options)).filter((other) => other !== locale) as Locale[] : [];
   const images = image ? [{ ...image, url: absoluteUrl(image.url) }] : undefined;
-  const indexable = index && publishedLocales.includes(locale);
   const aboutUrl = absoluteUrl(hrefFor({ route: "about" }, locale));
 
   return {
@@ -94,6 +95,6 @@ export function buildMetadata(options: BuildMetadataOptions): Metadata {
       ...(article ? { publishedTime: article.publishedTime, modifiedTime: article.modifiedTime, authors: [aboutUrl], tags: article.tags ? [...article.tags] : undefined } : {}),
     },
     twitter: { card: "summary_large_image", title: fullTitle, description, ...(images ? { images } : {}) },
-    ...(indexable ? {} : { robots: { index: false, follow: true } }),
+    ...(eligibility.indexable ? {} : { robots: { index: false, follow: true } }),
   };
 }
