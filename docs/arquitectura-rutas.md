@@ -339,3 +339,35 @@ app/en/
   (`hreflang="es"`), y todas tienen selector. Edge headless: selector en `/proyectos/cia-sur/`,
   `/en/blog/how-seo-helps-your-business-grow/` y `/sobre-mi/` → equivalente exacta y `lang` correcto
   tras la recarga.
+
+### 11.3 P8: sitemap y hreflang
+
+- `app/sitemap.ts` sale de `publicPages()`: una entrada por página indexable e idioma publicado;
+  `alternates.languages` (con `x-default` = ES) solo cuando la página está publicada en más de un
+  idioma; `lastModified` solo en blog y posts. Hoy (solo ES) el XML servido es **byte a byte igual**
+  al anterior (mismo orden: estáticas, posts, proyectos) y no lleva alternates.
+- Hreflang del `<head>` gobernado por la misma regla (`buildMetadata`, P6): sin hreflang mientras
+  EN no esté publicado, recíproco cuando lo esté.
+- Tests (`tests/unit/sitemap.test.ts`): hoy = URLs ES de la línea base sin alternates; con
+  `publishedLocales = ["es","en"]` simulado (`vi.doMock("@/content/publication")`): doble de
+  entradas, grupo `{es, en, x-default}` en cada una, recíproco, x-default = ES y sin `/os`/`/classic`.
+- Smoke: cada `<loc>` → 200 sin noindex, `lang` según prefijo; sin EN publicado, ni hreflang en
+  `<head>` ni alternates en el sitemap; con EN publicado, `<head>` = sitemap, incluye la propia URL,
+  x-default = ES y recíproco.
+- Ensayo de P9 (build temporal con `["es","en"]`, revertido sin commit): `npm run smoke` en verde con
+  44 URLs en el sitemap, hreflang recíproco en `<head>` y sitemap, EN sin noindex y
+  `og:locale:alternate` cruzado.
+
+### 11.4 Qué verificar en P9 (publicar EN)
+
+1. Revisión del usuario del texto EN: las 22 páginas EN (cabecera → "English version") y el escritorio
+   en `/en/?view=retro`. Pendiente de contenido: `technologies` de Civicoin ("Diseño editorial").
+2. Cambiar solo `content/publication.ts` → `["es", "en"]`.
+3. Línea base: regenerar `tests/fixtures/routes-baseline.json` y documentar en §10 los cambios
+   esperados: ninguno en status/title/canonical de las URLs ES; el snapshot no mide hreflang, pero el
+   sitemap pasa de 22 a 44 URLs.
+4. `npm run check`, build standalone y `npm run smoke` (ya cubre el caso publicado; ensayado en P8).
+5. Ajustar el texto del test "hoy (solo ES publicado)" de `sitemap.test.ts` y el de `metadata.test.ts`
+   (EN con noindex), que fallarán a propósito al publicar.
+6. Revisar con Search Console tras desplegar (Fase 7) y la prueba Traefik + Cloudflare de §8.3
+   (HTML/RSC de `/en/*` con `Vary` y `Cache-Control` correctos).

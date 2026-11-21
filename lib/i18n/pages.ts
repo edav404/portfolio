@@ -20,14 +20,17 @@ export type AvailablePage = {
   indexable: boolean;
 };
 
-/** Rutas sin parámetros que ya existen (Fase 3). Las de `since > 3` se añaden en su fase. */
-const staticKeys = ["home", "projects", "services", "about", "blog", "now", "contact"] as const satisfies readonly RouteKey[];
+/**
+ * Rutas sin parámetros que ya existen (Fase 3). Las de `since > 3` se añaden en su fase.
+ * El orden (estáticas, posts, proyectos) es el del sitemap.
+ */
+const staticKeys = ["home", "projects", "services", "about", "now", "contact", "blog"] as const satisfies readonly RouteKey[];
 
 function refs(): RouteRef[] {
   return [
     ...staticKeys.map((route) => ({ route }) as RouteRef),
-    ...caseStudies.map(({ slug }) => ({ route: "project", params: { slug } }) as RouteRef),
     ...posts.map(({ slug }) => ({ route: "post", params: { slug } }) as RouteRef),
+    ...caseStudies.map(({ slug }) => ({ route: "project", params: { slug } }) as RouteRef),
   ];
 }
 

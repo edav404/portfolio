@@ -33,3 +33,36 @@ describe("sitemap", () => {
     for (const { url } of entries) expect(new URL(url).pathname, url).not.toMatch(/\/\//);
   });
 });
+
+describe("sitemap e idiomas (P8)", () => {
+  it("hoy (solo ES publicado): exactamente las URLs ES de la línea base, sin alternates", async () => {
+    const { readFileSync } = await import("node:fs");
+    const baseline = JSON.parse(readFileSync("tests/fixtures/routes-baseline.json", "utf8")) as { entries: { path: string; kind: string }[] };
+    const expected = baseline.entries.filter((entry) => entry.kind === "sitemap").map((entry) => `https://edav.com.co${entry.path}`);
+    expect(entries.map((entry) => entry.url)).toEqual(expected);
+    for (const entry of entries) expect(entry.alternates, entry.url).toBeUndefined();
+  });
+
+  it("con EN publicado: ES + EN, hreflang recíproco con x-default = ES y sin rutas no indexables", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://edav.com.co");
+    vi.resetModules();
+    vi.doMock("@/content/publication", () => ({ publishedLocales: ["es", "en"] }));
+    const both = (await import("@/app/sitemap")).default();
+    vi.doUnmock("@/content/publication");
+    vi.unstubAllEnvs();
+
+    expect(both).toHaveLength(entries.length * 2);
+    const byUrl = new Map(both.map((entry) => [entry.url, entry]));
+    for (const entry of both) {
+      const languages = entry.alternates?.languages as Record<string, string> | undefined;
+      expect(languages, entry.url).toBeDefined();
+      expect(Object.keys(languages!).sort()).toEqual(["en", "es", "x-default"]);
+      expect(languages!["x-default"]).toBe(languages!.es);
+      expect(Object.values(languages!)).toContain(entry.url);
+      // Recíproco: cada alternativa existe en el sitemap y declara el mismo grupo.
+      for (const lang of ["es", "en"]) expect(byUrl.get(languages![lang])?.alternates?.languages, `${entry.url} → ${lang}`).toEqual(languages);
+      expect(new URL(entry.url).pathname).not.toMatch(/^\/(en\/)?(os|classic)\//);
+    }
+    expect(both.filter((entry) => new URL(entry.url).pathname.startsWith("/en/"))).toHaveLength(entries.length);
+  });
+});

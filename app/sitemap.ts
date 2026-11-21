@@ -1,31 +1,34 @@
 import type { MetadataRoute } from "next";
 import { posts } from "@/content/posts";
-import { caseStudies } from "@/content/projects";
-import { siteUrl } from "@/content/site";
+import type { RouteRef } from "@/content/routes";
+import { publicPages } from "@/lib/i18n/pages";
+import { absoluteUrl } from "@/lib/metadata";
 
 export const dynamic = "force-static";
 
-/**
- * URL absoluta con barra final, igual que el canonical (`trailingSlash: true` en next.config.ts).
- * Sin barra, cada <loc> respondería 308 hacia la versión con barra (SEO-04).
- */
-function absoluteUrl(path: string): string {
-  const withSlash = path.endsWith("/") ? path : `${path}/`;
-  return `${siteUrl}${withSlash}`;
+/** Fecha real de actualización (SEO-05): solo los posts tienen `updated`; el blog toma la más reciente. */
+function lastModified(ref: RouteRef): string | undefined {
+  if (ref.route === "blog") return posts.map((post) => post.updated).sort().at(-1);
+  if (ref.route === "post") {
+    const slug = ref.params.slug;
+    return posts.find((post) => typeof slug === "string" ? post.slug.es === slug : post.slug.es === slug.es)?.updated;
+  }
+  return undefined;
 }
 
 /**
- * SEO-05: `lastModified` solo cuando hay una fecha real en `content/` (hoy, los posts con `updated`).
- * Las páginas y los proyectos no tienen fecha de actualización fiable, así que se omite.
- * `changeFrequency` y `priority` se quitan: Google los ignora.
- * TODO Fase 7: añadir `alternates.languages` (hreflang) cuando existan las rutas /en/.
+ * Sitemap desde el inventario de páginas (docs/arquitectura-rutas.md §6, P8): una entrada por página
+ * indexable e idioma publicado. `alternates.languages` (hreflang recíproco + `x-default` = ES) solo
+ * cuando la página está publicada en más de un idioma: con solo ES, el sitemap no lleva alternates.
+ * Fuera: `/os`, `/classic`, 404, `/api` y CV. URLs con barra final, como el canonical (SEO-04).
+ * `changeFrequency` y `priority` se omiten: Google los ignora.
  */
 export default function sitemap(): MetadataRoute.Sitemap {
-  const pages = ["/", "/proyectos/", "/servicios/", "/sobre-mi/", "/ahora/", "/contacto/", "/blog/"];
-  const latestPost = posts.map((post) => post.updated).sort().at(-1);
-  return [
-    ...pages.map((path) => ({ url: absoluteUrl(path), ...(path === "/blog/" && latestPost ? { lastModified: latestPost } : {}) })),
-    ...posts.map((post) => ({ url: absoluteUrl(`/blog/${post.slug.es}/`), lastModified: post.updated })),
-    ...caseStudies.map((project) => ({ url: absoluteUrl(`/proyectos/${project.slug}/`) })),
-  ];
+  return publicPages().map(({ ref, path, languages }) => {
+    const modified = lastModified(ref);
+    const alternates = Object.keys(languages).length > 0
+      ? { languages: Object.fromEntries(Object.entries(languages).map(([lang, href]) => [lang, absoluteUrl(href)])) }
+      : undefined;
+    return { url: absoluteUrl(path), ...(modified ? { lastModified: modified } : {}), ...(alternates ? { alternates } : {}) };
+  });
 }

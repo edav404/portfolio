@@ -6,8 +6,9 @@
  * Uso: node scripts/smoke-routes.mjs [baseUrl]      (por defecto http://127.0.0.1:3111)
  *
  * Comprueba (docs/arquitectura-rutas.md §5 P2 y §9.3):
- * - cada <loc> del sitemap responde 200, HTML con lang="es", sin redirección, canonical y og:url
- *   iguales a su propia URL y sin hreflang (solo ES publicado);
+ * - cada <loc> del sitemap responde 200, HTML con su lang, sin redirección ni noindex, canonical y
+ *   og:url iguales a su propia URL; hreflang (sitemap y <head>) solo si content/publication.ts
+ *   publica "en", y entonces idéntico en ambos, recíproco y con x-default = ES (P8/P9);
  * - cada redirección de lib/redirects.ts es un 308 de un solo salto a una URL que da 200;
  * - el 404 global (experimental.globalNotFound): /no-existe/, slug rechazado, /api/ y archivo
  *   inexistentes → 404 con lang="es", noindex y contenido EN EL HTML INICIAL, sin canonical;
@@ -40,22 +41,46 @@ function attr(html, marker, name) {
   return tag?.match(new RegExp(`\\b${name}="([^"]*)"`))?.[1] ?? null;
 }
 
-// 1) Sitemap
+// 1) Sitemap. P8: hreflang (sitemap y <head>) solo cuando EN esté publicado (content/publication.ts).
+const publication = await readFile(resolve(root, "content/publication.ts"), "utf8");
+const enPublished = /publishedLocales[^=]*=\s*\[[^\]]*"en"/.test(publication);
 const sitemap = await get("/sitemap.xml");
 check(sitemap.status === 200, `/sitemap.xml → ${sitemap.status}`);
 const xml = await (await fetch(`${base}/sitemap.xml`)).text();
-const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1].trim());
+const blocks = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map((match) => match[1]);
+const sitemapAlternates = new Map(blocks.map((block) => [
+  block.match(/<loc>([^<]+)<\/loc>/)[1].trim(),
+  Object.fromEntries([...block.matchAll(/<xhtml:link\b[^>]*hreflang="([^"]+)"[^>]*href="([^"]+)"/g)].map((match) => [match[1], match[2]])),
+]));
+const locs = [...sitemapAlternates.keys()];
 check(locs.length > 0, "el sitemap no tiene URLs");
 const paths = locs.map((loc) => new URL(loc).pathname);
+const headAlternates = (html) => Object.fromEntries([...html.matchAll(/<link\b[^>]*rel="alternate"[^>]*>/g)]
+  .map(([tag]) => [tag.match(/\bhrefLang="([^"]+)"/i)?.[1], tag.match(/\bhref="([^"]+)"/)?.[1]])
+  .filter(([key]) => key));
+const same = (a, b) => JSON.stringify(Object.entries(a).sort()) === JSON.stringify(Object.entries(b).sort());
 for (const loc of locs) {
   const path = new URL(loc).pathname;
   const page = await get(path);
+  const expectedLang = path.startsWith("/en/") ? "en" : "es";
   check(page.status === 200, `${path} → ${page.status}`);
-  check(lang(page.html) === "es", `${path}: lang=${lang(page.html)}`);
-  // P3: canonical y og:url propios de cada página (SEO-02); sin hreflang mientras solo ES esté publicado.
+  check(lang(page.html) === expectedLang, `${path}: lang=${lang(page.html)}`);
+  check(!/<meta name="robots" content="noindex/.test(page.html), `${path}: noindex en una URL del sitemap`);
+  // P3: canonical y og:url propios de cada página (SEO-02).
   check(attr(page.html, 'rel="canonical"', "href") === loc, `${path}: canonical ≠ ${loc}`);
   check(attr(page.html, 'property="og:url"', "content") === loc, `${path}: og:url ≠ ${loc}`);
-  check(!/<link rel="alternate" hrefLang=/i.test(page.html), `${path}: hreflang antes de publicar el EN`);
+  const head = headAlternates(page.html);
+  const listed = sitemapAlternates.get(loc);
+  if (!enPublished) {
+    check(Object.keys(head).length === 0, `${path}: hreflang en <head> antes de publicar el EN`);
+    check(Object.keys(listed).length === 0, `${path}: alternates en el sitemap antes de publicar el EN`);
+    check(expectedLang === "es", `${path}: URL EN en el sitemap antes de publicarla`);
+    continue;
+  }
+  // P9: el grupo de hreflang del <head> = el del sitemap; incluye la propia URL; x-default = ES; recíproco.
+  check(same(head, listed), `${path}: hreflang del <head> ≠ sitemap`);
+  check(listed[expectedLang] === loc && listed["x-default"] === listed.es && listed.es && listed.en, `${path}: grupo hreflang incompleto`);
+  for (const other of Object.values(listed)) check(same(sitemapAlternates.get(other) ?? {}, listed), `${path}: hreflang no recíproco con ${other}`);
 }
 
 // 2) Redirecciones (mismo parseo que scripts/snapshot-routes.mjs; el test unitario lo cuadra con lib/redirects.ts)
@@ -79,8 +104,6 @@ for (const path of ["/no-existe/", "/proyectos/no-existe/", "/blog/no-existe/", 
 }
 
 // 4) Árbol EN (P6): rastreo desde /en/ por los enlaces internos bajo /en/.
-const publication = await readFile(resolve(root, "content/publication.ts"), "utf8");
-const enPublished = /publishedLocales[^=]*=\s*\[[^\]]*"en"/.test(publication);
 const enSeeds = ["/en/", "/en/projects/", "/en/services/", "/en/about/", "/en/blog/", "/en/now/", "/en/contact/"];
 const enSeen = new Set();
 const enQueue = [...enSeeds];
