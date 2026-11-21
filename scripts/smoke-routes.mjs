@@ -13,8 +13,9 @@
  * - el 404 global (experimental.globalNotFound): /no-existe/, slug rechazado, /api/ y archivo
  *   inexistentes → 404 con lang="es", noindex y contenido EN EL HTML INICIAL, sin canonical;
  * - árbol EN (P6), rastreado desde /en/ (P7: sin enlaces internos fuera de /en/ salvo /cv/, /api/ y
- *   el selector de idioma): 200, lang="en", canonical y og:url propios, noindex y sin
- *   hreflang mientras content/publication.ts no publique "en"; 404 del catch-all EN con noindex.
+ *   el selector de idioma): 200, lang="en", canonical y og:url propios; desde P9 sin noindex, con
+ *   hreflang recíproco y og:locale:alternate (antes, noindex y sin hreflang); 404 del catch-all EN
+ *   con noindex.
  * Sale con código 1 si algo falla.
  */
 import { readFile } from "node:fs/promises";
@@ -81,6 +82,12 @@ for (const loc of locs) {
   check(same(head, listed), `${path}: hreflang del <head> ≠ sitemap`);
   check(listed[expectedLang] === loc && listed["x-default"] === listed.es && listed.es && listed.en, `${path}: grupo hreflang incompleto`);
   for (const other of Object.values(listed)) check(same(sitemapAlternates.get(other) ?? {}, listed), `${path}: hreflang no recíproco con ${other}`);
+  const ogAlternate = attr(page.html, 'property="og:locale:alternate"', "content");
+  check(ogAlternate === (expectedLang === "es" ? "en_US" : "es_CO"), `${path}: og:locale:alternate=${ogAlternate}`);
+}
+if (enPublished) {
+  const enCount = paths.filter((path) => path.startsWith("/en/")).length;
+  check(enCount * 2 === paths.length, `sitemap: ${enCount} URLs EN de ${paths.length} (se esperaba la mitad)`);
 }
 
 // 2) Redirecciones (mismo parseo que scripts/snapshot-routes.mjs; el test unitario lo cuadra con lib/redirects.ts)

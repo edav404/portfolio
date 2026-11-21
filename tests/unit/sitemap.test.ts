@@ -35,23 +35,30 @@ describe("sitemap", () => {
 });
 
 describe("sitemap e idiomas (P8)", () => {
-  it("hoy (solo ES publicado): exactamente las URLs ES de la línea base, sin alternates", async () => {
+  it("hoy (P9): exactamente las URLs ES y EN de la línea base", async () => {
     const { readFileSync } = await import("node:fs");
     const baseline = JSON.parse(readFileSync("tests/fixtures/routes-baseline.json", "utf8")) as { entries: { path: string; kind: string }[] };
     const expected = baseline.entries.filter((entry) => entry.kind === "sitemap").map((entry) => `https://edav.com.co${entry.path}`);
     expect(entries.map((entry) => entry.url)).toEqual(expected);
-    for (const entry of entries) expect(entry.alternates, entry.url).toBeUndefined();
+    expect(entries).toHaveLength(44);
   });
 
-  it("con EN publicado: ES + EN, hreflang recíproco con x-default = ES y sin rutas no indexables", async () => {
+  it("solo ES publicado (simulado): solo URLs ES y sin alternates", async () => {
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://edav.com.co");
     vi.resetModules();
-    vi.doMock("@/content/publication", () => ({ publishedLocales: ["es", "en"] }));
-    const both = (await import("@/app/sitemap")).default();
+    vi.doMock("@/content/publication", () => ({ publishedLocales: ["es"] }));
+    const esOnly = (await import("@/app/sitemap")).default();
     vi.doUnmock("@/content/publication");
     vi.unstubAllEnvs();
+    expect(esOnly).toHaveLength(entries.length / 2);
+    for (const entry of esOnly) {
+      expect(new URL(entry.url).pathname.startsWith("/en/"), entry.url).toBe(false);
+      expect(entry.alternates, entry.url).toBeUndefined();
+    }
+  });
 
-    expect(both).toHaveLength(entries.length * 2);
+  it("ES + EN: hreflang recíproco con x-default = ES y sin rutas no indexables", () => {
+    const both = entries;
     const byUrl = new Map(both.map((entry) => [entry.url, entry]));
     for (const entry of both) {
       const languages = entry.alternates?.languages as Record<string, string> | undefined;
@@ -63,6 +70,6 @@ describe("sitemap e idiomas (P8)", () => {
       for (const lang of ["es", "en"]) expect(byUrl.get(languages![lang])?.alternates?.languages, `${entry.url} → ${lang}`).toEqual(languages);
       expect(new URL(entry.url).pathname).not.toMatch(/^\/(en\/)?(os|classic)\//);
     }
-    expect(both.filter((entry) => new URL(entry.url).pathname.startsWith("/en/"))).toHaveLength(entries.length);
+    expect(both.filter((entry) => new URL(entry.url).pathname.startsWith("/en/"))).toHaveLength(entries.length / 2);
   });
 });

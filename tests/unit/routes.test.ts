@@ -27,7 +27,7 @@ function currentEsPaths(): string[] {
 
 describe("content/routes.ts", () => {
   it("(a) las rutas ES coinciden exactamente con las URLs del sitemap de la línea base P0", () => {
-    const sitemap = entries.filter((entry) => entry.kind === "sitemap").map((entry) => entry.path);
+    const sitemap = entries.filter((entry) => entry.kind === "sitemap" && !entry.path.startsWith("/en/")).map((entry) => entry.path);
     expect(new Set(currentEsPaths())).toEqual(new Set(sitemap));
     for (const entry of entries.filter((item) => item.kind === "sitemap")) expect(entry.status, entry.path).toBe(200);
   });
@@ -90,17 +90,17 @@ describe("content/routes.ts", () => {
     expect(matchPath("/en/proyectos/")).toBeNull();
   });
 
-  it("(f) alternates y hreflangMap omiten los idiomas no publicados", () => {
-    expect(publishedLocales).toEqual(["es"]);
+  it("(f) alternates y hreflangMap cubren los idiomas publicados (P9: ES y EN)", () => {
+    expect(publishedLocales).toEqual(["es", "en"]);
     for (const key of keys) {
       const params = routes[key].es.includes("[") ? { slug: "x" } : undefined;
       const result = (alternates as (k: RouteKey, p?: object) => Record<string, string>)(key, params);
       expect(Object.keys(result)).toEqual([...publishedLocales]);
     }
-    expect(hreflangMap("projects")).toEqual({ es: "/proyectos/", "x-default": "/proyectos/" });
-    // Un slug traducido sin versión en un idioma publicado no genera alternate.
-    expect(alternates("post", { slug: { en: "only-english" } })).toEqual({});
-    expect(hreflangMap("post", { slug: { en: "only-english" } })).toEqual({});
+    expect(hreflangMap("projects")).toEqual({ es: "/proyectos/", en: "/en/projects/", "x-default": "/proyectos/" });
+    // Un slug sin versión en un idioma no genera alternate para ese idioma; sin ES no hay x-default.
+    expect(alternates("post", { slug: { en: "only-english" } })).toEqual({ en: "/en/blog/only-english/" });
+    expect(hreflangMap("post", { slug: { en: "only-english" } })).toEqual({ en: "/en/blog/only-english/" });
   });
 
   it("href lanza si falta un parámetro o contiene una barra", () => {

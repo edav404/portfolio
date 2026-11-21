@@ -124,7 +124,7 @@ export const routes = {
   classic:   { es: "/classic/",             en: "/en/classic/",            since: 5, indexable: false },
 } as const satisfies Record<string, RouteDef>;
 
-export const publishedLocales: readonly Locale[] = ["es"];   // pasa a ["es","en"] tras la revisión del usuario (P9)
+export const publishedLocales: readonly Locale[] = ["es", "en"];   // P9 hecho (antes ["es"])
 export function href(key, locale, params?): string;           // lanza en build si falta un parámetro
 export function alternates(key, params?): Partial<Record<Locale, string>>;  // omite idiomas no publicados
 export function hreflangMap(key, params?): Record<string, string>;          // + "x-default" = es
@@ -278,6 +278,7 @@ Variante híbrida medida (global + solo el catch-all EN):
 | P4 | `/ahora/` | description (fuera del snapshot) | descripción corta → la de `content/pages.ts` | Igual |
 | Lote Codex/QA tras P8 | `/sobre-mi/` | texto visible (fuera del snapshot) | "jul de 2026 – dic de 2026" → "jul 2026 – dic 2026" (raya entre espacios finos U+2009) | Fechas cortas por idioma (QA O3, `formatPeriod`) |
 | Lote Codex/QA tras P8 | 404 EN (`/en/<ruta inexistente>/`) | texto visible tras hidratar (fuera del snapshot) | se quita "Versión en español" del cuerpo; el 404 ES no lo mostraba | Redundante con el selector de la cabecera (QA O1) |
+| P9 | 22 × `/en/…` (sitemap) | entradas nuevas | — → 200, `lang="en"`, canonical y `og:url` propios | El EN entra en el sitemap (22 → 44 URLs). Las 22 URLs ES y las 18 redirecciones no cambian en ningún campo medido |
 
 Sin más cambios en status, `Location`, `lang`, `<title>` ni canonical de las 22 URLs del sitemap ni de las 18 redirecciones. La portada conserva su título absoluto (62 caracteres, excepción deliberada). En P4 el texto visible (y `aria-label`/`alt`/`placeholder`/`title`) de las 23 páginas medidas es idéntico al de P3. `npm run smoke` lo vigila contra el servidor standalone (CI incluido).
 
@@ -363,7 +364,7 @@ app/en/
   44 URLs en el sitemap, hreflang recíproco en `<head>` y sitemap, EN sin noindex y
   `og:locale:alternate` cruzado.
 
-### 11.4 Qué verificar en P9 (publicar EN)
+### 11.4 Qué verificar en P9 (publicar EN) — hecho, ver §11.6
 
 1. Revisión del usuario del texto EN: las 22 páginas EN (cabecera → "English version") y el escritorio
    en `/en/?view=retro`. Pendiente de contenido: `technologies` de Civicoin ("Diseño editorial").
@@ -389,3 +390,28 @@ app/en/
   Shopify preseleccionado se comprueban en Edge headless.
 - Contacto: `content/contact-errors.ts` es el listado único de códigos; `message` conserva el texto
   ES exacto de cada rama previa a P4.
+
+### 11.6 P9: inglés publicado (hecho)
+
+- `content/publication.ts` → `["es", "en"]`. Es el único cambio de producción; el resto son tests,
+  smoke y línea base.
+- Resultado en el standalone:
+  - Sitemap con 44 URLs (22 ES + 22 EN), cada una con alternates recíprocos `es`/`en` y
+    `x-default` = ES.
+  - Las páginas `/en/…` son indexables (sin `noindex`), con canonical propio, hreflang recíproco en
+    `<head>` (igual al del sitemap) y `og:locale:alternate`.
+  - Las páginas ES no cambian, salvo que ahora anuncian el EN: hreflang y `og:locale:alternate = en_US`.
+  - `/os/`, `/classic/`, `/en/os/` y `/en/classic/` siguen sin existir (404 con `noindex`). El 404 EN
+    sigue siendo 404 con `noindex`.
+- Línea base (§10): solo entran las 22 URLs EN; las ES y las redirecciones no cambian en ningún campo.
+- Tests: los casos "hoy" pasan a afirmar el estado publicado. El estado anterior (solo ES) se
+  conserva como caso simulado con `vi.doMock("@/content/publication")` en `metadata.test.ts` y
+  `sitemap.test.ts`.
+- Smoke: además de lo anterior, comprueba `og:locale:alternate` en cada URL del sitemap y que la
+  mitad de las URLs sean EN.
+- **Pendiente al desplegar (Fase 7):**
+  - Prueba HTML/RSC de `/en/*` y de las ES a través de Traefik + Cloudflare (§8.3, riesgo 3 de §9),
+    con purga de la caché de Cloudflare: status, `Content-Type`, idioma, `Cache-Control` y `Vary`,
+    sin intercambio HTML/RSC.
+  - Enviar el sitemap y revisar en Search Console.
+

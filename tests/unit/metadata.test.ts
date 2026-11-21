@@ -58,17 +58,17 @@ describe("buildMetadata", () => {
     expect(meta.twitter?.images).toEqual([{ url: "https://edav.com.co/img/cia.png", alt: "CIA SUR" }]);
   });
 
-  it("sin hreflang ni alternateLocale mientras solo ES está publicado", () => {
+  it("hreflang ES/EN con x-default = ES y og:locale:alternate (P9)", () => {
     const meta = project();
-    expect(meta.alternates).not.toHaveProperty("languages");
-    expect(meta.openGraph).not.toHaveProperty("alternateLocale");
+    expect(meta.alternates?.languages).toEqual({ es: "/proyectos/cia-sur/", en: "/en/projects/cia-sur/", "x-default": "/proyectos/cia-sur/" });
+    expect(meta.openGraph).toMatchObject({ locale: "es_CO", alternateLocale: ["en_US"] });
   });
 
-  it("indexable por defecto en ES; noindex con index: false o en un idioma no publicado", () => {
+  it("indexable por defecto en ES y EN; noindex con index: false", () => {
     expect(project()).not.toHaveProperty("robots");
     expect(m.buildMetadata({ route: "contact", locale: "es", title: "t", description: "d", index: false }).robots).toEqual({ index: false, follow: true });
     const en = m.buildMetadata({ route: "projects", locale: "en", title: "Projects", description: "d" });
-    expect(en.robots).toEqual({ index: false, follow: true });
+    expect(en).not.toHaveProperty("robots");
     expect(en.alternates?.canonical).toBe("/en/projects/");
     expect(en.openGraph?.locale).toBe("en_US");
   });
@@ -99,15 +99,26 @@ describe("títulos SEO", () => {
   });
 });
 
-describe("EN antes y después de publicarlo (P6 / P9)", () => {
-  it("hoy: página EN con noindex, canonical propio y sin hreflang ni og:locale:alternate", () => {
+describe("EN publicado (P9) y estado anterior (P6–P8)", () => {
+  it("hoy: página EN indexable, canonical propio, hreflang recíproco y og:locale:alternate", () => {
+    const languages = { es: "/sobre-mi/", en: "/en/about/", "x-default": "/sobre-mi/" };
     const en = m.buildMetadata({ route: "about", locale: "en", title: "About", description: "d" });
+    expect(en).not.toHaveProperty("robots");
+    expect(en.alternates).toEqual({ canonical: "/en/about/", languages });
+    expect(en.openGraph).toMatchObject({ url: "/en/about/", locale: "en_US", alternateLocale: ["es_CO"] });
+    expect(m.buildMetadata({ route: "about", locale: "es", title: "Sobre mí", description: "d" }).alternates).toEqual({ canonical: "/sobre-mi/", languages });
+  });
+
+  it("solo ES publicado (simulado): EN con noindex y sin alternas en ningún idioma", async () => {
+    vi.resetModules();
+    vi.doMock("@/content/publication", () => ({ publishedLocales: ["es"] }));
+    const p8 = await import("@/lib/metadata");
+    const en = p8.buildMetadata({ route: "about", locale: "en", title: "About", description: "d" });
     expect(en.robots).toEqual({ index: false, follow: true });
     expect(en.alternates).toEqual({ canonical: "/en/about/" });
-    expect(en.openGraph).toMatchObject({ url: "/en/about/", locale: "en_US" });
     expect(en.openGraph).not.toHaveProperty("alternateLocale");
-    // La ES equivalente tampoco anuncia la EN mientras no esté publicada.
-    expect(m.buildMetadata({ route: "about", locale: "es", title: "Sobre mí", description: "d" }).alternates).toEqual({ canonical: "/sobre-mi/" });
+    expect(p8.buildMetadata({ route: "about", locale: "es", title: "Sobre mí", description: "d" }).alternates).toEqual({ canonical: "/sobre-mi/" });
+    vi.doUnmock("@/content/publication");
   });
 
   it("con EN publicado: hreflang recíproco con x-default = ES y sin noindex", async () => {
