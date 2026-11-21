@@ -1059,3 +1059,11 @@
   .os-root.os-root :is(.xp-menu__item, .xp-start__item, .xp-start__all, .xp-task, .xp-tray__btn,
     .xp-start-button, .xp-icon, .xp-caption, .xp-titlebar__icon, .xp-back):focus-visible { outline-offset: -3px; box-shadow: none; }
 }
+
+/* Añadido en O4 (shell): contenedor del toolbar de la barra de tareas (Inicio + tareas),
+   separado de la bandeja, que es otro grupo. */
+.xp-taskbar__toolbar { display: flex; align-items: stretch; flex: 1; min-width: 0; }
+/* El título es un h2 (A11Y): se neutraliza el estilo global de encabezados dentro del cromo. */
+.xp-titlebar__title { margin: 0; font: inherit; letter-spacing: normal; line-height: inherit; color: inherit; }
+/* El panel Inicio vive dentro de la barra (orden de Tab natural): su altura máxima se calcula contra el viewport. */
+.xp-taskbar > .xp-start { max-height: calc(100dvh - var(--xp-taskbar-h)); }

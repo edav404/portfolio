@@ -1,16 +1,24 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import OsShell from "@/components/os/os-shell";
+import styles from "@/components/os/apps/apps.module.css";
+import type { OsCopy, OsHrefs, OsProjectIndexItem, WelcomeCopy } from "@/components/os/types";
+import "@/components/os/os.css";
 import { getOsProject, osProjectSlugs, osProjects, projectTitle } from "@/content/projects";
-import { href } from "@/content/routes";
+import { profile } from "@/content/profile";
+import { href, hrefFor } from "@/content/routes";
+import { cvHref } from "@/content/site";
 import type { Locale } from "@/content/types";
-import { format, uiFor } from "@/content/ui";
+import { format, roleInSentence } from "@/content/format";
+import { uiFor } from "@/content/ui";
+import { languageIndex } from "@/lib/i18n/pages";
 import { buildMetadata } from "@/lib/metadata";
+import { isOsPath } from "@/lib/os/window-url";
 
 /**
- * Vistas de servidor de `/os/` y `/en/os/` (docs/arquitectura-os.md §1). Por ahora: el SSR del
- * escritorio vacío ("en construcción") y el respaldo sin JS. O4 monta aquí el shell cliente.
- * El catálogo (`osProjectSlugs`) es la única fuente de parámetros, metadata y listados.
+ * Vistas de servidor de `/os/` y `/en/os/` (docs/arquitectura-os.md §1). El único módulo que resuelve
+ * `ui.osShell` y el catálogo de proyectos: el shell cliente recibe todo por props (un solo idioma en el
+ * bundle). El catálogo (`osProjectSlugs`) es la única fuente de parámetros, metadata y listados.
  */
 
 /** Parámetros de `/os/proyectos/[slug]/` y `/en/os/projects/[slug]/` (mismo slug en ambos idiomas). */
@@ -36,62 +44,132 @@ export function osProjectMetadata(locale: Locale, slug: string) {
   });
 }
 
-/** Raíz del SO: persiste entre las rutas de `/os/…`. `<noscript>` visible, localizado y enfocable. */
-export function OsLayoutView({ locale, children }: { locale: Locale; children: React.ReactNode }) {
-  const copy = uiFor(locale, "osShell");
-  return (
-    <div className="os-root" data-theme="xp">
-      <noscript>
-        <p>{copy.noscript.message} <Link href={href("home", locale)}>{copy.noscript.link}</Link></p>
-      </noscript>
-      <h1 className="sr-only">{copy.heading}</h1>
-      {children}
-    </div>
-  );
+/** Índice lean del catálogo autorizado: lo mínimo para Welcome, la barra de tareas y las cabeceras. */
+function projectIndex(locale: Locale): OsProjectIndexItem[] {
+  return osProjects().map((project) => {
+    const title = projectTitle(project, locale);
+    return {
+      slug: project.slug,
+      title,
+      category: project.category[locale],
+      year: project.year,
+      summary: project.summary[locale],
+      image: project.image,
+      alt: project.alt?.[locale] ?? title,
+      publicHref: href("project", locale, { slug: project.slug }),
+    };
+  });
 }
 
-/** Escritorio vacío de `/os/`: título, descripción y los proyectos autorizados como enlaces reales. */
-export function OsHomeView({ locale }: { locale: Locale }) {
-  const copy = uiFor(locale, "osShell");
-  const projects = osProjects();
-  return (
-    <main id="os-desktop">
-      <h2>{copy.fallback.title}</h2>
-      <p>{copy.fallback.lead}</p>
-      <section aria-labelledby="os-fallback-projects">
-        <h3 id="os-fallback-projects">{copy.fallback.projectsTitle}</h3>
-        <p>{format(copy.fallback.projectsCount, { count: projects.length })}</p>
+/** Equivalentes ES↔EN de las rutas del SO (solo las del SO: el cliente elige por la ruta actual). */
+function osLanguageIndex(locale: Locale): Record<string, string> {
+  return Object.fromEntries(Object.entries(languageIndex(locale)).filter(([path]) => isOsPath(path)));
+}
+
+/**
+ * Raíz del SO: persiste entre las rutas de `/os/…` (layout). Monta el shell cliente con el escritorio,
+ * la barra de tareas y la ventana inicial ya en el HTML. El respaldo sin JS va en `<noscript>`:
+ * mensaje visible, localizado y enfocable, más los proyectos como enlaces reales.
+ */
+export function OsLayoutView({ locale, children }: { locale: Locale; children: React.ReactNode }) {
+  const text = uiFor(locale, "osShell");
+  const legacy = uiFor(locale, "os");
+  const projects = projectIndex(locale);
+  const other: Locale = locale === "es" ? "en" : "es";
+  const copy: OsCopy = {
+    heading: text.heading, apps: text.apps, desktop: text.desktop, window: text.window, start: text.start,
+    taskbar: text.taskbar, announce: text.announce, project: text.project, pocket: text.pocket,
+    noscript: text.noscript, fallback: text.fallback,
+  };
+  const welcome: WelcomeCopy = {
+    kicker: legacy.welcome.kicker,
+    title: legacy.welcome.title,
+    intro: format(legacy.welcome.intro, { name: profile.name, role: roleInSentence(profile.headline[locale], locale) }),
+    exploreWork: legacy.welcome.exploreWork,
+    startProject: legacy.welcome.startProject,
+    projectsCount: format(legacy.welcome.projectsCount, { count: projects.length }),
+  };
+  const hrefs: OsHrefs = {
+    home: href("home", locale),
+    cv: cvHref[locale],
+    languageIndex: osLanguageIndex(locale),
+    languageFallback: hrefFor({ route: "os" }, other),
+    otherLocale: other,
+    owner: profile.name,
+  };
+  const noscript = (
+    <noscript>
+      <div className={styles.noscript}>
+        <p>{text.noscript.message} <Link href={href("home", locale)}>{text.noscript.link}</Link></p>
+        <h2 className={styles.heading}>{text.fallback.projectsTitle}</h2>
+        <p>{format(text.fallback.projectsCount, { count: projects.length })}</p>
         <ul>
           {projects.map((project) => (
-            <li key={project.slug}>
-              <Link href={href("osProject", locale, { slug: project.slug })}>{projectTitle(project, locale)}</Link>
-            </li>
+            <li key={project.slug}><Link href={href("osProject", locale, { slug: project.slug })}>{project.title}</Link></li>
           ))}
         </ul>
-      </section>
-    </main>
+      </div>
+    </noscript>
+  );
+  return (
+    <OsShell locale={locale} copy={copy} welcome={welcome} projects={projects} knownSlugs={osProjectSlugs} hrefs={hrefs} noscript={noscript}>
+      {children}
+    </OsShell>
   );
 }
 
-/** Detalle de UN proyecto del catálogo (solo sus datos). Slug fuera del catálogo: 404. */
+/** `/os/`: el escritorio lo pinta el layout; la página no aporta contenido. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- mismo contrato que `OsProjectView` (las páginas pasan el idioma)
+export function OsHomeView(_props: { locale: Locale }) {
+  return null;
+}
+
+/**
+ * Detalle de UN proyecto del catálogo (solo sus datos). Slug fuera del catálogo: 404. El shell lo
+ * monta dentro de la ventana del proyecto y lo conserva por slug; la cabecera (portada, resumen,
+ * pie) la pone la ventana desde el índice.
+ */
 export function OsProjectView({ locale, slug }: { locale: Locale; slug: string }) {
   const project = getOsProject(slug);
   if (!project) notFound();
-  const copy = uiFor(locale, "osShell");
-  const title = projectTitle(project, locale);
+  const { project: labels } = uiFor(locale, "osShell");
+  const services = project.services[locale];
   return (
-    <main id="os-desktop">
-      <article>
-        <h2>{title}</h2>
-        <p>{project.category[locale]} · {project.year}</p>
-        <Image src={project.image} alt={project.alt?.[locale] ?? title} width={640} height={400} sizes="(max-width: 768px) 100vw, 640px"/>
-        <p>{project.summary[locale]}</p>
-        <p>
-          <Link href={href("project", locale, { slug: project.slug })}>{copy.fallback.openPublic}</Link>
-          {" "}
-          <Link href={href("os", locale)}>{copy.fallback.backToOs}</Link>
-        </p>
-      </article>
-    </main>
+    <>
+      <section className={styles.section}>
+        <h3 className={styles.heading}>{labels.challenge}</h3>
+        <p className={styles.text}>{project.challenge[locale]}</p>
+      </section>
+      <section className={styles.section}>
+        <h3 className={styles.heading}>{labels.solution}</h3>
+        <p className={styles.text}>{project.solution[locale]}</p>
+      </section>
+      {project.myRole ? (
+        <section className={styles.section}>
+          <h3 className={styles.heading}>{labels.myRole}</h3>
+          <p className={styles.text}>{project.myRole[locale]}</p>
+        </section>
+      ) : null}
+      <section className={styles.section}>
+        <h3 className={styles.heading}>{labels.services}</h3>
+        <ul className={styles.list}>{services.map((service) => <li key={service}>{service}</li>)}</ul>
+      </section>
+      <section className={styles.section}>
+        <h3 className={styles.heading}>{labels.technologies}</h3>
+        <ul className={styles.chips}>{project.technologies.map((tech) => <li key={tech} className={styles.chip}>{tech}</li>)}</ul>
+      </section>
+      {project.links?.length ? (
+        <section className={styles.section}>
+          <h3 className={styles.heading}>{labels.links}</h3>
+          <ul className={styles.list}>
+            {project.links.map((link) => (
+              <li key={link.href}>
+                <a className={styles.link} href={link.href} target="_blank" rel="noopener noreferrer" aria-label={format(labels.externalLink, { label: link.label[locale] })}>{link.label[locale]}</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+    </>
   );
 }
