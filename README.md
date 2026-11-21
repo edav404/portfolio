@@ -7,8 +7,8 @@ Portafolio profesional experimental de Emmanuel Dávila, construido con Next.js 
 - Secuencia de arranque BIOS opcional.
 - Escritorio responsive con iconos, menú Inicio y barra de tareas.
 - Gestor de ventanas con foco, arrastre, minimizar, maximizar y cerrar.
-- Selector persistente entre EDAV Desktop 98 y una vista web convencional más accesible.
-- Explorador de los 13 proyectos, terminal funcional y asistente de servicios.
+- Portada web accesible con contenido real; EDAV Desktop 98 se abre bajo demanda.
+- Explorador de proyectos, terminal funcional y asistente de servicios.
 - ED Assistant animado, arrastrable y contextual para formularios, terminal y errores 404.
 - Reproductor conectado a Last.fm, notificaciones, sonido opcional y shader CRT WebGL.
 - Adaptación móvil como launcher, accesibilidad por teclado y reducción de movimiento.

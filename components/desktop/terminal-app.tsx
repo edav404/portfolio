@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useRef, useState } from "react";
+import { profile } from "@/content/profile";
 
 type Line = { type: "command" | "output" | "error"; text: string };
 
@@ -21,8 +22,8 @@ export function TerminalApp({ onOpen }: { onOpen: (id: string) => void }) {
     const next: Line[] = [{ type: "command", text: `C:\\EDAV> ${input}` }];
     if (command === "clear" || command === "cls") setLines([]);
     else if (command === "help") next.push({ type: "output", text: help.join("  ·  ") });
-    else if (command === "whoami") next.push({ type: "output", text: "Emmanuel Dávila — Full Stack Developer & Web Designer, Medellín CO." });
-    else if (command === "skills") next.push({ type: "output", text: "TypeScript · React · Next.js · Node.js · WordPress · WooCommerce · Shopify · PostgreSQL · Figma" });
+    else if (command === "whoami") next.push({ type: "output", text: `${profile.name} — ${profile.headline.es}, ${profile.location.es}.` });
+    else if (command === "skills") next.push({ type: "output", text: "TypeScript · React · Next.js · Node.js · WordPress · WooCommerce · Shopify · Power Platform · n8n · PostgreSQL" });
     else if (command === "date") next.push({ type: "output", text: new Intl.DateTimeFormat("es-CO", { dateStyle: "full", timeStyle: "medium" }).format(new Date()) });
     else if (["projects", "services", "contact", "music"].includes(command)) { onOpen(command === "music" ? "media" : command); next.push({ type: "output", text: `Abriendo ${command}.exe...` }); }
     else if (command.startsWith("open ")) { const id = command.slice(5).replace("work", "projects").replace("about", "about"); onOpen(id); next.push({ type: "output", text: `Solicitud enviada: ${id}.exe` }); }

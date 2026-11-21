@@ -1,62 +1,78 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { DesktopShell } from "@/components/desktop/desktop-shell";
-import { DesktopIcon, PixelLogo } from "@/components/desktop/desktop-icons";
-import { StandardHome } from "@/components/standard-home";
+/**
+ * Portada con escritorio opcional (SEO-01 / UX-01 / ARQ-01 / PERF-01).
+ *
+ * - El contenido de `/` llega como `children` desde un Server Component y se pinta en el
+ *   HTML inicial; este componente no decide qué se renderiza en el servidor.
+ * - El escritorio (`DesktopShell`) se carga con `next/dynamic` y `ssr: false` solo cuando
+ *   el visitante lo pide: su JS no se descarga en `/` si nadie entra al SO.
+ * - Sin cookie ni localStorage: el HTML de `/` es siempre el mismo. `?view=retro` (enlace
+ *   compartible) abre el escritorio tras hidratar. La preferencia persistente (cookie) y el
+ *   selector XP como overlay llegan en la Fase 5, sobre esta misma base.
+ */
 
-type ViewMode = "choice" | "retro" | "standard";
+import dynamic from "next/dynamic";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { DesktopIcon } from "@/components/desktop/desktop-icons";
 
-function ExperienceGateway({ onChoose }: { onChoose: (view: Exclude<ViewMode, "choice">) => void }) {
-  return <section className="experience-gateway" aria-labelledby="experience-title">
-    <div className="experience-gateway-panel">
-      <header><PixelLogo/><div><strong>EDAV</strong><span>PORTFOLIO EXPERIENCE SELECTOR</span></div></header>
-      <p className="experience-gateway-kicker">SELECCIONA TU EXPERIENCIA</p>
-      <h1 id="experience-title">¿Cómo quieres explorar el portafolio de Emmanuel?</h1>
-      <p className="experience-gateway-intro">Puedes cambiar de vista en cualquier momento. El contenido y los proyectos son los mismos.</p>
-      <div className="experience-gateway-options">
-        <button type="button" onClick={() => onChoose("standard")} aria-describedby="standard-view-description">
-          <span className="experience-gateway-icon is-standard"><DesktopIcon name="welcome"/></span>
-          <span className="experience-gateway-recommended">Recomendada en móvil</span>
-          <strong>Vista web normal</strong>
-          <span id="standard-view-description">Navegación familiar, directa y cómoda para leer o recorrer desde cualquier dispositivo.</span>
-          <b>Entrar a la vista web</b>
-        </button>
-        <button type="button" onClick={() => onChoose("retro")} aria-describedby="retro-view-description">
-          <span className="experience-gateway-icon is-retro"><DesktopIcon name="terminal"/></span>
-          <strong>EDAV Desktop 98</strong>
-          <span id="retro-view-description">Escritorio interactivo con BIOS, ventanas, terminal, sonido y estética retro Y2K.</span>
-          <b>Iniciar experiencia interactiva</b>
-        </button>
-      </div>
-      <small>Ambas opciones respetan reducción de movimiento y permiten volver a cambiar de experiencia.</small>
-    </div>
-  </section>;
+const loadDesktop = () => import("@/components/desktop/desktop-shell").then((module) => module.DesktopShell);
+const DesktopShell = dynamic(loadDesktop, {
+  ssr: false,
+  loading: () => <div className="loading-screen os-loading" role="status"><p>Cargando EDAV Desktop 98…</p></div>,
+});
+
+type DesktopControls = { open: () => void; preload: () => void };
+const DesktopContext = createContext<DesktopControls | null>(null);
+
+const RETRO_PARAM = "retro";
+
+function setViewParam(view: string | null) {
+  const url = new URL(window.location.href);
+  if (view) url.searchParams.set("view", view); else url.searchParams.delete("view");
+  window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
-export function PortfolioExperience() {
-  const [view, setView] = useState<ViewMode>("choice");
-  const [skipRetroBoot, setSkipRetroBoot] = useState(false);
+export function PortfolioExperience({ children }: { children: ReactNode }) {
+  const [active, setActive] = useState(false);
+  const [skipBoot, setSkipBoot] = useState(false);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
 
-  useEffect(() => {
-    const preferenceTimer = window.setTimeout(() => {
-      const requestedView = new URLSearchParams(window.location.search).get("view");
-      if (requestedView === "standard" || requestedView === "retro") setView(requestedView);
-    }, 0);
-    return () => window.clearTimeout(preferenceTimer);
+  const open = useCallback(() => {
+    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setActive(true);
+    setViewParam(RETRO_PARAM);
+    window.scrollTo({ top: 0, behavior: "auto" });
   }, []);
 
-  const changeView = (next: Exclude<ViewMode, "choice">) => {
-    if (next === "standard") setSkipRetroBoot(true);
-    setView(next);
-    window.localStorage.setItem("edav-view", next);
-    window.history.replaceState(null, "", next === "standard" ? "?view=standard" : window.location.pathname);
-    window.scrollTo({ top: 0, behavior: "auto" });
-  };
+  const close = useCallback(() => {
+    setActive(false);
+    setSkipBoot(true);
+    setViewParam(null);
+    // Devuelve el foco al botón que abrió el escritorio, ya visible de nuevo.
+    window.requestAnimationFrame(() => returnFocusRef.current?.focus());
+  }, []);
 
-  if (view === "choice") return <ExperienceGateway onChoose={changeView}/>;
+  // Enlace profundo `/?view=retro`: se lee solo en el cliente y tras hidratar.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("view") !== RETRO_PARAM) return;
+    const timer = window.setTimeout(() => setActive(true), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
-  return view === "retro"
-    ? <DesktopShell skipBoot={skipRetroBoot} onSwitchToStandard={() => changeView("standard")}/>
-    : <StandardHome onReturnToRetro={() => changeView("retro")}/>;
+  const controls: DesktopControls = { open, preload: () => void loadDesktop() };
+
+  return <DesktopContext.Provider value={controls}>
+    <div hidden={active}>{children}</div>
+    {active && <DesktopShell skipBoot={skipBoot} onSwitchToStandard={close}/>}
+  </DesktopContext.Provider>;
+}
+
+/** Botón en línea (no flotante: no tapa contenido) que abre el escritorio. */
+export function DesktopLaunchButton() {
+  const controls = useContext(DesktopContext);
+  if (!controls) return null;
+  return <button type="button" className="experience-switch" onClick={controls.open} onPointerEnter={controls.preload} onFocus={controls.preload}>
+    <DesktopIcon name="terminal"/> Abrir EDAV Desktop 98
+  </button>;
 }

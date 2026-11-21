@@ -12,6 +12,11 @@ export const site = {
   description: profile.seoDescription.es,
   lastfm: profile.contact.lastfm,
   whatsapp: profile.contact.whatsapp,
+  email: profile.contact.email,
+  linkedin: profile.contact.linkedin,
+  github: profile.contact.github,
+  // Rutas reales que sirve `app/cv/[file]/route.ts` (sin barra final: son archivos).
+  cv: { es: "/cv/emmanuel-davila-cv-es.pdf", en: "/cv/emmanuel-davila-cv-en.pdf" },
 };
 
 export const services = allServices.map((service) => ({
