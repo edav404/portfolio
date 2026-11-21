@@ -276,6 +276,8 @@ Variante híbrida medida (global + solo el catch-all EN):
 | P4 | `/servicios/` | title | "Servicios de desarrollo Full Stack y automatización \| Emmanuel Dávila" (69) → "Servicios Full Stack y de automatización \| Emmanuel Dávila" (58) | Títulos SEO desde `content/pages.ts` (≤ 60 caracteres) |
 | P4 | `/sobre-mi/` | title | "Sobre mí — Desarrollador Full Stack y de automatización \| Emmanuel Dávila" (73) → "Sobre mí: desarrollador Full Stack \| Emmanuel Dávila" (52) | Igual |
 | P4 | `/ahora/` | description (fuera del snapshot) | descripción corta → la de `content/pages.ts` | Igual |
+| Lote Codex/QA tras P8 | `/sobre-mi/` | texto visible (fuera del snapshot) | "jul de 2026 – dic de 2026" → "jul 2026 – dic 2026" (raya entre espacios finos U+2009) | Fechas cortas por idioma (QA O3, `formatPeriod`) |
+| Lote Codex/QA tras P8 | 404 EN (`/en/<ruta inexistente>/`) | texto visible tras hidratar (fuera del snapshot) | se quita "Versión en español" del cuerpo; el 404 ES no lo mostraba | Redundante con el selector de la cabecera (QA O1) |
 
 Sin más cambios en status, `Location`, `lang`, `<title>` ni canonical de las 22 URLs del sitemap ni de las 18 redirecciones. La portada conserva su título absoluto (62 caracteres, excepción deliberada). En P4 el texto visible (y `aria-label`/`alt`/`placeholder`/`title`) de las 23 páginas medidas es idéntico al de P3. `npm run smoke` lo vigila contra el servidor standalone (CI incluido).
 
@@ -328,7 +330,10 @@ app/en/
   un enlace más de la navegación ("English version" / "Versión en español"). Sin equivalente (404) →
   portada del otro idioma. Visible ya, antes de P9, porque es la vía de revisión del EN. Cambio
   visible intencionado en ES: ese enlace en la cabecera de las 23 páginas medidas (el resto del texto
-  ES no cambia). Sin estilos propios: hereda los de `.main-nav a` (`.language-switch` queda libre para CSS).
+  ES no cambia). Hereda `.main-nav a` y añade borde fino (`.main-nav .language-switch`). Busca la
+  equivalente por `canonicalPath` (`/proyectos/%63ia-sur/` resuelve) y, en el cliente, conserva
+  `?servicio=` en contacto y el `#fragmento` (`carryOver`); el HTML del servidor enlaza a la ruta sola
+  (sin `useSearchParams`, así que sin Suspense).
 - `lib/i18n/links.ts` → `localizeInternalHref(esHref, locale)`: traduce las rutas ES del cuerpo de
   los posts (con ancla y query), deja igual externos, `/cv/`, `/api/` y rutas desconocidas, y lanza en
   build si una ruta ES conocida no tiene equivalente. Lo usa `PostBody`; los proyectos no tienen
@@ -371,3 +376,16 @@ app/en/
    (EN con noindex), que fallarán a propósito al publicar.
 6. Revisar con Search Console tras desplegar (Fase 7) y la prueba Traefik + Cloudflare de §8.3
    (HTML/RSC de `/en/*` con `Vary` y `Cache-Control` correctos).
+
+### 11.5 Lote de correcciones Codex/QA sobre P8
+
+- Validador único de segmentos (`isValidSegment`) en `href`/`matchPath`; `canonicalPath` es la clave de
+  `languageIndex`, `localizeInternalHref` y el selector. `%2F`, `.` y `..` no son rutas del sitio.
+- `seoEligibility` (content/routes.ts): criterio común de `buildMetadata` y del sitemap
+  (`RouteDef.indexable`, `index`, idioma publicado y `canonicalTo`).
+- Smoke: selector con `href`/`hreflang`/`lang` en ambos sentidos (portada, proyecto, post de slug
+  traducido) con navegación al destino y vuelta, y selector del 404 ES. El 404 EN es el error shell
+  (§9.1): la navegación real desde `/en/no-existe/` y el caso `/contacto/?servicio=shopify` → EN con
+  Shopify preseleccionado se comprueban en Edge headless.
+- Contacto: `content/contact-errors.ts` es el listado único de códigos; `message` conserva el texto
+  ES exacto de cada rama previa a P4.
