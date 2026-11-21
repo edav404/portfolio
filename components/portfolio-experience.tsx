@@ -27,9 +27,11 @@ const DesktopShell = dynamic(loadDesktop, {
 /** Textos ya resueltos por el servidor: el cliente no importa content/ui.ts. */
 export type ExperienceCopy = DesktopCopy & { loading: string; open: string };
 
-type DesktopControls = { open: () => void; preload: () => void; label: string; registerLauncher: (element: HTMLElement | null) => void };
+type DesktopControls = { open: () => void; preload: () => void; label: string };
 const DesktopContext = createContext<DesktopControls | null>(null);
 const LoadingText = createContext("");
+/** Clase del botón de apertura (también destino de foco de respaldo al cerrar). */
+const LAUNCHER_CLASS = "experience-switch";
 
 /** "Cargando…" dentro del portal: misma raíz temática que el escritorio. */
 function DesktopLoading() {
@@ -48,9 +50,6 @@ export function PortfolioExperience({ copy, children }: { copy: ExperienceCopy; 
   const [active, setActive] = useState(false);
   const [skipBoot, setSkipBoot] = useState(false);
   const returnFocusRef = useRef<HTMLElement | null>(null);
-  // Botón de apertura de la portada: destino de respaldo cuando el escritorio se abrió por
-  // enlace profundo (`?view=retro`) y no hay un elemento previo al que volver.
-  const launcherRef = useRef<HTMLElement | null>(null);
   const restoreFocusRef = useRef(false);
 
   const open = useCallback(() => {
@@ -72,14 +71,12 @@ export function PortfolioExperience({ copy, children }: { copy: ExperienceCopy; 
   useEffect(() => {
     if (active || !restoreFocusRef.current) return;
     restoreFocusRef.current = false;
-    const target = [returnFocusRef.current, launcherRef.current].find((element) => element?.isConnected);
+    // Respaldo con `?view=retro` (no hay elemento previo): el botón de apertura de la portada.
+    const launcher = document.querySelector<HTMLElement>(`.${LAUNCHER_CLASS}`);
+    const target = [returnFocusRef.current, launcher].find((element) => element?.isConnected);
     target?.focus({ preventScroll: true });
   }, [active]);
 
-  const registerLauncher = useCallback((element: HTMLElement | null) => {
-    if (element) launcherRef.current ??= element;
-    else launcherRef.current = null;
-  }, []);
 
   // Enlace profundo `/?view=retro`: se lee solo en el cliente y tras hidratar.
   useEffect(() => {
@@ -88,7 +85,7 @@ export function PortfolioExperience({ copy, children }: { copy: ExperienceCopy; 
     return () => window.clearTimeout(timer);
   }, []);
 
-  const controls: DesktopControls = { open, preload: () => void loadDesktop(), label: copy.open, registerLauncher };
+  const controls: DesktopControls = { open, preload: () => void loadDesktop(), label: copy.open };
 
   // El escritorio se monta en un portal en <body>, fuera del .theme-root del shell público: así lleva
   // su propio tema (data-theme="xp") sin anidarlo. DesktopShell pone html[data-os-open] al montarse,
@@ -103,7 +100,7 @@ export function PortfolioExperience({ copy, children }: { copy: ExperienceCopy; 
 export function DesktopLaunchButton() {
   const controls = useContext(DesktopContext);
   if (!controls) return null;
-  return <button type="button" className="experience-switch" ref={controls.registerLauncher} onClick={controls.open} onPointerEnter={controls.preload} onFocus={controls.preload}>
+  return <button type="button" className={LAUNCHER_CLASS} onClick={controls.open} onPointerEnter={controls.preload} onFocus={controls.preload}>
     <DesktopIcon name="terminal"/> {controls.label}
   </button>;
 }
