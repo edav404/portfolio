@@ -53,22 +53,25 @@ Cerrada en la rama `fase/2-dependencias-fixes` (commits `a172005`…). Notas: la
 - [ ] `docs/seo-blog.md`: mejoras aplicadas a los 2 artículos; títulos con sufijo "| edav"
 - [ ] `docs/seguridad-proxies.md`: elegir escenario Cloudflare/Traefik (se cierra en la Fase 8)
 - [ ] CSP: revisar consola en todas las vistas y pasar `CSP_ENFORCE` a `true`
+- [ ] Fase 3: revisar la traducción EN (`content/*.ts`, `ui.ts`, `pages.ts`), el orden de proyectos destacados en portada, el texto "Asistente de configuración de proyecto" y el diseño visual en navegador (fondo de interiores más claro, selector de idioma)
 - [ ] Formulario: honeypot, 422 y envío SMTP real; escritorio completo en navegador
 
 ## Fase 3 — Arquitectura compartida, tokens e i18n
 
-- [ ] 🟡 Derivar las cifras de `content/profile.ts` (decisión 10)
+Implementada en la rama `fase/3-arquitectura-i18n` (diseño y resultados en `docs/arquitectura-rutas.md`). Pendiente: **P9, publicar el inglés** (cambiar solo `content/publication.ts` tras revisar la traducción) y su verificación a través de Cloudflare. SEO-02/03: falta la imagen social por defecto (`public/og/default-{es,en}.png`, recurso de diseño). Se vigila `experimental.globalNotFound` en cada actualización de Next (smoke de 404 global).
 
-- [ ] 🟠 Árbol de rutas concreto (idioma × variante × caché) antes de tocar layouts
-- [ ] 🟠 ARQ-02 / UI-02 Route groups con layouts propios y `data-theme`; eliminar `body:has()`
-- [ ] 🟠 ARQ-05 / SEO-09 / A11Y-08 i18n: ES sin prefijo, EN bajo `/en/` con slugs traducidos, `lang` correcto, `content/ui.ts`, `content/routes.ts`
-- [ ] 🟠 CNT-03 / COD-06 `/sobre-mi` y demás vistas desde `content/`; migrar `data/` → `content/`
-- [ ] 🟠 UI-03 Tokens: base + temas `xp` y `classic` (264 hex, 52 sombras, 22 z-index a consolidar) · COD-11 · UI-12 CSS muerto
-- [ ] 🟠 PERF-05 / COD-10 / UI-08 `next/font` en lugar de `@import`
-- [ ] 🟠 SEO-02 / SEO-03 Helper `buildMetadata` (OG, canonical, alternates) e imagen social por defecto
-- [ ] 🟠 DX-01 Tests (Vitest) + CI (GitHub Actions) + Renovate/Dependabot · DX-02 scripts
-- [ ] 🟡 COD-03 `featured` · COD-04 duplicación · COD-05 código muerto · COD-12 README · UX-10 mezcla ES/EN
-- [ ] 🟡 PERF-06 CSS único de 70 KB bloqueante · A11Y-13 contraste de texto
+- [x] 🟡 Derivar las cifras de `content/profile.ts` (decisión 10)
+
+- [x] 🟠 Árbol de rutas concreto (idioma × variante × caché) antes de tocar layouts
+- [x] 🟠 ARQ-02 / UI-02 Route groups con layouts propios y `data-theme`; eliminar `body:has()`
+- [x] 🟠 ARQ-05 / SEO-09 / A11Y-08 i18n: ES sin prefijo, EN bajo `/en/` con slugs traducidos, `lang` correcto, `content/ui.ts`, `content/routes.ts`
+- [x] 🟠 CNT-03 / COD-06 `/sobre-mi` y demás vistas desde `content/`; migrar `data/` → `content/`
+- [x] 🟠 UI-03 Tokens: base + temas `xp` y `classic` (264 hex, 52 sombras, 22 z-index a consolidar) · COD-11 · UI-12 CSS muerto
+- [x] 🟠 PERF-05 / COD-10 / UI-08 `next/font` en lugar de `@import`
+- [x] 🟠 SEO-02 / SEO-03 Helper `buildMetadata` (OG, canonical, alternates) e imagen social por defecto
+- [x] 🟠 DX-01 Tests (Vitest) + CI (GitHub Actions) + Renovate/Dependabot · DX-02 scripts
+- [x] 🟡 COD-03 `featured` · COD-04 duplicación · COD-05 código muerto · COD-12 README · UX-10 mezcla ES/EN
+- [x] 🟡 PERF-06 CSS único de 70 KB bloqueante · A11Y-13 contraste de texto
 
 ## Fase 4 — SO con ventanas
 
