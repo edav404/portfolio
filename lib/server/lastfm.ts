@@ -1,4 +1,5 @@
 import "server-only";
+import { LASTFM_IMAGE_HOSTS, LASTFM_LINK_HOSTS } from "@/lib/server/lastfm-hosts";
 
 export type LastfmTrack = {
   name: string;
@@ -26,6 +27,17 @@ type RawTrack = {
   "@attr"?: { nowplaying?: string };
 };
 
+/** Devuelve la URL normalizada si es https y su host está en la lista; si no, `null`. */
+function safeUrl(value: string | undefined, hosts: readonly string[]): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password && hosts.includes(url.hostname.toLowerCase()) ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchRecentTrack(): Promise<LastfmResult> {
   const apiKey = process.env.LASTFM_API_KEY;
   const username = process.env.LASTFM_USERNAME || "edav404";
@@ -47,9 +59,10 @@ async function fetchRecentTrack(): Promise<LastfmResult> {
         name: track.name ?? "",
         artist: track.artist?.["#text"] ?? "",
         album: track.album?.["#text"] ?? "",
-        // Solo aceptamos portadas https para no romper la CSP ni servir contenido mixto.
-        image: image.startsWith("https://") ? image : "",
-        url: track.url?.startsWith("https://") ? track.url : `https://www.last.fm/user/${encodeURIComponent(username)}`,
+        // Solo portadas https de los hosts permitidos en la CSP (img-src); otras se descartan aquí
+        // para no mostrar una imagen rota ni servir contenido mixto.
+        image: safeUrl(image, LASTFM_IMAGE_HOSTS) ?? "",
+        url: safeUrl(track.url, LASTFM_LINK_HOSTS) ?? `https://www.last.fm/user/${encodeURIComponent(username)}`,
         nowPlaying: track["@attr"]?.nowplaying === "true",
       },
     };

@@ -1,10 +1,55 @@
 import type { NextConfig } from "next";
+import { LASTFM_IMAGE_HOSTS } from "./lib/server/lastfm-hosts";
 
-// Cabeceras base de seguridad. La CSP completa se define en la Fase 2 tras la auditoría.
+const isDev = process.env.NODE_ENV === "development";
+
+/**
+ * CSP estática (SEC-02). Sin nonce a propósito: el nonce obliga a renderizar todas las páginas
+ * de forma dinámica (adiós a la generación estática), y este sitio no maneja datos sensibles.
+ * Por eso `script-src` necesita `'unsafe-inline'` (scripts inline de hidratación de Next).
+ * Ver node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md.
+ *
+ * Se publica en Report-Only: las violaciones salen en la consola del navegador y no bloquean nada.
+ * Cuando la consola esté limpia en todas las vistas, cambiar CSP_ENFORCE a `true`.
+ */
+const CSP_ENFORCE = false;
+
+const cspDirectives = [
+  "default-src 'self'",
+  // 'unsafe-eval' solo en `next dev` (React Refresh / Turbopack). El JSON-LD es un bloque de datos
+  // (`type="application/ld+json"`) que el navegador no ejecuta: no le afecta script-src.
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  // Google Fonts vía @import en app/globals.css. Quitar ambos hosts al migrar a next/font (Fase 3).
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com",
+  // Portadas de Last.fm: misma lista que valida lib/server/lastfm.ts.
+  `img-src 'self' data: blob: ${LASTFM_IMAGE_HOSTS.map((host) => `https://${host}`).join(" ")}`,
+  // Mascotas: audio propio; ClippyJS empaqueta los sonidos como data: URI. Los tonos del arranque
+  // son Web Audio (osciladores) y no necesitan nada.
+  "media-src 'self' data: blob:",
+  // /api/lastfm/, /api/contact/ y, en desarrollo, el websocket de HMR (mismo origen).
+  "connect-src 'self'",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
+  "frame-src 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  // Los navegadores ignoran (y avisan) esta directiva en Report-Only: solo se añade al aplicar la CSP.
+  ...(CSP_ENFORCE ? ["upgrade-insecure-requests"] : []),
+];
+
 const securityHeaders = [
+  {
+    key: CSP_ENFORCE ? "Content-Security-Policy" : "Content-Security-Policy-Report-Only",
+    value: cspDirectives.join("; "),
+  },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  // Redundante con frame-ancestors, pero lo respetan navegadores antiguos.
   { key: "X-Frame-Options", value: "DENY" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), browsing-topics=()" },
   // HSTS corto y sin includeSubDomains hasta verificar todos los subdominios (se amplía en la Fase 8).
   { key: "Strict-Transport-Security", value: "max-age=86400" },
