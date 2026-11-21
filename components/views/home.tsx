@@ -45,7 +45,7 @@ export function HomeView({ locale }: { locale: Locale }) {
     { value: format(common.since, { year: experienceSince }), label: page.hero.sinceLabel },
     ...stats.map((stat) => ({ value: stat.value, label: stat.label[locale] })),
   ];
-  const experienceCopy = { loading: os.loading, open: os.open, contactForm: uiFor(locale, "contactForm"), music: uiFor(locale, "music") };
+  const experienceCopy = { loading: os.loading, open: os.open, contactForm: uiFor(locale, "contactForm"), music: uiFor(locale, "music"), os };
   const music = uiFor(locale, "music");
 
   return <>

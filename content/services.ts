@@ -1,3 +1,4 @@
+import { href } from "./routes";
 import type { L, Locale } from "./types";
 
 export type Service = {
@@ -125,9 +126,9 @@ export function serviceLabel(slug: string, locale: Locale = "es"): string | null
   return getService(slug)?.title[locale] ?? null;
 }
 
-/** Enlace al formulario con el servicio preseleccionado. */
-export function contactHrefForService(slug: string): string {
-  return `/contacto/?servicio=${encodeURIComponent(slug)}`;
+/** Enlace al formulario (de cada idioma) con el servicio preseleccionado. */
+export function contactHrefForService(slug: string, locale: Locale = "es"): string {
+  return `${href("contact", locale)}?servicio=${encodeURIComponent(slug)}`;
 }
 
 /** Las citas son de los clientes en español; la versión en inglés es una traducción. */

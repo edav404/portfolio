@@ -5,6 +5,7 @@ import { profile, skillGroups, skills } from "@/content/profile";
 import { href } from "@/content/routes";
 import { siteUrl } from "@/content/site";
 import type { Locale } from "@/content/types";
+import { roleInSentence } from "@/content/format";
 import { format, uiFor } from "@/content/ui";
 import { formatYearMonth } from "@/lib/i18n/format";
 import { absoluteUrl, buildMetadata } from "@/lib/metadata";
@@ -12,10 +13,6 @@ import { absoluteUrl, buildMetadata } from "@/lib/metadata";
 export function aboutMetadata(locale: Locale) {
   const { seo } = pageFor(locale, "about");
   return buildMetadata({ route: "about", locale, title: seo.title, description: seo.description });
-}
-
-function lowerFirst(text: string): string {
-  return text.charAt(0).toLowerCase() + text.slice(1);
 }
 
 export function AboutView({ locale }: { locale: Locale }) {
@@ -36,7 +33,7 @@ export function AboutView({ locale }: { locale: Locale }) {
     <section className="page-hero section-shell">
       <p className="eyebrow">{page.hero.eyebrow}</p>
       <h1>{profile.about.title[locale]}</h1>
-      <p>{format(page.hero.intro, { name: profile.name, role: lowerFirst(profile.headline[locale]) })} {profile.about.lead[locale]}</p>
+      <p>{format(page.hero.intro, { name: profile.name, role: roleInSentence(profile.headline[locale], locale) })} {profile.about.lead[locale]}</p>
       <Cta href={contact}>{page.hero.cta}</Cta>
     </section>
 

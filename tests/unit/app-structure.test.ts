@@ -49,6 +49,15 @@ describe("estructura de app/", () => {
     expect(all.filter((path) => path.startsWith("(es)/") && /\[\.\.\./.test(path))).toEqual([]);
   });
 
+  it("el árbol EN tiene su layout raíz, su 404 y un catch-all dinámico (§9.3, punto 2)", () => {
+    expect(all).toContain("en/layout.tsx");
+    expect(read("en/layout.tsx")).toMatch(/<Document locale="en">/);
+    expect(all).toContain("en/(site)/not-found.tsx");
+    const missing = read("en/(site)/[...missing]/page.tsx");
+    expect(missing).toMatch(/export const dynamic = "force-dynamic"/);
+    expect(missing).toMatch(/notFound\(\)/);
+  });
+
   it("los recursos sin idioma siguen en la raíz de app/", () => {
     for (const path of ["api", "cv", "sitemap.ts", "robots.ts", "icon.svg"]) expect(existsSync(join(appDir, path)), path).toBe(true);
   });

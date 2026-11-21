@@ -65,7 +65,9 @@ export function buildMetadata(options: BuildMetadataOptions): Metadata {
   const path = hrefFor(options, locale);
   const canonical = options.canonicalTo ? hrefFor(options.canonicalTo, locale) : path;
   const fullTitle = absoluteTitle ? title : withTitleSuffix(title);
-  const others = Object.keys(alternatesFor(options)).filter((other) => other !== locale) as Locale[];
+  // Hreflang y og:locale:alternate solo entre idiomas publicados, y solo si esta página también lo
+  // está: una página EN en revisión (noindex) no anuncia ni recibe alternativas hasta P9.
+  const others = publishedLocales.includes(locale) ? Object.keys(alternatesFor(options)).filter((other) => other !== locale) as Locale[] : [];
   const images = image ? [{ ...image, url: absoluteUrl(image.url) }] : undefined;
   const indexable = index && publishedLocales.includes(locale);
   const aboutUrl = absoluteUrl(hrefFor({ route: "about" }, locale));

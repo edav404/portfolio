@@ -10,7 +10,9 @@
  *   iguales a su propia URL y sin hreflang (solo ES publicado);
  * - cada redirección de lib/redirects.ts es un 308 de un solo salto a una URL que da 200;
  * - el 404 global (experimental.globalNotFound): /no-existe/, slug rechazado, /api/ y archivo
- *   inexistentes → 404 con lang="es", noindex y contenido EN EL HTML INICIAL, sin canonical.
+ *   inexistentes → 404 con lang="es", noindex y contenido EN EL HTML INICIAL, sin canonical;
+ * - árbol EN (P6), rastreado desde /en/: 200, lang="en", canonical y og:url propios, noindex y sin
+ *   hreflang mientras content/publication.ts no publique "en"; 404 del catch-all EN con noindex.
  * Sale con código 1 si algo falla.
  */
 import { readFile } from "node:fs/promises";
@@ -75,8 +77,42 @@ for (const path of ["/no-existe/", "/proyectos/no-existe/", "/blog/no-existe/", 
   check(!/rel="canonical"/.test(page.html), `${path}: el 404 no debe tener canonical`);
 }
 
+// 4) Árbol EN (P6): rastreo desde /en/ por los enlaces internos bajo /en/.
+const publication = await readFile(resolve(root, "content/publication.ts"), "utf8");
+const enPublished = /publishedLocales[^=]*=\s*\[[^\]]*"en"/.test(publication);
+const enSeeds = ["/en/", "/en/projects/", "/en/services/", "/en/about/", "/en/blog/", "/en/now/", "/en/contact/"];
+const enSeen = new Set();
+const enQueue = [...enSeeds];
+const enPages = new Map();
+while (enQueue.length) {
+  const path = enQueue.shift();
+  if (enSeen.has(path)) continue;
+  enSeen.add(path);
+  const page = await get(path);
+  enPages.set(path, page.html);
+  check(page.status === 200, `${path} → ${page.status}`);
+  check(lang(page.html) === "en", `${path}: lang=${lang(page.html)}`);
+  const own = `${new URL(attr(page.html, 'rel="canonical"', "href") ?? "x:", base).pathname}`;
+  check(own === path, `${path}: canonical ${own}`);
+  check(new URL(attr(page.html, 'property="og:url"', "content") ?? "x:", base).pathname === path, `${path}: og:url no es la propia`);
+  const noindex = /<meta name="robots" content="noindex/.test(page.html);
+  check(enPublished ? !noindex : noindex, `${path}: noindex=${noindex} con EN ${enPublished ? "publicado" : "sin publicar"}`);
+  if (!enPublished) check(!/<link rel="alternate" hrefLang=/i.test(page.html), `${path}: hreflang antes de publicar el EN`);
+  for (const [, href] of page.html.matchAll(/<a\b[^>]*\bhref="(\/en\/[^"#?]*)/g)) if (!enSeen.has(href)) enQueue.push(href);
+}
+check(enSeen.size >= 9, `árbol EN: solo ${enSeen.size} páginas alcanzables`);
+
+// 5) 404 EN: catch-all del árbol EN. El HTML inicial es el "error shell" de Next 16.4.6 (§9.1):
+// aquí solo status y noindex; lang="en" y la UI EN se comprueban con navegador.
+for (const path of ["/en/no-existe/", "/en/projects/no-existe/", "/en/blog/no-existe/"]) {
+  const page = await get(path);
+  check(page.status === 404, `${path} → ${page.status} (se esperaba 404)`);
+  check(/<meta name="robots" content="noindex"/.test(page.html), `${path}: sin noindex`);
+  check(!/rel="canonical"/.test(page.html), `${path}: el 404 no debe tener canonical`);
+}
+
 if (failures.length) {
   console.error(`✗ ${failures.length} fallos:\n- ${failures.join("\n- ")}`);
   process.exit(1);
 }
-console.log(`✓ smoke de rutas: ${paths.length} URLs del sitemap, redirecciones y 404 global`);
+console.log(`✓ smoke de rutas: ${paths.length} URLs del sitemap, redirecciones, 404 global, ${enSeen.size} páginas EN y 404 EN`);

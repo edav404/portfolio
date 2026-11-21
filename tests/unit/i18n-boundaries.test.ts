@@ -71,7 +71,12 @@ describe("componentes cliente", () => {
 });
 
 /** Fragmentos visibles permitidos en el JSX: marca y decoración (no son texto traducible). */
-const allowed = new Set(["ED", "404", "/", "·", "✦", "“", "©"]);
+const allowed = new Set([
+  "ED", "404", "/", "·", "✦", "“", "©",
+  // Escritorio: marca, nombres propios y rótulos decorativos iguales en ambos idiomas.
+  "EDAV", "EDAV BIOS", "v98.04.04", "EDAV PERSONAL COMPUTER", "EDAV Desktop", "EDAV Desktop 98", "FULL STACK", "AUTOMATION",
+  "LinkedIn", "GitHub", "WEB", "CRT", "HELP", "Esc",
+]);
 
 function jsxLiterals(code: string): string[] {
   const found: string[] = [];
@@ -81,7 +86,9 @@ function jsxLiterals(code: string): string[] {
   for (const match of source.matchAll(/(?:<[A-Za-z][\w.]*(?:\s[^<>]*)?>|<>|<\/[\w.]*>)([^<>{}]*)(?=<)/g)) {
     const text = match[1].trim();
     // Código entre un cierre de JSX y la siguiente expresión (`</h2>; … return <ul>`), no texto.
-    if (/^;|return$/.test(text)) continue;
+    if (/^;|\breturn$/.test(text)) continue;
+    // Genéricos de TypeScript (`useRef<HTMLDivElement>(null); …`) y objetos: código, no texto.
+    if (/[;=(]|,\s*\n/.test(text)) continue;
     if (text && /\p{L}/u.test(text) && !allowed.has(text)) found.push(text);
   }
   // Atributos de texto con valor literal.
@@ -91,7 +98,9 @@ function jsxLiterals(code: string): string[] {
   return found;
 }
 
-const viewFiles = walk(join(root, "components/views")).concat([join(root, "components/header.tsx"), join(root, "components/footer.tsx"), join(root, "components/shell/site-shell.tsx")]);
+// El escritorio (portada y `/en/?view=retro`) también: sus textos llegan de `ui.os` por props.
+const viewFiles = [...walk(join(root, "components/views")), ...walk(join(root, "components/desktop")), ...walk(join(root, "components/shell"))]
+  .concat(["header.tsx", "footer.tsx", "portfolio-experience.tsx", "contact-form.tsx", "music-widget.tsx"].map((name) => join(root, "components", name)));
 
 describe("sin literales de texto en el JSX", () => {
   it.each(viewFiles.map((file) => [norm(file), file] as const))("%s", (_name, file) => {

@@ -98,3 +98,32 @@ describe("títulos SEO", () => {
     expect(title.length).toBeGreaterThan(60);
   });
 });
+
+describe("EN antes y después de publicarlo (P6 / P9)", () => {
+  it("hoy: página EN con noindex, canonical propio y sin hreflang ni og:locale:alternate", () => {
+    const en = m.buildMetadata({ route: "about", locale: "en", title: "About", description: "d" });
+    expect(en.robots).toEqual({ index: false, follow: true });
+    expect(en.alternates).toEqual({ canonical: "/en/about/" });
+    expect(en.openGraph).toMatchObject({ url: "/en/about/", locale: "en_US" });
+    expect(en.openGraph).not.toHaveProperty("alternateLocale");
+    // La ES equivalente tampoco anuncia la EN mientras no esté publicada.
+    expect(m.buildMetadata({ route: "about", locale: "es", title: "Sobre mí", description: "d" }).alternates).toEqual({ canonical: "/sobre-mi/" });
+  });
+
+  it("con EN publicado: hreflang recíproco con x-default = ES y sin noindex", async () => {
+    vi.resetModules();
+    vi.doMock("@/content/publication", () => ({ publishedLocales: ["es", "en"] }));
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://edav.com.co");
+    const p9 = await import("@/lib/metadata");
+    vi.unstubAllEnvs();
+    const languages = { es: "/blog/como-el-seo-puede-ayudar-a-tu-negocio/", en: "/en/blog/how-seo-can-help-your-business/", "x-default": "/blog/como-el-seo-puede-ayudar-a-tu-negocio/" };
+    const slug = { es: "como-el-seo-puede-ayudar-a-tu-negocio", en: "how-seo-can-help-your-business" };
+    const es = p9.buildMetadata({ route: "post", params: { slug }, locale: "es", title: "t", description: "d" });
+    const en = p9.buildMetadata({ route: "post", params: { slug }, locale: "en", title: "t", description: "d" });
+    expect(es.alternates?.languages).toEqual(languages);
+    expect(en.alternates?.languages).toEqual(languages);
+    expect(en.robots).toBeUndefined();
+    expect(en.openGraph).toMatchObject({ alternateLocale: ["es_CO"] });
+    vi.doUnmock("@/content/publication");
+  });
+});

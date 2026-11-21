@@ -5,6 +5,7 @@
  * Módulo puro: no importa contenido ni lee variables de entorno, así que se puede usar en cliente.
  * Todas las rutas llevan barra final (`trailingSlash: true` en next.config.ts).
  */
+import { publishedLocales } from "./publication";
 import { defaultLocale, locales, type L, type Locale } from "./types";
 
 export type RouteDef = {
@@ -35,8 +36,8 @@ export const routes = {
 
 export type RouteKey = keyof typeof routes;
 
-/** Idiomas visibles para buscadores. Pasa a `["es", "en"]` tras la revisión del EN (P9). */
-export const publishedLocales: readonly Locale[] = ["es"];
+/** Idiomas visibles para buscadores (content/publication.ts). Pasa a `["es", "en"]` en P9. */
+export { publishedLocales };
 
 /** Locale de OpenGraph (`og:locale`). */
 export const ogLocale = { es: "es_CO", en: "en_US" } as const satisfies L;

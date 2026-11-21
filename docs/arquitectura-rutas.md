@@ -278,3 +278,42 @@ Variante híbrida medida (global + solo el catch-all EN):
 | P4 | `/ahora/` | description (fuera del snapshot) | descripción corta → la de `content/pages.ts` | Igual |
 
 Sin más cambios en status, `Location`, `lang`, `<title>` ni canonical de las 22 URLs del sitemap ni de las 18 redirecciones. La portada conserva su título absoluto (62 caracteres, excepción deliberada). En P4 el texto visible (y `aria-label`/`alt`/`placeholder`/`title`) de las 23 páginas medidas es idéntico al de P3. `npm run smoke` lo vigila contra el servidor standalone (CI incluido).
+
+## 11. Resultado de P6–P8
+
+### 11.1 P6: árbol EN
+
+Estructura (simplificación de §8: sin grupo `(en)`):
+
+```
+app/en/
+  layout.tsx                ← raíz EN: rootMetadata("en"); <Document locale="en">; importa globals.css
+  (site)/
+    layout.tsx · template.tsx   ← <SiteShell locale="en"> (mismo ThemeRoot classic; data-page="home" en /en/)
+    not-found.tsx               ← <NotFoundView locale="en">
+    [...missing]/page.tsx       ← force-dynamic; notFound()
+    page.tsx · projects/ · projects/[slug]/ · services/ · about/ · blog/ · blog/[slug]/ · now/ · contact/
+```
+
+- Páginas EN = adaptadores de ~10 líneas sobre `components/views/*` con `locale="en"`; las de catálogo
+  con `generateStaticParams` + `dynamicParams = false` (proyectos: mismos slugs; posts: slugs EN).
+- Build: todo el árbol EN es ○/● salvo `ƒ /en/[...missing]` (intencionado, §9.3).
+- Publicación: `publishedLocales` vive en `content/publication.ts` (reexportado por `routes.ts`) para
+  poder simularla en tests (`vi.doMock`). Mientras no incluya `"en"`, cada página EN lleva
+  `noindex, follow`, canonical y `og:url` propios, y **ni ES ni EN emiten hreflang ni
+  `og:locale:alternate`** (`buildMetadata` solo los pone si el idioma de la página está publicado).
+- Escritorio: `/en/?view=retro` abre el escritorio en inglés. Todo su microcopy sale de `ui.os`
+  (resuelto en `HomeView` y pasado por props; `LocaleProvider` da el idioma para los datos `L`
+  de proyectos, perfil y servicios). `format()` se movió a `content/format.ts` (sin dependencias) para
+  usarlo en cliente. Único cambio visible en ES: el lateral del asistente de servicios pasa de
+  "Project Setup Wizard" a "Asistente de configuración de proyecto" (texto de `ui.os.wizard.sidebar`).
+- Tests: `tests/unit/route-files.test.ts` (paridad de `page.tsx` ES/EN para toda `RouteKey` sin `since`
+  o con `since ≤ 3`, y que cada página EN use una vista con `locale="en"`); `app-structure` (raíz, 404 y
+  catch-all EN); `metadata` (EN hoy con noindex y sin hreflang; con EN publicado, hreflang recíproco);
+  `i18n-boundaries` amplía la regla de "sin literales" al escritorio y al resto de componentes cliente.
+- Smoke: rastrea el árbol EN desde `/en/` (22 páginas: 200, `lang="en"`, canonical y `og:url` propios,
+  noindex y sin hreflang mientras EN no esté publicado) y comprueba `/en/no-existe/`,
+  `/en/projects/no-existe/` y `/en/blog/no-existe/` → 404 + noindex + sin canonical. Con navegador
+  (Edge headless): el 404 EN hidrata con `lang="en"` y su UI; el escritorio EN no tiene microcopy ES.
+- Contenido pendiente (no es código): `technologies` de Civicoin incluye "Diseño editorial" (no es `L`);
+  nombres propios en ES (Servicios Nutresa, Tecnológico de Antioquia) se mantienen a propósito.

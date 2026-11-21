@@ -48,10 +48,8 @@ export function resolveLocale<T>(tree: T, locale: Locale): Resolved<T> {
   return tree as Resolved<T>;
 }
 
-/** Rellena marcadores `{nombre}`. Un marcador sin valor se deja tal cual (se ve en la revisión). */
-export function format(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (match, name: string) => (name in values ? String(values[name]) : match));
-}
+/** `format` vive en content/format.ts (sin dependencias, usable en cliente). */
+export { format } from "./format";
 
 // --- Microcopy ---------------------------------------------------------------------------------
 
@@ -313,6 +311,10 @@ export const ui = {
       path: { es: "C:\\Mi trabajo\\Todos", en: "C:\\My work\\All" },
       folders: { es: "Carpetas", en: "Folders" },
       desktop: { es: "Escritorio", en: "Desktop" },
+      /** Carpetas decorativas del árbol lateral. */
+      folderWeb: { es: "Desarrollo web", en: "Web development" },
+      folderCommerce: { es: "E-commerce", en: "E-commerce" },
+      folderBrand: { es: "Identidad visual", en: "Visual identity" },
       selected: { es: "SELECCIONADO", en: "SELECTED" },
       selectItem: { es: "Seleccionar {title}. Doble clic para abrir el caso.", en: "Select {title}. Double-click to open the case study." },
       previewAlt: { es: "Vista previa del proyecto {title}", en: "Preview of the {title} project" },
@@ -340,6 +342,8 @@ export const ui = {
       experience: { es: "Experiencia", en: "Experience" },
       projects: { es: "Proyectos", en: "Projects" },
       projectsValue: { es: "{count} documentados", en: "{count} documented" },
+      since: { es: "Desde {year}", en: "Since {year}" },
+      contactLinks: { es: "CV y contacto directo", en: "CV and direct contact" },
       cvEs: { es: "CV (ES, PDF)", en: "CV (ES, PDF)" },
       cvEn: { es: "CV (EN, PDF)", en: "CV (EN, PDF)" },
       openProfile: { es: "Abrir perfil completo", en: "Open full profile" },
