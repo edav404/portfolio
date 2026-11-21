@@ -1,4 +1,4 @@
-import type { L } from "./types";
+import type { L, Locale } from "./types";
 
 export type Service = {
   slug: string;
@@ -81,6 +81,54 @@ export const services: Service[] = [
     stack: { es: "Figma, diseño adaptable y criterios de accesibilidad (WCAG)", en: "Figma, responsive design and accessibility guidelines (WCAG)" },
   },
 ];
+
+/** Valor del formulario para un proyecto que no encaja en ningún servicio. */
+export const OTHER_SERVICE = "otro" as const;
+export const otherServiceLabel: L = { es: "Otro", en: "Other" };
+
+/** Slugs válidos del campo `service` del formulario (servicios + "otro"). */
+export const serviceSlugs: readonly string[] = [...services.map((service) => service.slug), OTHER_SERVICE];
+
+export function getService(slug: string): Service | undefined {
+  return services.find((service) => service.slug === slug);
+}
+
+/** Minúsculas, sin tildes ni espacios sobrantes: para comparar títulos antiguos. */
+function normalize(value: string): string {
+  return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+/** Etiquetas que usaba el formulario antes de identificar los servicios por slug. */
+const legacyLabels: Record<string, string> = {
+  "wordpress o woocommerce": "wordpress",
+  "diseno web": "diseno-web",
+  automatizacion: "automatizacion",
+};
+
+/**
+ * Convierte lo que llegue por URL (`?servicio=`) o por el formulario en un slug válido.
+ * Acepta el slug, el título ES/EN y las etiquetas antiguas; devuelve `null` si no lo reconoce.
+ */
+export function resolveServiceSlug(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const key = normalize(value);
+  if (!key) return null;
+  if (serviceSlugs.includes(key)) return key;
+  if (key === normalize(otherServiceLabel.es) || key === normalize(otherServiceLabel.en)) return OTHER_SERVICE;
+  const byTitle = services.find((service) => normalize(service.title.es) === key || normalize(service.title.en) === key);
+  return byTitle?.slug ?? legacyLabels[key] ?? null;
+}
+
+/** Título legible de un slug del formulario (para el asunto del correo, por ejemplo). */
+export function serviceLabel(slug: string, locale: Locale = "es"): string | null {
+  if (slug === OTHER_SERVICE) return otherServiceLabel[locale];
+  return getService(slug)?.title[locale] ?? null;
+}
+
+/** Enlace al formulario con el servicio preseleccionado. */
+export function contactHrefForService(slug: string): string {
+  return `/contacto/?servicio=${encodeURIComponent(slug)}`;
+}
 
 /** Las citas son de los clientes en español; la versión en inglés es una traducción. */
 export type Testimonial = { name: string; project: L; logo: string; quote: L; translatedFrom?: "es" };
