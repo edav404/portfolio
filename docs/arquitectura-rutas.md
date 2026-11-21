@@ -206,3 +206,19 @@ Smoke test `scripts/smoke-routes.mjs` contra `next start` (status, `lang`, canon
 | 12 | Imagen OG por defecto | Estática por idioma en `public/og/` (recurso pendiente) |
 | 13 | `x-default` | ES |
 | 14 | Vistas compartidas | `components/views/` |
+
+## 8. Revisión de Codex (aprobado con cambios)
+
+Veredicto: estructura válida, sin bloqueos críticos. Cambios incorporados al diseño:
+
+| # | Observación | Cambio |
+|---|---|---|
+| 1 🟠 | "`notFound()` antes de Suspense → 404" depende de que no haya empezado el streaming en todo el árbol (también boundaries superiores); `force-dynamic` no garantiza el status (`not-found.md`, `streaming.md`) | El **spike de 404 es condición obligatoria antes de P2**: comprobar el **status inicial** (no solo la UI) en ES y EN, en el catch-all y en slugs rechazados por `dynamicParams=false`. Repetir al añadir `loading.tsx`, Suspense o layouts asíncronos. Alcance: "404 de páginas capturadas", no de cualquier petición |
+| 2 🟠 | La regla "toda página con `[` exporta `dynamicParams=false`" contradice el catch-all | Tres contratos: páginas de catálogo finito (`generateStaticParams` + `dynamicParams=false`); catch-all 404 (excepción, `force-dynamic`); route handlers (contrato propio). Un slug rechazado puede acabar en el catch-all: no suponer qué `not-found` renderiza |
+| 3 🟠 | Mitigación de Cloudflare incompleta para RSC | P8/P9: prueba a través de Traefik + Cloudflare calentando HTML y luego RSC/prefetch (y al revés): status, `Content-Type`, idioma, `Cache-Control`, `Vary`, sin intercambio HTML/RSC. Conservar `rsc`, `next-router-prefetch` y `_rsc` en la clave; respetar `Cache-Control` (`cdn-caching.md`) |
+| 4 🟠 | El smoke contra `next start` no prueba el artefacto desplegado (`node server.js` standalone) | Segundo smoke contra la imagen Docker final: páginas, PDF, icono, fuente, JS/CSS y un recurso de `public/`; después, repetir en el dominio |
+| 5 🟡 | P5 no explica cómo sustituir lo que hoy calcula `body` (color, fondo, tipografía, pseudoelementos) ni el ocultamiento de cabecera y pie en el escritorio | P5 traslada esas propiedades al wrapper temático y sustituye explícitamente el ocultamiento del shell; verificar overlay, foco, cierre y restauración del scroll |
+| 6 🟡 | `publicPages()` mezcla indexables con equivalencias de idioma | Un inventario de rutas disponibles con dos vistas: equivalencias de idioma (incluye `noindex`) y sitemap/hreflang (aplica publicación e indexabilidad). Navegación EN revisable antes de P9 |
+| — | Simplificación | EN como `app/en/layout.tsx` (raíz directa bajo `en`), sin el grupo `(en)` |
+
+Pendiente de verificar (especulativo): status final de slugs rechazados y archivos inexistentes; reglas reales de Cloudflare y purga; HTML antiguo que referencia chunks retirados (valorar `deploymentId`); `/_next/...` y `/api/x-inexistente/` no tienen 404 localizado garantizado.
