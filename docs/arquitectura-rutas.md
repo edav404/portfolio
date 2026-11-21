@@ -222,3 +222,45 @@ Veredicto: estructura válida, sin bloqueos críticos. Cambios incorporados al d
 | — | Simplificación | EN como `app/en/layout.tsx` (raíz directa bajo `en`), sin el grupo `(en)` |
 
 Pendiente de verificar (especulativo): status final de slugs rechazados y archivos inexistentes; reglas reales de Cloudflare y purga; HTML antiguo que referencia chunks retirados (valorar `deploymentId`); `/_next/...` y `/api/x-inexistente/` no tienen 404 localizado garantizado.
+
+## 9. Resultado del spike de 404
+
+Worktree desechable sobre `d58085b`, `next build` + `node .next/standalone/server.js` (con `public/` y `.next/static` copiados como en el `Dockerfile`). Estructura: `app/(es)/layout.tsx` (raíz ES) + `(es)/(site)/{layout,not-found,template}.tsx` + `[...missing]/page.tsx` (`force-dynamic`, `notFound()`), todas las páginas ES movidas a `(site)` (`proyectos/[slug]` con `dynamicParams = false`), y `app/en/layout.tsx` (raíz EN) + `en/(site)/{layout,page,not-found}.tsx` + `[...missing]` + `projects/[slug]` (`dynamicParams = false`). Status medido con `curl -I` y con `curl` completo (coinciden siempre). "HTML inicial" = lo que devuelve el servidor; "con JS" = DOM tras hidratar (Edge headless `--dump-dom`).
+
+### 9.1 Variante del diseño (catch-all por idioma)
+
+| URL | Status | HTML inicial | Con JS | Conclusión |
+|---|---|---|---|---|
+| `/no-existe/` | 404 | `<html id="__next_error__">`, `<body>` vacío, sin `lang`; `noindex`; icono | `lang="es"`, 404 ES dentro de Header/Footer, `data-theme="classic"` | Status correcto; UI solo en cliente |
+| `/proyectos/no-existe/` | 404 | igual (error shell) | igual que arriba (ES) | El slug rechazado por `dynamicParams=false` cae en el catch-all ES |
+| `/en/no-existe/` | 404 | error shell, sin `lang` | `lang="en"`, 404 EN en su shell | Correcto con JS |
+| `/en/projects/no-existe/` | 404 | error shell | `lang="en"`, 404 EN | Correcto con JS |
+| `/api/x-inexistente/` | 404 | error shell (HTML) | 404 ES | El catch-all ES captura `/api/*` desconocido |
+| `/cv/otro.pdf` | 404 | error shell (HTML) | 404 ES | Lo captura el catch-all (el route handler tiene `dynamicParams=false`) |
+| `/_next/static/x.js` | 404 | error shell (HTML) | — | Un chunk inexistente renderiza una página completa (coste por petición; `Cache-Control: private, no-store`) |
+| `/foo.png` | 404 | error shell (HTML) | 404 ES | Igual |
+| `/icon.svg`, `/sitemap.xml`, `/robots.txt` | 200 | — | — | Siguen ○; `<link rel="icon">` presente en `<head>` de `/` y `/en/` |
+| `/`, `/en/`, `/proyectos/cia-sur/`, `/en/projects/cia-sur/` | 200 | `lang` correcto, `data-theme="classic"` en el wrapper | — | Dos layouts raíz funcionan |
+
+**Hallazgo principal.** En Next 16.4.6, cualquier `notFound()` lanzado desde una página produce status 404 y `noindex` correctos, pero el SSR del árbol falla hasta la raíz y Next responde el *error shell* (`app-render.js`, `getErrorRSCPayload`): HTML sin `lang` ni contenido, y la UI de `not-found.tsx` (localizada, dentro de su shell) solo aparece al hidratar desde el payload RSC. Se reprodujo en todas las colocaciones probadas: catch-all `force-dynamic`, página estática que llama a `notFound()`, `not-found.tsx` hermano de la página, en el grupo `(site)` y en la raíz del layout de idioma. **No es nuevo**: en producción hoy `/proyectos/no-existe/` ya sale así (`lang: null` en `tests/fixtures/routes-baseline.json`). Lo que sí funciona en SSR es el 404 **sin ruta** (`/_not-found` prerenderizado): hoy `/no-existe/` sale con `lang="es"` y el catch-all del diseño lo empeoraría.
+
+### 9.2 Alternativa `global-not-found` (experimental)
+
+`experimental.globalNotFound: true` + `app/global-not-found.tsx` (documento propio con `globals.css`): `/_not-found` vuelve a ser ○ y todo lo que no casa con ninguna ruta sale **renderizado en servidor**: 404, `<html lang>` fijo, `noindex`, icono, hoja de estilos y `<title>` propio. Se comprobó también que un slug rechazado por `dynamicParams=false` **sin** catch-all cuenta como "sin ruta" y va al global, y que `/_next/static/x.js` vuelve al 404 `text/plain` de Next. Limitación: no es localizable. El componente puede ser dinámico, pero las cabeceras que recibe son solo `host, user-agent, accept, x-forwarded-*`: no hay ruta de la petición sin `proxy.ts` (descartado por D3).
+
+Variante híbrida medida (global + solo el catch-all EN):
+
+| URL | Status | HTML inicial | Responde |
+|---|---|---|---|
+| `/no-existe/`, `/proyectos/no-existe/`, `/api/x-inexistente/`, `/cv/otro.pdf`, `/foo.png` | 404 | `lang="es"`, UI completa en SSR, `noindex`, icono, CSS | `global-not-found` |
+| `/en/no-existe/`, `/en/projects/no-existe/` | 404 | error shell; con JS, `lang="en"` y 404 EN | catch-all EN |
+| `/_next/static/x.js` | 404 | `text/plain` | Next (sin render) |
+
+### 9.3 Corrección propuesta al diseño (antes de P2)
+
+1. **ES: sin catch-all.** Sustituir `(es)/(site)/[...missing]` por `app/global-not-found.tsx` + `experimental.globalNotFound` (§1 fila 404 y §2.3). Contenido en ES con un enlace breve a `/en/` ("English version"), `data-theme="classic"` en su propio wrapper (no pasa por `SiteShell`: necesita su propio Header/Footer ligero o ninguno), sin canonical. Cubre también `/api/*`, `/cv/*` y archivos de `public/` inexistentes, estático (○) y sin render por petición.
+2. **EN: mantener `app/en/(site)/[...missing]` + `not-found.tsx`** (status 404 + `noindex` garantizados; UI EN tras hidratar). Alternativa más simple si se prefiere SSR completo: sin catch-all EN y un `global-not-found` bilingüe (pierde el shell EN).
+3. **`(es)/(site)/not-found.tsx` sigue haciendo falta** solo para `notFound()` explícitos dentro de páginas ES; con `dynamicParams=false` en todo el catálogo no queda ninguno, pero se conserva como red.
+4. **Criterios de aceptación ajustados.** P2: `/no-existe/` y `/proyectos/no-existe/` → 404, `noindex` y `lang="es"` **en el HTML inicial** (lo da el global). P6: `/en/no-existe/` → 404 y `noindex` en el HTML inicial; `lang="en"` y UI EN se verifican **con navegador** (el HTML inicial es el error shell). El smoke de rutas debe distinguir ambos casos.
+5. **Riesgo nuevo:** `globalNotFound` es experimental (desde 15.4). Fijarlo en un test de humo (`/no-existe/` con `lang="es"` en SSR) para detectar regresiones al actualizar Next; si desaparece, el plan B es el catch-all ES del diseño original (status correcto, UI solo con JS).
+6. Sigue vigente §8.1: repetir estas mediciones al añadir `loading.tsx`, Suspense o layouts asíncronos.
