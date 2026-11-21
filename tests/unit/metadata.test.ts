@@ -1,0 +1,91 @@
+import { beforeAll, describe, expect, it, vi } from "vitest";
+
+type MetadataModule = typeof import("@/lib/metadata");
+let m: MetadataModule;
+
+beforeAll(async () => {
+  // El dominio se lee al importar content/site.ts: fijarlo antes de importar.
+  vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://edav.com.co");
+  vi.resetModules();
+  m = await import("@/lib/metadata");
+  vi.unstubAllEnvs();
+});
+
+describe("absoluteUrl", () => {
+  it("antepone el dominio canónico a rutas internas", () => {
+    expect(m.absoluteUrl("/proyectos/")).toBe("https://edav.com.co/proyectos/");
+    expect(m.absoluteUrl("img/a.png")).toBe("https://edav.com.co/img/a.png");
+  });
+
+  it("deja intactas las URLs absolutas", () => {
+    expect(m.absoluteUrl("https://cdn.example.com/a.png")).toBe("https://cdn.example.com/a.png");
+  });
+});
+
+describe("rootMetadata", () => {
+  it("define base, plantilla de título y descripción, sin canonical, openGraph ni twitter (D8)", () => {
+    const root = m.rootMetadata("es");
+    expect(root.metadataBase?.toString()).toBe("https://edav.com.co/");
+    expect(root.title).toEqual({ default: "Emmanuel Dávila | Desarrollador Full Stack y de automatización", template: "%s | Emmanuel Dávila" });
+    expect(root.description).toBeTruthy();
+    expect(root).not.toHaveProperty("alternates");
+    expect(root).not.toHaveProperty("openGraph");
+    expect(root).not.toHaveProperty("twitter");
+  });
+});
+
+describe("buildMetadata", () => {
+  const project = () => m.buildMetadata({ route: "project", params: { slug: "cia-sur" }, locale: "es", title: "CIA SUR — Caso de estudio", description: "Resumen", image: { url: "/img/cia.png", alt: "CIA SUR" } });
+
+  it("canonical, og:url y twitter propios de la página", () => {
+    const meta = project();
+    expect(meta.alternates?.canonical).toBe("/proyectos/cia-sur/");
+    expect(meta.openGraph).toMatchObject({ url: "/proyectos/cia-sur/", title: "CIA SUR — Caso de estudio | Emmanuel Dávila", description: "Resumen", locale: "es_CO", siteName: "EDAV OS", type: "website" });
+    expect(meta.twitter).toMatchObject({ card: "summary_large_image", title: "CIA SUR — Caso de estudio | Emmanuel Dávila" });
+  });
+
+  it("título con plantilla por defecto; absoluto si se pide (og:title igual al <title>)", () => {
+    expect(project().title).toBe("CIA SUR — Caso de estudio");
+    const home = m.buildMetadata({ route: "home", locale: "es", title: m.defaultTitle("es"), absoluteTitle: true, description: "d" });
+    expect(home.title).toEqual({ absolute: "Emmanuel Dávila | Desarrollador Full Stack y de automatización" });
+    expect(home.openGraph?.title).toBe("Emmanuel Dávila | Desarrollador Full Stack y de automatización");
+    expect(home.alternates?.canonical).toBe("/");
+  });
+
+  it("imágenes con URL absoluta en openGraph y twitter", () => {
+    const meta = project();
+    expect(meta.openGraph?.images).toEqual([{ url: "https://edav.com.co/img/cia.png", alt: "CIA SUR" }]);
+    expect(meta.twitter?.images).toEqual([{ url: "https://edav.com.co/img/cia.png", alt: "CIA SUR" }]);
+  });
+
+  it("sin hreflang ni alternateLocale mientras solo ES está publicado", () => {
+    const meta = project();
+    expect(meta.alternates).not.toHaveProperty("languages");
+    expect(meta.openGraph).not.toHaveProperty("alternateLocale");
+  });
+
+  it("indexable por defecto en ES; noindex con index: false o en un idioma no publicado", () => {
+    expect(project()).not.toHaveProperty("robots");
+    expect(m.buildMetadata({ route: "contact", locale: "es", title: "t", description: "d", index: false }).robots).toEqual({ index: false, follow: true });
+    const en = m.buildMetadata({ route: "projects", locale: "en", title: "Projects", description: "d" });
+    expect(en.robots).toEqual({ index: false, follow: true });
+    expect(en.alternates?.canonical).toBe("/en/projects/");
+    expect(en.openGraph?.locale).toBe("en_US");
+  });
+
+  it("artículo: tipo article, fechas, etiquetas y autor", () => {
+    const meta = m.buildMetadata({
+      route: "post", params: { slug: { es: "mi-post", en: "my-post" } }, locale: "es", title: "Post | edav", absoluteTitle: true, description: "d",
+      type: "article", article: { publishedTime: "2024-01-02", modifiedTime: "2024-02-03", tags: ["SEO"] },
+    });
+    expect(meta.alternates?.canonical).toBe("/blog/mi-post/");
+    expect(meta.openGraph).toMatchObject({ type: "article", url: "/blog/mi-post/", publishedTime: "2024-01-02", modifiedTime: "2024-02-03", tags: ["SEO"], authors: ["https://edav.com.co/sobre-mi/"] });
+    expect(meta.authors).toEqual([{ name: "Emmanuel Dávila", url: "https://edav.com.co/sobre-mi/" }]);
+  });
+
+  it("canonicalTo: canonical y og:url apuntan a la ruta destino", () => {
+    const meta = m.buildMetadata({ route: "classic", locale: "es", title: "Clásico", description: "d", index: false, canonicalTo: { route: "home" } });
+    expect(meta.alternates?.canonical).toBe("/");
+    expect(meta.openGraph?.url).toBe("/");
+  });
+});

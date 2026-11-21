@@ -1,8 +1,8 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import { Document } from "@/components/shell/document";
 import { SiteShell } from "@/components/shell/site-shell";
 import { NotFoundView } from "@/components/views/not-found";
-import { profile } from "@/content/profile";
+import { rootMetadata, siteViewport } from "@/lib/metadata";
 import "./globals.css";
 import "./desktop.css";
 
@@ -15,11 +15,12 @@ import "./desktop.css";
  * Next añade `noindex` por el status 404. Requiere `experimental.globalNotFound` en next.config.ts.
  */
 export const metadata: Metadata = {
-  title: `Página no encontrada | ${profile.name}`,
+  ...rootMetadata("es"),
+  title: { absolute: "Página no encontrada | Emmanuel Dávila" },
   description: "La página que buscas no existe o cambió de dirección.",
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#167ea5", colorScheme: "light" };
+export const viewport = siteViewport;
 
 export default function GlobalNotFound() {
   return <Document locale="es"><SiteShell locale="es"><NotFoundView/></SiteShell></Document>;

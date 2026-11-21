@@ -4,8 +4,9 @@ import { education, experience, experienceSince, type ExperienceEntry } from "@/
 import { profile, skillGroups, skills } from "@/content/profile";
 import { siteUrl } from "@/content/site";
 import type { Locale } from "@/content/types";
+import { buildMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = { title: "Sobre mí — Desarrollador Full Stack y de automatización", description: "Conoce a Emmanuel Dávila, desarrollador Full Stack y de automatización en Medellín: desarrollo web a la medida, WordPress, Shopify y Microsoft 365.", alternates: { canonical: "/sobre-mi" } };
+export const metadata: Metadata = buildMetadata({ route: "about", locale: "es", title: "Sobre mí — Desarrollador Full Stack y de automatización", description: "Conoce a Emmanuel Dávila, desarrollador Full Stack y de automatización en Medellín: desarrollo web a la medida, WordPress, Shopify y Microsoft 365." });
 
 // Vista ES; la versión /en/ llegará con el árbol de rutas i18n. Todo el contenido sale de `content/` (CNT-03);
 // las etiquetas de interfaz que quedan en el JSX pasarán a `content/ui.ts`.

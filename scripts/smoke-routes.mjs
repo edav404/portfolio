@@ -6,7 +6,8 @@
  * Uso: node scripts/smoke-routes.mjs [baseUrl]      (por defecto http://127.0.0.1:3111)
  *
  * Comprueba (docs/arquitectura-rutas.md §5 P2 y §9.3):
- * - cada <loc> del sitemap responde 200, HTML con lang="es" y sin redirección;
+ * - cada <loc> del sitemap responde 200, HTML con lang="es", sin redirección, canonical y og:url
+ *   iguales a su propia URL y sin hreflang (solo ES publicado);
  * - cada redirección de lib/redirects.ts es un 308 de un solo salto a una URL que da 200;
  * - el 404 global (experimental.globalNotFound): /no-existe/, slug rechazado, /api/ y archivo
  *   inexistentes → 404 con lang="es", noindex y contenido EN EL HTML INICIAL, sin canonical.
@@ -30,16 +31,28 @@ async function get(path) {
 
 const lang = (html) => html.match(/<html\b[^>]*\blang="([^"]*)"/)?.[1] ?? null;
 
+/** Valor de un atributo de la etiqueta <link>/<meta> que contiene `marker`. */
+function attr(html, marker, name) {
+  const tag = [...html.matchAll(/<(?:link|meta)\b[^>]*>/g)].map((match) => match[0]).find((text) => text.includes(marker));
+  return tag?.match(new RegExp(`\\b${name}="([^"]*)"`))?.[1] ?? null;
+}
+
 // 1) Sitemap
 const sitemap = await get("/sitemap.xml");
 check(sitemap.status === 200, `/sitemap.xml → ${sitemap.status}`);
 const xml = await (await fetch(`${base}/sitemap.xml`)).text();
-const paths = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => new URL(match[1].trim()).pathname);
-check(paths.length > 0, "el sitemap no tiene URLs");
-for (const path of paths) {
+const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1].trim());
+check(locs.length > 0, "el sitemap no tiene URLs");
+const paths = locs.map((loc) => new URL(loc).pathname);
+for (const loc of locs) {
+  const path = new URL(loc).pathname;
   const page = await get(path);
   check(page.status === 200, `${path} → ${page.status}`);
   check(lang(page.html) === "es", `${path}: lang=${lang(page.html)}`);
+  // P3: canonical y og:url propios de cada página (SEO-02); sin hreflang mientras solo ES esté publicado.
+  check(attr(page.html, 'rel="canonical"', "href") === loc, `${path}: canonical ≠ ${loc}`);
+  check(attr(page.html, 'property="og:url"', "content") === loc, `${path}: og:url ≠ ${loc}`);
+  check(!/<link rel="alternate" hrefLang=/i.test(page.html), `${path}: hreflang antes de publicar el EN`);
 }
 
 // 2) Redirecciones (mismo parseo que scripts/snapshot-routes.mjs; el test unitario lo cuadra con lib/redirects.ts)

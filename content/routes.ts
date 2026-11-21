@@ -101,10 +101,39 @@ export function alternates<K extends RouteKey>(key: K, ...[params]: ParamsArg<K>
 
 /** Mapa hreflang → ruta, para `alternates.languages` de la metadata y del sitemap. `x-default` = ES. */
 export function hreflangMap<K extends RouteKey>(key: K, ...[params]: ParamsArg<K>): Record<string, string> {
-  const map: Record<string, string> = { ...published(key, params) };
+  return withDefault(published(key, params));
+}
+
+function withDefault(paths: Partial<Record<Locale, string>>): Record<string, string> {
+  const map: Record<string, string> = { ...paths };
   const fallback = map[defaultLocale];
   if (fallback) map["x-default"] = fallback;
   return map;
+}
+
+/**
+ * Ruta + parámetros como un solo valor, para APIs que la reciben como dato (p. ej. `buildMetadata`).
+ * Mismas reglas de tipos que `href`: `params` solo (y siempre) en rutas con `[param]`.
+ */
+export type RouteRef = {
+  [K in RouteKey]: [ParamNames<(typeof routes)[K]["es"]>] extends [never] ? { route: K; params?: undefined } : { route: K; params: RouteParams<K> };
+}[RouteKey];
+
+/** `href` a partir de un `RouteRef`. */
+export function hrefFor(ref: RouteRef, locale: Locale): string {
+  const path = build(ref.route, locale, ref.params);
+  if (path === null) throw new Error(`content/routes.ts: faltan parámetros para "${ref.route}" (${locale})`);
+  return path;
+}
+
+/** `alternates` a partir de un `RouteRef`. */
+export function alternatesFor(ref: RouteRef): Partial<Record<Locale, string>> {
+  return published(ref.route, ref.params);
+}
+
+/** `hreflangMap` a partir de un `RouteRef`. */
+export function hreflangFor(ref: RouteRef): Record<string, string> {
+  return withDefault(published(ref.route, ref.params));
 }
 
 export type RouteMatch = { key: RouteKey; locale: Locale; params: Record<string, string> };

@@ -6,6 +6,7 @@ import { Cta, JsonLd } from "@/components/ui";
 import { profile } from "@/content/profile";
 import { caseStudies, getCaseStudy, projectTitle, statusLabels } from "@/content/projects";
 import { siteUrl } from "@/content/site";
+import { buildMetadata } from "@/lib/metadata";
 
 // Vista ES; la versión /en/ llegará con el árbol de rutas i18n.
 const locale = "es";
@@ -18,7 +19,11 @@ export function generateStaticParams() { return caseStudies.map(({ slug }) => ({
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params; const project = getCaseStudy(slug); if (!project) return {};
   const title = projectTitle(project, locale);
-  return { title: `${title} — Caso de estudio`, description: project.summary[locale], alternates: { canonical: `/proyectos/${project.slug}` }, openGraph: { title: `${title} — Caso de estudio`, description: project.summary[locale], images: [{ url: project.image, alt: project.alt?.[locale] ?? title }] } };
+  return buildMetadata({
+    route: "project", params: { slug: project.slug }, locale,
+    title: `${title} — Caso de estudio`, description: project.summary[locale],
+    image: { url: project.image, alt: project.alt?.[locale] ?? title },
+  });
 }
 
 export default async function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {

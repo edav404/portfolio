@@ -4,6 +4,9 @@ import { JsonLd } from "@/components/ui";
 import { profile } from "@/content/profile";
 import { services } from "@/content/services";
 import { siteUrl } from "@/content/site";
+import { buildMetadata, defaultTitle } from "@/lib/metadata";
+
+export const metadata = buildMetadata({ route: "home", locale: "es", title: defaultTitle("es"), absoluteTitle: true, description: profile.seoDescription.es });
 
 // Portada servida por el servidor con contenido real; el escritorio es opcional y se carga bajo demanda.
 export default function Home() {

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Cta, JsonLd } from "@/components/ui";
 import { contactHrefForService, services } from "@/content/services";
+import { buildMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = { title: "Servicios de desarrollo Full Stack y automatización", description: "Desarrollo web a la medida, automatización de procesos, WordPress, WooCommerce, Shopify y diseño UX/UI para marcas y negocios.", alternates: { canonical: "/servicios" } };
+export const metadata: Metadata = buildMetadata({ route: "services", locale: "es", title: "Servicios de desarrollo Full Stack y automatización", description: "Desarrollo web a la medida, automatización de procesos, WordPress, WooCommerce, Shopify y diseño UX/UI para marcas y negocios." });
 
 const faqs = [
   ["¿Cuánto tarda un proyecto web?", "Depende del alcance. Un sitio corporativo suele requerir entre cuatro y ocho semanas; un e-commerce o desarrollo a la medida puede necesitar más tiempo."],

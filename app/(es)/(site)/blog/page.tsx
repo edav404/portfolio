@@ -4,17 +4,13 @@ import { Icon } from "@/components/icons";
 import { Cta, JsonLd, SectionHeading } from "@/components/ui";
 import { sortedPosts } from "@/content/posts";
 import { profile } from "@/content/profile";
-import { siteName, siteUrl } from "@/content/site";
+import { siteUrl } from "@/content/site";
 import { formatPostDate } from "./format-date";
+import { buildMetadata } from "@/lib/metadata";
 
 const description = "Artículos de Emmanuel Dávila sobre páginas web para negocios, SEO, WordPress, Shopify y automatización de procesos, escritos para dueños de negocio.";
 
-export const metadata: Metadata = {
-  title: "Blog: desarrollo web, SEO y automatización",
-  description,
-  alternates: { canonical: "/blog/" },
-  openGraph: { type: "website", url: "/blog/", title: "Blog: desarrollo web, SEO y automatización | Emmanuel Dávila", description, locale: "es_CO", siteName },
-};
+export const metadata: Metadata = buildMetadata({ route: "blog", locale: "es", title: "Blog: desarrollo web, SEO y automatización", description });
 
 export default function BlogPage() {
   const schema = {

@@ -264,3 +264,14 @@ Variante híbrida medida (global + solo el catch-all EN):
 4. **Criterios de aceptación ajustados.** P2: `/no-existe/` y `/proyectos/no-existe/` → 404, `noindex` y `lang="es"` **en el HTML inicial** (lo da el global). P6: `/en/no-existe/` → 404 y `noindex` en el HTML inicial; `lang="en"` y UI EN se verifican **con navegador** (el HTML inicial es el error shell). El smoke de rutas debe distinguir ambos casos.
 5. **Riesgo nuevo:** `globalNotFound` es experimental (desde 15.4). Fijarlo en un test de humo (`/no-existe/` con `lang="es"` en SSR) para detectar regresiones al actualizar Next; si desaparece, el plan B es el catch-all ES del diseño original (status correcto, UI solo con JS).
 6. Sigue vigente §8.1: repetir estas mediciones al añadir `loading.tsx`, Suspense o layouts asíncronos.
+
+## 10. Cambios intencionados en la línea base (`tests/fixtures/routes-baseline.json`)
+
+| Paso | URLs | Campo | Antes → después | Motivo |
+|---|---|---|---|---|
+| P2 | `/no-existe/` | title, canonical, og:url | título por defecto, canonical y `og:url` de la portada → "Página no encontrada \| Emmanuel Dávila", sin canonical ni `og:url` | `global-not-found` (§9.3, SEO-12) |
+| P2 | `/proyectos/no-existe/` | lang, title, canonical, og:url | `lang` null (error shell) → `"es"`; resto igual que la fila anterior | El slug rechazado por `dynamicParams=false` lo atiende `global-not-found` en SSR |
+| P3 | `/proyectos/`, `/servicios/`, `/sobre-mi/`, `/ahora/`, `/contacto/` | og:url | `https://edav.com.co/` → su propia URL | `buildMetadata` devuelve `openGraph` completo (D8, SEO-02) |
+| P3 | 13 × `/proyectos/<slug>/` | og:url | ausente → su propia URL | Igual |
+
+Sin cambios en status, `Location`, `lang`, `<title>` ni canonical de las 22 URLs del sitemap ni de las 18 redirecciones. `npm run smoke` lo vigila contra el servidor standalone (CI incluido).

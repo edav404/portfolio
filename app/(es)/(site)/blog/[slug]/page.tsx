@@ -4,9 +4,10 @@ import { notFound } from "next/navigation";
 import { Cta, JsonLd } from "@/components/ui";
 import { getPostBySlug, posts } from "@/content/posts";
 import { profile } from "@/content/profile";
-import { siteName, siteUrl } from "@/content/site";
+import { siteUrl } from "@/content/site";
 import { formatPostDate } from "../format-date";
 import { PostBody, plainText } from "../post-body";
+import { buildMetadata } from "@/lib/metadata";
 
 // Solo existen los slugs ES de `content/posts.ts`; cualquier otro da 404 sin renderizar en runtime.
 // La versión EN (`/en/blog/<slug-en>/`) llega con la i18n de la Fase 3.
@@ -21,27 +22,14 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const post = getPostBySlug((await params).slug, "es");
   if (!post) return {};
-  const path = `/blog/${post.slug.es}/`;
-  // Título corto con " | edav" en vez de la plantilla " | Emmanuel Dávila" (CNT-06: ≤ 60 caracteres).
-  const title = `${post.seoTitle.es} | edav`;
-  return {
-    title: { absolute: title },
+  return buildMetadata({
+    route: "post", params: { slug: post.slug }, locale: "es",
+    // Título corto con " | edav" en vez de la plantilla " | Emmanuel Dávila" (CNT-06: ≤ 60 caracteres).
+    title: `${post.seoTitle.es} | edav`, absoluteTitle: true,
     description: post.description.es,
-    authors: [{ name: profile.name, url: `${siteUrl}/sobre-mi/` }],
-    alternates: { canonical: path },
-    openGraph: {
-      type: "article",
-      url: path,
-      title,
-      description: post.description.es,
-      locale: "es_CO",
-      siteName,
-      publishedTime: post.published,
-      modifiedTime: post.updated,
-      authors: [`${siteUrl}/sobre-mi/`],
-      tags: post.tags.es,
-    },
-  };
+    type: "article",
+    article: { publishedTime: post.published, modifiedTime: post.updated, tags: post.tags.es },
+  });
 }
 
 export default async function BlogPostPage({ params }: Props) {
