@@ -4,7 +4,8 @@ import OsShell from "@/components/os/os-shell";
 import styles from "@/components/os/apps/apps.module.css";
 import type { OsCopy, OsHrefs, OsProjectIndexItem, WelcomeCopy } from "@/components/os/types";
 import "@/components/os/os.css";
-import { getOsProject, osProjectSlugs, osProjects, projectTitle } from "@/content/projects";
+import { people } from "@/content/people";
+import { getOsProject, osProjectSlugs, osProjects, projectTitle, statusLabels } from "@/content/projects";
 import { profile } from "@/content/profile";
 import { href, hrefFor } from "@/content/routes";
 import { cvHref } from "@/content/site";
@@ -12,6 +13,7 @@ import type { Locale } from "@/content/types";
 import { format, roleInSentence } from "@/content/format";
 import { uiFor } from "@/content/ui";
 import { languageIndex } from "@/lib/i18n/pages";
+import { resolveCredits } from "@/lib/os/credits";
 import { buildMetadata } from "@/lib/metadata";
 import { isOsPath } from "@/lib/os/window-url";
 
@@ -57,6 +59,10 @@ function projectIndex(locale: Locale): OsProjectIndexItem[] {
       image: project.image,
       alt: project.alt?.[locale] ?? title,
       publicHref: href("project", locale, { slug: project.slug }),
+      kind: project.kind,
+      ownership: project.ownership,
+      status: statusLabels[project.status][locale],
+      credits: resolveCredits(project.credits, people, locale),
     };
   });
 }
@@ -77,9 +83,12 @@ export function OsLayoutView({ locale, children }: { locale: Locale; children: R
   const projects = projectIndex(locale);
   const other: Locale = locale === "es" ? "en" : "es";
   const copy: OsCopy = {
-    heading: text.heading, apps: text.apps, desktop: text.desktop, window: text.window, start: text.start,
-    taskbar: text.taskbar, announce: text.announce, project: text.project, pocket: text.pocket,
+    heading: text.heading, apps: text.apps, desktop: text.desktop, window: text.window, steps: text.steps, start: text.start,
+    taskbar: text.taskbar, contextMenu: text.contextMenu, shortcuts: text.shortcuts, announce: text.announce, project: text.project, pocket: text.pocket,
     noscript: text.noscript, fallback: text.fallback,
+    gallery: text.gallery, errors: text.errors, settings: text.settings, aboutApp: text.aboutApp,
+    servicesApp: text.servicesApp, contactApp: text.contactApp, terminal: text.terminal,
+    music: uiFor(locale, "music"), contactForm: uiFor(locale, "contactForm"),
   };
   const welcome: WelcomeCopy = {
     kicker: legacy.welcome.kicker,
@@ -136,6 +145,10 @@ export function OsProjectView({ locale, slug }: { locale: Locale; slug: string }
   const services = project.services[locale];
   return (
     <>
+      <dl className={styles.facts}>
+        <div><dt>{labels.client}</dt><dd>{project.client[locale]}</dd></div>
+        <div><dt>{labels.location}</dt><dd>{project.location[locale]}</dd></div>
+      </dl>
       <section className={styles.section}>
         <h3 className={styles.heading}>{labels.challenge}</h3>
         <p className={styles.text}>{project.challenge[locale]}</p>

@@ -613,7 +613,7 @@ export const ui = {
       cycleWindows: { es: "Cambiar entre ventanas", en: "Cycle through windows" },
       closeWindow: { es: "Cerrar la ventana activa", en: "Close the active window" },
       help: { es: "Mostrar esta ayuda", en: "Show this help" },
-      keyStart: { es: "Alt+Shift+S", en: "Alt+Shift+S" },
+      keyStart: { es: "Alt+Shift+I", en: "Alt+Shift+I" },
       keyTaskbar: { es: "Alt+Shift+T", en: "Alt+Shift+T" },
       keyDesktop: { es: "Alt+Shift+D", en: "Alt+Shift+D" },
       keyCycle: { es: "Alt+Shift+↑ / ↓", en: "Alt+Shift+↑ / ↓" },
@@ -627,6 +627,12 @@ export const ui = {
       screenEffect: { es: "Efecto de pantalla antigua", en: "Old screen effect" },
       sound: { es: "Sonido del sistema", en: "System sound" },
       assistant: { es: "Mostrar al asistente ED", en: "Show the ED assistant" },
+      windowsGroup: { es: "Ventanas", en: "Windows" },
+      soundGroup: { es: "Sonido y pantalla", en: "Sound and screen" },
+      assistantGroup: { es: "Asistente", en: "Assistant" },
+      keyboardGroup: { es: "Teclado", en: "Keyboard" },
+      shortcutsList: { es: "Atajos disponibles", en: "Available shortcuts" },
+      resetDone: { es: "Ventanas restablecidas", en: "Windows reset" },
       assistantCorner: { es: "Cambiar de esquina", en: "Change corner" },
       corners: { es: "Esquinas del asistente", en: "Assistant corners" },
       cornerTopLeft: { es: "Arriba a la izquierda", en: "Top left" },
@@ -689,6 +695,10 @@ export const ui = {
       openProject: { es: "Abrir el proyecto {title}", en: "Open project {title}" },
       selectedDetail: { es: "{category}, {year}, {status}", en: "{category}, {year}, {status}" },
       noCover: { es: "Sin portada", en: "No cover" },
+      /** Etiquetas de los filtros de tipo (fuente única en project-labels.ts). */
+      kinds: projectKindLabels,
+      status: { es: "{count} proyectos. {selected}", en: "{count} projects. {selected}" },
+      nothingSelected: { es: "Selecciona un proyecto para ver su resumen.", en: "Select a project to see its summary." },
       coverAlt: { es: "Portada del proyecto {title}", en: "{title} project cover" },
       /** Filtros de autoría (los de tipo salen de `projectKinds`). */
       ownership: {
@@ -718,6 +728,9 @@ export const ui = {
       badgeCollaboration: { es: "Colaboración · {name}", en: "Collaboration · {name}" },
       badgeClient: { es: "Proyecto para cliente", en: "Client project" },
       /** Nombre accesible del enlace a GitHub de un coautor. */
+      captures: { es: "Capturas", en: "Screenshots" },
+      captureAlt: { es: "Captura del proyecto {title}", en: "Screenshot of the {title} project" },
+      creditsList: { es: "Créditos del proyecto", en: "Project credits" },
       githubLink: { es: "{name} en GitHub, se abre en una pestaña nueva", en: "{name} on GitHub, opens in a new tab" },
       externalLink: { es: "{label}, se abre en una pestaña nueva", en: "{label}, opens in a new tab" },
     },
@@ -732,6 +745,54 @@ export const ui = {
       unsavedBody: { es: "Si cierras esta ventana, perderás lo que escribiste.", en: "If you close this window, you will lose what you wrote." },
       unsavedKeep: { es: "Seguir editando", en: "Keep editing" },
       unsavedDiscard: { es: "Cerrar y descartar", en: "Close and discard" },
+    },
+    /** Acerca de (app `about`). Perfil y experiencia salen de content/profile.ts y experience.ts. */
+    aboutApp: {
+      available: { es: "Disponible para proyectos", en: "Available for projects" },
+      experience: { es: "Experiencia", en: "Experience" },
+      education: { es: "Formación", en: "Education" },
+      skills: { es: "Habilidades", en: "Skills" },
+      cvTitle: { es: "CV y contacto directo", en: "CV and direct contact" },
+      cvEs: { es: "CV en español (PDF)", en: "CV in Spanish (PDF)" },
+      cvEn: { es: "CV in English (PDF)", en: "CV in English (PDF)" },
+      fullProfile: { es: "Abrir perfil completo", en: "Open full profile" },
+      /** `{from}` y `{to}` ya formateados; `{to}` puede ser «actualidad». */
+      period: { es: "{from} – {to}", en: "{from} – {to}" },
+      present: { es: "actualidad", en: "present" },
+      since: { es: "Desde {year}", en: "Since {year}" },
+      stack: { es: "Tecnologías", en: "Stack" },
+    },
+    /** Servicios (app `services`). */
+    servicesApp: {
+      intro: { es: "Elige un servicio para ver qué incluye.", en: "Pick a service to see what it includes." },
+      list: { es: "Servicios", en: "Services" },
+      includes: { es: "Qué incluye", en: "What's included" },
+      stack: { es: "Stack recomendado", en: "Recommended stack" },
+      request: { es: "Pedir este servicio", en: "Request this service" },
+      requestAria: { es: "Pedir este servicio, {service}: abre Contacto con el servicio elegido", en: "Request this service, {service}: opens Contact with the service selected" },
+    },
+    /** Contacto (app `contact`). El formulario usa `contactForm` (mismos textos y códigos de error). */
+    contactApp: {
+      kicker: { es: "NUEVO MENSAJE", en: "NEW MESSAGE" },
+      title: { es: "Cuéntame qué quieres construir.", en: "Tell me what you want to build." },
+      lead: {
+        es: "Objetivo, alcance, público y referencias: con eso podemos comenzar una conversación útil.",
+        en: "Goal, scope, audience and references: that's enough to start a useful conversation.",
+      },
+      draftKept: { es: "Tu borrador se conserva si minimizas esta ventana.", en: "Your draft is kept if you minimize this window." },
+      another: { es: "Escribir otro mensaje", en: "Write another message" },
+    },
+    /** Terminal (app `terminal`): comandos del escritorio actual, adaptados. */
+    terminal: {
+      banner: { es: "EDAV Símbolo del sistema [Versión 98.04.04]", en: "EDAV Command Prompt [Version 98.04.04]" },
+      hint: { es: "Escribe HELP para listar los comandos disponibles.", en: "Type HELP to list the available commands." },
+      opening: { es: "Abriendo {app}.exe...", en: "Opening {app}.exe..." },
+      requested: { es: "Solicitud enviada: {app}.exe", en: "Request sent: {app}.exe" },
+      unknown: { es: "'{input}' no se reconoce como comando. Escribe HELP.", en: "'{input}' is not recognized as a command. Type HELP." },
+      unknownApp: { es: "No existe la aplicación '{app}'. Prueba con: {list}.", en: "There is no app '{app}'. Try one of: {list}." },
+      inputLabel: { es: "Comando de terminal", en: "Terminal command" },
+      history: { es: "Salida de la terminal", en: "Terminal output" },
+      whoami: { es: "{name}: {headline}, {location}.", en: "{name}: {headline}, {location}." },
     },
   },
 } as const satisfies CopyTree;

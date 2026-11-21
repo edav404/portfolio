@@ -7,11 +7,15 @@ import { format } from "@/content/format";
 import { activeId, taskbarIds, type OsState } from "@/lib/os/window-reducer";
 import type { Prefs } from "@/lib/os/prefs";
 import { iconFor } from "./app-meta";
+import { Balloon } from "./balloon";
 import { OsGlyph, XpIcon } from "./icons";
 import { EdavLogo } from "./logo";
+import { useOsCommands } from "./os-commands";
 import { useOsActions, useOsStatic } from "./os-context";
+import { HELP_PANEL_ID, ShortcutsHelp } from "./shortcuts-help";
 import { START_PANEL_ID, StartPanel } from "./start-panel";
 import { useRoving } from "./use-roving";
+import { useShortcuts } from "./use-shortcuts";
 import { windowDomId } from "./window-frame";
 import { useWindowTitle } from "./window-layer";
 
@@ -46,6 +50,11 @@ export const Taskbar = memo(function Taskbar({ state, prefs, onPref }: Props) {
   const pathname = usePathname();
   const [startOpen, setStartOpen] = useState(false);
   const startRef = useRef<HTMLButtonElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const helpButtonRef = useRef<HTMLButtonElement>(null);
+  const helpReturn = useRef<HTMLElement | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const commands = useOsCommands();
   const ids = taskbarIds(state);
   const active = activeId(state);
   const idsKey = ids.join("|");
@@ -59,6 +68,24 @@ export const Taskbar = memo(function Taskbar({ state, prefs, onPref }: Props) {
     if (restoreFocus) startRef.current?.focus({ preventScroll: true });
   }, []);
 
+  const toggleHelp = () => {
+    if (helpOpen) { setHelpOpen(false); return; }
+    const active = document.activeElement;
+    helpReturn.current = active instanceof HTMLElement && active !== document.body ? active : helpButtonRef.current;
+    setHelpOpen(true);
+  };
+
+  // Atajos globales opt-in (Alt+Shift+tecla física). El filtro y la ayuda salen de lib/os/shortcuts.
+  useShortcuts(prefs.shortcuts, {
+    start: () => { setStartOpen((value) => !value); startRef.current?.focus({ preventScroll: true }); },
+    taskbar: () => toolbarRef.current?.querySelector<HTMLElement>('[data-roving][tabindex="0"]')?.focus({ preventScroll: true }),
+    desktop: () => commands.focusDesktop(),
+    cyclePrev: () => commands.cycle(-1),
+    cycleNext: () => commands.cycle(1),
+    close: () => commands.closeActive(),
+    help: toggleHelp,
+  });
+
   const activate = (id: (typeof ids)[number]) => {
     const win = state.windows[id]!;
     if (win.minimized) actions.open(id);
@@ -68,7 +95,7 @@ export const Taskbar = memo(function Taskbar({ state, prefs, onPref }: Props) {
 
   return (
     <footer className="xp-taskbar">
-      <div role="toolbar" aria-label={copy.taskbar.label} aria-orientation="horizontal" className="xp-taskbar__toolbar" onKeyDown={roving.onKeyDown}>
+      <div ref={toolbarRef} role="toolbar" aria-label={copy.taskbar.label} aria-orientation="horizontal" className="xp-taskbar__toolbar" onKeyDown={roving.onKeyDown}>
         <button
           ref={startRef}
           type="button"
@@ -99,7 +126,11 @@ export const Taskbar = memo(function Taskbar({ state, prefs, onPref }: Props) {
                 tabIndex={roving.tabIndexFor(id)}
                 aria-pressed={isActive}
                 aria-controls={windowDomId(id)}
-                onFocus={() => roving.onFocusItem(id)}
+                onFocus={(event) => {
+                  roving.onFocusItem(id);
+                  // Al minimizar, el foco llega aquí: pasa a ser la parada roving y se desplaza a la vista.
+                  event.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" });
+                }}
                 onClick={() => activate(id)}
               >
                 <XpIcon name={iconFor(id)} size={16}/>
@@ -122,8 +153,22 @@ export const Taskbar = memo(function Taskbar({ state, prefs, onPref }: Props) {
         <button type="button" className="xp-tray__btn xp-tray__btn--desktop-only" aria-label={copy.taskbar.screenEffect} aria-pressed={prefs.screenEffect} onClick={() => onPref({ screenEffect: !prefs.screenEffect })}>
           <OsGlyph name="crt"/>
         </button>
+        <button
+          ref={helpButtonRef}
+          type="button"
+          className="xp-tray__btn"
+          aria-label={copy.shortcuts.title}
+          aria-haspopup="dialog"
+          aria-expanded={helpOpen}
+          aria-controls={helpOpen ? HELP_PANEL_ID : undefined}
+          onClick={toggleHelp}
+        >
+          <XpIcon name="help" size={16}/>
+        </button>
         <Clock/>
       </div>
+      {helpOpen ? <ShortcutsHelp onClose={() => setHelpOpen(false)} returnRef={helpReturn}/> : null}
+      <Balloon/>
     </footer>
   );
 });

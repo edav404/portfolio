@@ -1,0 +1,67 @@
+/* Reproductor Last.fm en estética de reproductor clásico, con los tokens Luna */
+.player {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: var(--xp-face);
+  color: var(--xp-ink);
+}
+.titlebar {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  background: var(--xp-titlebar-active);
+  color: var(--xp-titlebar-active-ink);
+  font-size: var(--xp-text-xs);
+  letter-spacing: .04em;
+}
+.screen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  margin: var(--space-4);
+  border: 1px solid var(--xp-edge-strong);
+  background: var(--c-black);
+  color: var(--c-white);
+}
+.cover {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 96px;
+  height: 96px;
+  border: 1px solid var(--xp-edge-strong);
+  background: var(--xp-face);
+  color: var(--xp-ink-muted);
+  font-size: 32px;
+  text-decoration: none;
+}
+.cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.info { flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.badge { font-family: var(--xp-font-mono); font-size: var(--xp-text-xs); letter-spacing: .06em; color: var(--c-white); }
+.track { font-size: var(--xp-text-lg); overflow-wrap: anywhere; }
+.artist { margin: 0; color: var(--c-white); overflow-wrap: anywhere; }
+.spectrum { display: flex; align-items: flex-end; gap: 2px; height: 36px; margin-top: auto; }
+.spectrum i {
+  flex: 1;
+  background: var(--xp-ink-ok);
+  transform-origin: bottom;
+  animation: spectrum 1.2s ease-in-out infinite alternate;
+}
+.player[data-loading="true"] .spectrum i,
+.player[data-error="true"] .spectrum i { animation: none; opacity: .35; }
+/* Suspendida (ventana minimizada o pestaña oculta): ninguna animación en marcha. */
+.player[data-paused="true"] .spectrum i { animation-play-state: paused; }
+@keyframes spectrum { from { transform: scaleY(.45); } to { transform: scaleY(1); } }
+@media (prefers-reduced-motion: reduce) { .spectrum i { animation: none; } }
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4) var(--space-4);
+  font-size: var(--xp-text-xs);
+}
+.footer a { color: var(--xp-ink-link); }

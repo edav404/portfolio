@@ -8,16 +8,21 @@ import { createDebouncedSaver, loadGeometry, saveGeometry } from "@/lib/os/persi
 import { createPrefsStore, type Prefs } from "@/lib/os/prefs";
 import { intentFromPath } from "@/lib/os/window-url";
 import {
-  activeId, collectGeometry, persistsGeometry, projectWindowId, slugOf,
+  activeId, collectGeometry, persistsGeometry, projectWindowId, requestClose as closePolicy, slugOf,
   type Action, type OsState, type WindowId,
 } from "@/lib/os/window-reducer";
+import { isMobileWidth } from "@/lib/os/window-geometry";
+import { AnnouncerRegion, createAnnouncer } from "./announcer";
 import { iconKeyFor } from "./app-meta";
+import { captureActivator, createActivatorStore, focusElement, isUsableElement, resolveReturnTarget, type Activator } from "./focus-manager";
 import { DesktopSurface } from "./desktop-surface";
+import { OsCommandsContext, OsPrefsContext, type OsCommands } from "./os-commands";
 import { OsActionsContext, OsDetailsContext, OsStaticContext, type OsActions, type OsStatic } from "./os-context";
 import { Taskbar } from "./taskbar";
 import type { OsCopy, OsHrefs, OsProjectIndexItem, WelcomeCopy } from "./types";
 import { useOsNavigation } from "./use-os-navigation";
 import { windowBodyId, windowDomId } from "./window-frame";
+import { GuardContext, createGuardStore } from "./window-guard";
 import { WindowLayer } from "./window-layer";
 
 type Props = {
@@ -36,7 +41,7 @@ type Props = {
 type PendingFocus =
   | { kind: "content"; id: WindowId }
   | { kind: "task"; id: WindowId }
-  | { kind: "return"; id: WindowId; next: WindowId | null };
+  | { kind: "return"; id: WindowId; next: WindowId | null; activator?: Activator | null };
 
 
 /**
@@ -48,7 +53,12 @@ export default function OsShell({ locale, copy, welcome, projects, knownSlugs, h
   const [prefsStore] = useState(() => createPrefsStore(typeof window === "undefined" ? null : undefined));
   const prefs = useSyncExternalStore(prefsStore.subscribe, prefsStore.getSnapshot, prefsStore.getServerSnapshot);
   const [saver] = useState(() => createDebouncedSaver((geometry) => { saveGeometry(geometry); }));
-  const [announcement, setAnnouncement] = useState("");
+  // Anunciador unico (role="status" montado siempre): cola con deduplicacion y minimo ~1 s entre mensajes.
+  const [announcer] = useState(createAnnouncer);
+  const setAnnouncement = useCallback((text: string | ((before: string) => string)) => announcer.announce(typeof text === "string" ? text : text("").trim()), [announcer]);
+  useEffect(() => () => announcer.dispose(), [announcer]);
+  const [guards] = useState(createGuardStore);
+  const [activators] = useState(createActivatorStore);
   const pending = useRef<PendingFocus | null>(null);
 
   const titleOf = useCallback((id: WindowId): string => {
@@ -65,11 +75,18 @@ export default function OsShell({ locale, copy, welcome, projects, knownSlugs, h
     switch (request.kind) {
       case "content": focus(document.getElementById(windowBodyId(request.id))); break;
       case "task": focus(document.querySelector<HTMLElement>(`[data-task="${request.id}"]`)); break;
-      case "return":
-        if (focus(document.querySelector<HTMLElement>(`[data-icon="${iconKeyFor(request.id)}"]`))) break;
-        if (request.next && focus(document.getElementById(windowBodyId(request.next)))) break;
-        focus(document.getElementById("os-desktop"));
+      case "return": {
+        // Cadena (docs §4): activador -> boton de Inicio (si vino de un menu) -> icono -> siguiente ventana -> escritorio.
+        const target = resolveReturnTarget<HTMLElement>([
+          request.activator?.el,
+          request.activator?.fromMenu ? document.querySelector<HTMLElement>(".xp-start-button") : null,
+          document.querySelector<HTMLElement>(`[data-icon="${iconKeyFor(request.id)}"]`),
+          request.next ? document.getElementById(windowBodyId(request.next)) : null,
+          document.getElementById("os-desktop"),
+        ], isUsableElement);
+        focusElement(target);
         break;
+      }
     }
   }, [pending]);
 
@@ -98,6 +115,7 @@ export default function OsShell({ locale, copy, welcome, projects, knownSlugs, h
     const hasFocus = (id: WindowId) => winEl(id)?.contains(document.activeElement) === true;
     return {
       open(id) {
+        activators.remember(id, captureActivator());
         const changed = act({ type: "OPEN", id });
         pending.current = { kind: "content", id };
         if (!changed) flushFocus();
@@ -106,7 +124,8 @@ export default function OsShell({ locale, copy, welcome, projects, knownSlugs, h
       close(id) {
         const inside = hasFocus(id);
         act({ type: "CLOSE", id });
-        if (inside) pending.current = { kind: "return", id, next: activeId(ref.current) };
+        guards.setDirty(id, false);
+        if (inside) pending.current = { kind: "return", id, next: activeId(ref.current), activator: activators.take(id) };
       },
       minimize(id) {
         const inside = hasFocus(id);
@@ -116,12 +135,25 @@ export default function OsShell({ locale, copy, welcome, projects, knownSlugs, h
       toggleMaximize(id) { act({ type: "TOGGLE_MAXIMIZE", id }); },
       pocketBack() {
         const id = activeId(ref.current);
+        if (id !== null && guards.isDirty(id)) { guards.ask(id); return; }
         const inside = id !== null && hasFocus(id);
         act({ type: "POCKET_BACK" });
-        if (inside && id !== null) pending.current = { kind: "return", id, next: activeId(ref.current) };
+        if (inside && id !== null) pending.current = { kind: "return", id, next: activeId(ref.current), activator: activators.take(id) };
       },
+      // Vía común de cierre (✕, Atrás, Escape, atajo): con borrador pide confirmación en la ventana.
+      requestClose(id) {
+        const policy = closePolicy(id, { dirty: guards.isDirty(id), pocket: isMobileWidth(window.innerWidth) });
+        if (policy.confirm) { guards.ask(id); return; }
+        if (policy.action.type === "POCKET_BACK") this.pocketBack();
+        else this.close(id);
+      },
+      move(id, x, y) { act({ type: "MOVE", id, x, y }); },
+      resize(id, rect) { act({ type: "RESIZE", id, w: rect.w, h: rect.h, x: rect.x, y: rect.y }); },
+      nudge(id, delta) { act({ type: "NUDGE", id, ...delta }); },
+      snap(id, to) { act({ type: "SNAP", id, to }); },
+      announce(text) { announcer.announce(text); },
     };
-  }, [act, ref, flushFocus, pending]);
+  }, [act, ref, flushFocus, pending, guards, activators, announcer]);
 
   // Tras montar: viewport y geometría guardada en UNA transición (HYDRATE), foco del deep link, resize y guardado.
   useEffect(() => {
@@ -162,9 +194,31 @@ export default function OsShell({ locale, copy, welcome, projects, knownSlugs, h
 
   const onPref = useCallback((patch: Partial<Prefs>) => {
     prefsStore.set(patch);
-    const key = "sound" in patch ? (patch.sound ? "soundOn" : "soundOff") : "screenEffect" in patch ? (patch.screenEffect ? "effectOn" : "effectOff") : null;
+    const key = "shortcuts" in patch ? (patch.shortcuts ? "shortcutsOn" : "shortcutsOff") : "sound" in patch ? (patch.sound ? "soundOn" : "soundOff") : "screenEffect" in patch ? (patch.screenEffect ? "effectOn" : "effectOff") : null;
     if (key) setAnnouncement(copy.announce[key]);
-  }, [prefsStore, copy]);
+  }, [prefsStore, copy, setAnnouncement]);
+
+  // Comandos del cromo (menú contextual del escritorio y atajos opt-in): identidad estable salvo idioma.
+  const commands = useMemo<OsCommands>(() => {
+    const say = actions.announce;
+    return {
+      resetWindows() { act({ type: "RESET_GEOMETRY" }); say(copy.announce.windowsReset); },
+      showDesktop() {
+        act({ type: "MINIMIZE_ALL" });
+        say(copy.announce.desktopShown);
+        document.getElementById("os-desktop")?.focus({ preventScroll: true });
+      },
+      cycle(dir) {
+        if (!act({ type: "CYCLE", dir })) return;
+        const id = activeId(ref.current);
+        if (id) pending.current = { kind: "content", id };
+      },
+      closeActive() { const id = activeId(ref.current); if (id) actions.requestClose(id); },
+      focusDesktop() { document.getElementById("os-desktop")?.focus({ preventScroll: true }); },
+      openSettings() { actions.open("settings"); },
+      setPref: onPref,
+    };
+  }, [act, ref, pending, actions, copy, onPref]);
 
   const skipToWindow = (event: React.MouseEvent) => {
     event.preventDefault();
@@ -175,7 +229,10 @@ export default function OsShell({ locale, copy, welcome, projects, knownSlugs, h
   return (
     <OsStaticContext.Provider value={staticValue}>
       <OsActionsContext.Provider value={actions}>
+       <OsCommandsContext.Provider value={commands}>
+        <OsPrefsContext.Provider value={prefs}>
         <OsDetailsContext.Provider value={detailsValue}>
+        <GuardContext.Provider value={guards}>
           <div className={prefs.screenEffect ? "os-root is-crt" : "os-root"} data-theme="xp">
             {noscript}
             <a className="xp-skip-link" href="#os-desktop" onClick={skipToWindow}>{copy.desktop.skipToWindow}</a>
@@ -186,9 +243,12 @@ export default function OsShell({ locale, copy, welcome, projects, knownSlugs, h
             </main>
             <Taskbar state={state} prefs={prefs} onPref={onPref}/>
             <div className="xp-crt" aria-hidden="true"/>
-            <div className="xp-visually-hidden" role="status">{announcement}</div>
+            <AnnouncerRegion announcer={announcer}/>
           </div>
+        </GuardContext.Provider>
         </OsDetailsContext.Provider>
+        </OsPrefsContext.Provider>
+       </OsCommandsContext.Provider>
       </OsActionsContext.Provider>
     </OsStaticContext.Provider>
   );

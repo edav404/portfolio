@@ -306,7 +306,9 @@
   color: var(--xp-ink);
   font: var(--xp-text-sm) / 1.4 var(--xp-font);
   pointer-events: auto;
-  animation: xp-window-in var(--xp-dur) var(--xp-ease) both;
+  /* `backwards` (no `both`): con `forwards` el ultimo fotograma (`transform: none`) pisaria el `transform` en linea
+     que escribe el arrastre (O5); la animacion solo aplica su estado inicial antes de empezar. */
+  animation: xp-window-in var(--xp-dur) var(--xp-ease) backwards;
 }
 .xp-window[data-active="true"] { background: var(--xp-frame); box-shadow: var(--xp-shadow-window); }
 .xp-window[data-minimized="true"],
@@ -320,7 +322,7 @@
   border-radius: 0;
 }
 .xp-window[data-maximized="true"] .xp-titlebar { border-radius: 0; }
-.xp-window[data-interacting="true"] { user-select: none; }
+.xp-window[data-interacting="true"] { user-select: none; animation: none; }
 .xp-window[data-interacting="true"] .xp-window__body { pointer-events: none; }
 
 .xp-titlebar {
@@ -606,6 +608,9 @@
 .xp-menu__item[aria-disabled="true"],
 .xp-menu__item:disabled { color: var(--xp-ink-disabled); background: transparent; }
 .xp-menu__sep { height: 1px; margin: var(--space-2) var(--space-3); background: var(--xp-menu-rule); }
+
+/* Menu de sistema (O5): anclado bajo el icono de la barra de titulo; la ventana lo sube si no cabe sobre la barra de tareas. */
+.xp-sysmenu { top: 100%; left: var(--space-3); }
 
 @keyframes xp-menu-in {
   from { opacity: 0; transform: translateY(4px); }
@@ -1067,3 +1072,50 @@
 .xp-titlebar__title { margin: 0; font: inherit; letter-spacing: normal; line-height: inherit; color: inherit; }
 /* El panel Inicio vive dentro de la barra (orden de Tab natural): su altura máxima se calcula contra el viewport. */
 .xp-taskbar > .xp-start { max-height: calc(100dvh - var(--xp-taskbar-h)); }
+
+/* --------------------------------------------------------------------------
+   O6. Retoques de menús, globo y ayuda de atajos (añadidos; sin hex ni z-index numérico)
+   -------------------------------------------------------------------------- */
+/* El foco entra por script en los menús: se resalta igual que el hover (no solo :focus-visible). */
+.xp-menu__item:focus { background: var(--xp-select-bg); color: var(--xp-on-accent); }
+.xp-menu__check { display: inline-block; flex: none; width: 1em; text-align: center; }
+.xp-balloon { padding-right: calc(var(--space-5) + var(--xp-hit)); }
+.xp-balloon__close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: var(--xp-hit);
+  min-height: var(--xp-hit);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: var(--xp-text-lg);
+  line-height: 1;
+}
+.xp-balloon__close:hover { background: var(--xp-select-bg); color: var(--xp-on-accent); }
+
+/* Ayuda de atajos: diálogo no modal anclado a la bandeja (mismo lugar que el globo). */
+.xp-help {
+  position: absolute;
+  right: var(--space-4);
+  bottom: calc(var(--xp-taskbar-h) + var(--space-5));
+  z-index: var(--z-os-menu);
+  display: grid;
+  gap: var(--space-4);
+  max-width: min(420px, calc(100% - var(--space-8)));
+  padding: var(--space-5);
+  border: 1px solid var(--xp-edge-strong);
+  background: var(--xp-content-bg);
+  box-shadow: var(--xp-shadow-menu);
+  color: var(--xp-ink);
+  font-size: var(--xp-text-sm);
+}
+.xp-help__title { margin: 0; font-size: var(--xp-text-lg); }
+.xp-help__switch { display: grid; grid-template-columns: auto 1fr; gap: var(--space-2) var(--space-3); align-items: center; }
+.xp-help__switch .xp-help__note { grid-column: 2; }
+.xp-help__table { border-collapse: collapse; }
+.xp-help__table th { padding: var(--space-2) var(--space-4) var(--space-2) 0; font-weight: 400; text-align: left; }
+.xp-help__table td { padding: var(--space-2) 0; }
+.xp-help__table kbd { font: inherit; font-weight: 700; }
+.xp-help__note { margin: 0; color: var(--xp-ink-muted); font-size: var(--xp-text-xs); }
+.xp-help__close { justify-self: end; min-height: var(--xp-hit); padding: 0 var(--space-5); }

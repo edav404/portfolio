@@ -15,7 +15,8 @@
     "test:watch": "vitest",
     "check": "npm run typecheck && npm run lint && npm run test",
     "smoke": "node scripts/smoke-routes.mjs",
-    "snapshot:routes": "node scripts/snapshot-routes.mjs"
+    "snapshot:routes": "node scripts/snapshot-routes.mjs",
+    "e2e:os": "node scripts/os-e2e.mjs --serve"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.9.0",

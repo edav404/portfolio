@@ -2,12 +2,21 @@
  * Tipos compartidos del shell del SO (cliente). Solo tipos: `import type` no llega al bundle, así que
  * el copy sigue resolviéndose en el servidor (components/views/os.tsx) y llega por props.
  */
+import type { Ownership, ProjectKind } from "@/content/projects";
 import type { Resolved, Ui } from "@/content/ui";
+import type { OsCredit } from "@/lib/os/credits";
+import type { ContactFormCopy } from "@/components/contact-form";
+import type { MusicCopy } from "@/components/music-widget";
 
 export type OsShellText = Resolved<Ui["osShell"]>;
 
 /** Subconjunto del copy `ui.osShell` que viaja al cliente. */
-export type OsCopy = Pick<OsShellText, "heading" | "apps" | "desktop" | "window" | "start" | "taskbar" | "announce" | "project" | "pocket" | "noscript" | "fallback">;
+export type OsCopy = Pick<OsShellText, "heading" | "apps" | "desktop" | "window" | "steps" | "start" | "taskbar" | "contextMenu" | "shortcuts" | "announce" | "project" | "pocket" | "noscript" | "fallback"
+  | "gallery" | "errors" | "settings" | "aboutApp" | "servicesApp" | "contactApp" | "terminal"> & {
+  /** Textos del reproductor y del formulario (secciones `music` y `contactForm`, resueltas en el servidor). */
+  music: MusicCopy;
+  contactForm: ContactFormCopy;
+};
 
 /** Textos de la ventana Welcome (ya formateados en el servidor). */
 export type WelcomeCopy = {
@@ -30,6 +39,12 @@ export type OsProjectIndexItem = {
   alt: string;
   /** Ruta de la página pública del proyecto (`/proyectos/<slug>/`). */
   publicHref: string;
+  kind: ProjectKind;
+  ownership: Ownership;
+  /** Estado ya traducido («Entregado»). */
+  status: string;
+  /** Personas del crédito, resueltas en el servidor. */
+  credits: OsCredit[];
 };
 
 export type OsHrefs = {

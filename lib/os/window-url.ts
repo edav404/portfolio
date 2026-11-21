@@ -67,3 +67,11 @@ export function planHistory(prev: OsState, next: OsState, action: Action, locale
   if (next.entryIndex === prev.entryIndex && prev.entries[prev.entryIndex]?.id !== entry.id) return { kind: "replace", href, options: { scroll: false } };
   return NO_HISTORY;
 }
+
+/**
+ * El hook solo ejecuta el plan si el destino es una ruta del SO autorizada: un slug fuera del
+ * catálogo daría un 404 por RSC y una navegación completa que destruye el shell (§12.1).
+ */
+export function shouldNavigate(plan: HistoryPlan, known: readonly string[]): plan is Exclude<HistoryPlan, { kind: "none" }> {
+  return plan.kind !== "none" && intentFromPath(plan.href, known) !== null;
+}

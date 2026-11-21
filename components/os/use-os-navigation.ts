@@ -1,9 +1,9 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { Locale } from "@/content/types";
-import { intentFromPath } from "@/lib/os/window-url";
+import { intentFromPath, shouldNavigate } from "@/lib/os/window-url";
 import { createInitialState, reduceWithHistory, reduce, type Action, type OsState } from "@/lib/os/window-reducer";
 
 export type Transition = (prev: OsState, next: OsState, action: Action) => void;
@@ -19,7 +19,11 @@ export type Transition = (prev: OsState, next: OsState, action: Action) => void;
  * recalcula exactamente el mismo estado.
  */
 export function useOsNavigation(opts: { locale: Locale; knownSlugs: readonly string[]; onTransition?: Transition }) {
-  const { locale, knownSlugs } = opts;
+  const { locale } = opts;
+  // El catálogo llega como prop del servidor y cambia de identidad en cada navegación RSC: se conserva
+  // la referencia mientras el contenido sea igual, para que `act` y el efecto de ruta no se re-creen.
+  const [knownSlugs, setKnownSlugs] = useState(opts.knownSlugs);
+  if (knownSlugs !== opts.knownSlugs && !sameList(knownSlugs, opts.knownSlugs)) setKnownSlugs(opts.knownSlugs);
   const router = useRouter();
   const pathname = usePathname();
   const [state, dispatch] = useReducer(reduce, undefined, () => createInitialState({ path: pathname ?? "/os/", locale, knownSlugs }));
@@ -36,7 +40,7 @@ export function useOsNavigation(opts: { locale: Locale; knownSlugs: readonly str
     ref.current = next;
     dispatch(action);
     onTransition.current?.(prev, next, action);
-    if (plan.kind !== "none" && intentFromPath(plan.href, knownSlugs) !== null) {
+    if (shouldNavigate(plan, knownSlugs)) {
       if (plan.kind === "push") router.push(plan.href, plan.options);
       else router.replace(plan.href, plan.options);
     }
@@ -49,4 +53,8 @@ export function useOsNavigation(opts: { locale: Locale; knownSlugs: readonly str
   }, [pathname, knownSlugs, act]);
 
   return { state, act, ref, pathname: pathname ?? "" };
+}
+
+function sameList(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
 }

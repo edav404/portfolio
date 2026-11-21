@@ -1,7 +1,9 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { WindowId } from "@/lib/os/window-reducer";
+import type { StepDelta } from "@/lib/os/gesture";
+import type { SnapTarget } from "@/lib/os/window-geometry";
+import type { Rect, WindowId } from "@/lib/os/window-reducer";
 import type { Locale } from "@/content/types";
 import type { OsCopy, OsHrefs, OsProjectIndexItem, WelcomeCopy } from "./types";
 import type { ReactNode } from "react";
@@ -23,6 +25,15 @@ export type OsActions = {
   minimize(id: WindowId): void;
   toggleMaximize(id: WindowId): void;
   pocketBack(): void;
+  /** Vía común de cierre (✕, Atrás, Escape, atajo): con borrador pide confirmación en la ventana en vez de cerrar. */
+  requestClose(id: WindowId): void;
+  /** Un solo commit al soltar el arrastre. */
+  move(id: WindowId, x: number, y: number): void;
+  resize(id: WindowId, rect: Rect): void;
+  nudge(id: WindowId, delta: StepDelta): void;
+  snap(id: WindowId, to: SnapTarget): void;
+  /** Mensaje para el anunciador (`role="status"` único). */
+  announce(text: string): void;
 };
 
 export const OsStaticContext = createContext<OsStatic | null>(null);
