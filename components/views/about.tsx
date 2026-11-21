@@ -7,7 +7,7 @@ import { siteUrl } from "@/content/site";
 import type { Locale } from "@/content/types";
 import { roleInSentence } from "@/content/format";
 import { format, uiFor } from "@/content/ui";
-import { formatYearMonth } from "@/lib/i18n/format";
+import { formatPeriod } from "@/lib/i18n/format";
 import { absoluteUrl, buildMetadata } from "@/lib/metadata";
 
 export function aboutMetadata(locale: Locale) {
@@ -18,7 +18,7 @@ export function aboutMetadata(locale: Locale) {
 export function AboutView({ locale }: { locale: Locale }) {
   const page = pageFor(locale, "about");
   const common = uiFor(locale, "common");
-  const period = (entry: ExperienceEntry) => `${formatYearMonth(entry.start, locale)} – ${entry.end ? formatYearMonth(entry.end, locale) : common.present}`;
+  const period = (entry: ExperienceEntry) => formatPeriod(entry.start, entry.end, common.present, locale);
   // Página de perfil (E-E-A-T): enlaza con la entidad `Person` del layout raíz.
   const profileSchema = {
     "@context": "https://schema.org",

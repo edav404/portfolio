@@ -11,10 +11,22 @@ export function formatDate(date: string, locale: Locale): string {
   return new Intl.DateTimeFormat(intlLocale[locale], { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
 }
 
-/** "2026-07" → "jul 2026" / "Jul 2026"; "2023" → "2023". */
+/**
+ * "2026-07" → "jul 2026" / "Jul 2026"; "2023" → "2023". Mes abreviado de Intl sin el "de" ni el
+ * punto que añade es-CO ("sept." → "sept").
+ */
 export function formatYearMonth(value: string, locale: Locale): string {
   const [year, month] = value.split("-");
   if (!month) return year;
   const date = new Date(Date.UTC(Number(year), Number(month) - 1, 1));
-  return new Intl.DateTimeFormat(intlLocale[locale], { month: "short", year: "numeric", timeZone: "UTC" }).format(date);
+  const name = new Intl.DateTimeFormat(intlLocale[locale], { month: "short", timeZone: "UTC" }).format(date).replace(/\.$/, "");
+  return `${name} ${year}`;
+}
+
+/** Espacio fino (U+2009) a ambos lados de la raya de intervalo. */
+const RANGE_SEPARATOR = " – ";
+
+/** Intervalo "jul 2026 – dic 2026" (o "jul 2026 – actualidad" sin fin), con espacios finos. */
+export function formatPeriod(start: string, end: string | null | undefined, present: string, locale: Locale): string {
+  return `${formatYearMonth(start, locale)}${RANGE_SEPARATOR}${end ? formatYearMonth(end, locale) : present}`;
 }
