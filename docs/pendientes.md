@@ -20,28 +20,30 @@ Severidad: 🔴 crítico · 🟠 importante · 🟡 menor. Los IDs remiten al an
 
 ## Fase 2 — Dependencias y fixes críticos
 
-- [ ] 🟡 DEP-01 Actualizaciones minor/patch (React 19.3.x, `@types/*`). Majors fuera (DEP-02)
-- [ ] 🟡 DEP-03 / MAS-05 Quitar framer-motion (arrastre propio provisional en `RetroClippy`)
-- [ ] 🟡 DEP-04 `engines` + `.nvmrc` (Node 24)
-- [ ] 🟠 PERF-02 / MAS-09 Sacar `RetroClippy` del 404
-- [ ] 🟠 COD-01 Servicios por slug desde `content/services.ts`; leer `?servicio=`; añadir "Automatización"
-- [ ] 🔴 SEO-01 / UX-01 / ARQ-01 / PERF-01 Portada `/` con contenido real en el HTML inicial; el selector deja de bloquear
-- [ ] 🟠 UX-02 CV (ES/EN), correo, LinkedIn y GitHub visibles
-- [ ] 🟠 SEO-04 Sitemap con barra final · SEO-05 sin `lastModified` inventado
-- [ ] 🟠 SEO-06 Publicar el blog (2 artículos) con auditoría SEO por artículo y mejoras aplicadas
-- [ ] 🟠 Redirecciones 301 del WordPress antiguo (anexo 07; ojo `/portfolio/green-holds/` → CIA SUR)
-- [ ] 🟠 CNT-01 Posicionamiento "Full Stack y automatización" · CNT-02 / COD-02 / UX-07 cifras desde `content/` y "desde 2020"
-- [ ] 🟠 SEC-01 IP del cliente tras Cloudflare (`CLIENT_IP_HEADER`) + frontera de confianza documentada
-- [ ] 🟠 SEC-02 CSP en Report-Only (probar hidratación, JSON-LD, imágenes, audio) y restringir hosts de Last.fm
-- [ ] 🟡 SEC-03 Comprobar `Origin` / `Sec-Fetch-Site` en `/api/contact`
-- [ ] 🟡 SEC-05 / SEC-06 Rate limiter (inundación de claves) y uptime en `/api/health`
-- [ ] 🟡 Formulario: `Retry-After` en 429, no gastar cuota global si falla SMTP, sanear log SMTP, timeout de lectura, `localStorage` en `try/catch`
-- [ ] 🟠 INF-01 `.dockerignore`: excluir `private/` y `content/*` que no sean `.ts`
-- [ ] 🟡 INF-02 / INF-09 / INF-10 Caché de build, logs y documentación de despliegue
-- [ ] 🟠 A11Y-03 / A11Y-04 Foco visible y bordes de campo con contraste suficiente
-- [ ] 🟠 A11Y-05 Quitar la live region de la BIOS
-- [ ] 🟡 PERF-04 `priority` deprecado en Next 16
-- [ ] 🟡 DX-03 Ignorados · `next-env.d.ts` cambia al compilar: decidir si se versiona
+Cerrada en la rama `fase/2-dependencias-fixes` (commits `a172005`…). Notas: la CSP sigue en Report-Only hasta revisar la consola en todas las vistas (pasar `CSP_ENFORCE` a `true`); también se resolvieron SEC-08 (`.gitignore`), UX-06 (botón flotante) y se quitó `app/loading.tsx` (ocultaba la portada sin JS).
+
+- [x] 🟡 DEP-01 Actualizaciones minor/patch (React 19.3.x, `@types/*`). Majors fuera (DEP-02)
+- [x] 🟡 DEP-03 / MAS-05 Quitar framer-motion (arrastre propio provisional en `RetroClippy`)
+- [x] 🟡 DEP-04 `engines` + `.nvmrc` (Node 24)
+- [x] 🟠 PERF-02 / MAS-09 Sacar `RetroClippy` del 404
+- [x] 🟠 COD-01 Servicios por slug desde `content/services.ts`; leer `?servicio=`; añadir "Automatización"
+- [x] 🔴 SEO-01 / UX-01 / ARQ-01 / PERF-01 Portada `/` con contenido real en el HTML inicial; el selector deja de bloquear
+- [x] 🟠 UX-02 CV (ES/EN), correo, LinkedIn y GitHub visibles
+- [x] 🟠 SEO-04 Sitemap con barra final · SEO-05 sin `lastModified` inventado
+- [x] 🟠 SEO-06 Publicar el blog (2 artículos) con auditoría SEO por artículo y mejoras aplicadas
+- [x] 🟠 Redirecciones 301 del WordPress antiguo (anexo 07; ojo `/portfolio/green-holds/` → CIA SUR)
+- [x] 🟠 CNT-01 Posicionamiento "Full Stack y automatización" · CNT-02 / COD-02 / UX-07 cifras desde `content/` y "desde 2020"
+- [x] 🟠 SEC-01 IP del cliente tras Cloudflare (`CLIENT_IP_HEADER`) + frontera de confianza documentada
+- [x] 🟠 SEC-02 CSP en Report-Only (probar hidratación, JSON-LD, imágenes, audio) y restringir hosts de Last.fm
+- [x] 🟡 SEC-03 Comprobar `Origin` / `Sec-Fetch-Site` en `/api/contact`
+- [x] 🟡 SEC-05 / SEC-06 Rate limiter (inundación de claves) y uptime en `/api/health`
+- [x] 🟡 Formulario: `Retry-After` en 429, no gastar cuota global si falla SMTP, sanear log SMTP, timeout de lectura, `localStorage` en `try/catch`
+- [x] 🟠 INF-01 `.dockerignore`: excluir `private/` y `content/*` que no sean `.ts`
+- [x] 🟡 INF-02 / INF-09 / INF-10 Caché de build, logs y documentación de despliegue
+- [x] 🟠 A11Y-03 / A11Y-04 Foco visible y bordes de campo con contraste suficiente
+- [x] 🟠 A11Y-05 Quitar la live region de la BIOS
+- [x] 🟡 PERF-04 `priority` deprecado en Next 16
+- [x] 🟡 DX-03 Ignorados · `next-env.d.ts` cambia al compilar: decidir si se versiona
 
 ## Fase 3 — Arquitectura compartida, tokens e i18n
 
