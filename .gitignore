@@ -6,3 +6,6 @@ out/
 !.env.example
 npm-debug.log*
 .cloudflare-temp/
+
+# Material privado local (nunca se versiona)
+/private/
