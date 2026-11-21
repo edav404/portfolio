@@ -114,7 +114,7 @@ Verificado en la base de LocalWP (`permalink_structure = /%postname%/`, proyecto
 Tabla completa en el anexo 07. Trampa: la antigua `/portfolio/green-holds/` era **CIA SUR** → `/proyectos/cia-sur/`.
 La carpeta `WordPress/` del repo está vacía; conviene contrastar la tabla con Search Console o Wayback antes de implementarla.
 
-## 5. Decisiones abiertas para el usuario
+## 5. Decisiones (tomadas el 2026-11-21; ver `docs/pendientes.md`)
 
 | # | Decisión | Recomendación |
 |---|---|---|
