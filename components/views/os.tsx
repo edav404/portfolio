@@ -86,7 +86,7 @@ export function OsLayoutView({ locale, children }: { locale: Locale; children: R
     heading: text.heading, apps: text.apps, desktop: text.desktop, window: text.window, steps: text.steps, start: text.start,
     taskbar: text.taskbar, contextMenu: text.contextMenu, shortcuts: text.shortcuts, announce: text.announce, project: text.project, pocket: text.pocket,
     noscript: text.noscript, fallback: text.fallback,
-    gallery: text.gallery, errors: text.errors, settings: text.settings, aboutApp: text.aboutApp,
+    gallery: text.gallery, errors: text.errors, settings: text.settings, boot: text.boot, clippy: text.clippy, aboutApp: text.aboutApp,
     servicesApp: text.servicesApp, contactApp: text.contactApp, terminal: text.terminal,
     music: uiFor(locale, "music"), contactForm: uiFor(locale, "contactForm"),
   };

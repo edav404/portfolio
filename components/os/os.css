@@ -972,6 +972,15 @@
   }
   .xp-start__body { grid-template-columns: 1fr; }
   .xp-start__item { min-height: 48px; }
+  .xp-start { overflow-y: auto; overscroll-behavior: contain; }
+  /* La hoja recibe el foco al abrirse (tabindex -1): contenedor, no control; sin anillo propio */
+  .xp-start:focus { outline: none; }
+  .xp-start__all { min-height: 48px; }
+
+  /* El boton de tarea es solo el titulo de la pantalla activa: no es un control de minimizar (O10) */
+  .xp-task { cursor: default; }
+  /* Zonas seguras de iOS/Android con muescas */
+  .os-desktop-icons { padding-left: max(var(--space-4), env(safe-area-inset-left)); padding-right: max(var(--space-4), env(safe-area-inset-right)); }
 
   /* Globo, nudge y menús dentro de la pantalla */
   .xp-balloon { left: var(--space-4); max-width: none; }
@@ -1119,3 +1128,158 @@
 .xp-help__table kbd { font: inherit; font-weight: 700; }
 .xp-help__note { margin: 0; color: var(--xp-ink-muted); font-size: var(--xp-text-xs); }
 .xp-help__close { justify-self: end; min-height: var(--xp-hit); padding: 0 var(--space-5); }
+
+/* ==========================================================================
+   O11. Arranque decorativo y mascota (sin hex ni z-index numérico)
+   --------------------------------------------------------------------------
+   El arranque es un velo posterior a la hidratación: aria-hidden, sin foco y con
+   pointer-events: none (no impide interactuar). La mascota vive en un portal
+   DENTRO de .os-root, en la capa --z-os-assistant (bajo la barra de tareas).
+   ========================================================================== */
+.os-boot {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-os-modal);
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-5);
+  color: var(--xp-on-accent);
+  font-family: var(--xp-font);
+  background: linear-gradient(180deg, var(--c-luna-title-4), var(--c-luna-frame));
+  opacity: 1;
+  pointer-events: none;
+  user-select: none;
+}
+.os-boot[data-phase="fade"] { opacity: 0; transition: opacity var(--os-boot-fade, 240ms) linear; }
+.os-boot__title { margin: 0; font-size: var(--xp-text-lg); text-shadow: var(--xp-text-shadow-title); }
+.os-boot__bar {
+  width: min(240px, 60vw);
+  height: var(--space-5);
+  padding: var(--space-1);
+  border: 1px solid var(--xp-on-accent);
+  border-radius: var(--xp-radius-btn);
+  background: var(--c-luna-a-darken-25);
+  overflow: hidden;
+}
+.os-boot__fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: repeating-linear-gradient(90deg, var(--c-luna-cap-2) 0 8px, transparent 8px 10px);
+  animation: os-boot-fill var(--os-boot-ms, 2000ms) linear forwards;
+}
+.os-boot__hint { margin: 0; font-size: var(--xp-text-xs); }
+@keyframes os-boot-fill { to { width: 100%; } }
+
+.os-assistant-slot { display: contents; }
+.os-root .retro-clippy-portal {
+  position: absolute;
+  inset: var(--space-4) var(--space-4) calc(var(--xp-taskbar-h) + var(--space-4));
+  z-index: var(--z-os-assistant);
+  pointer-events: none;
+  font-family: var(--xp-font);
+}
+.os-root .retro-clippy {
+  position: absolute;
+  display: grid;
+  justify-items: center;
+  width: 280px;
+  max-width: 100%;
+  pointer-events: auto;
+  touch-action: none;
+}
+.os-root .retro-clippy[data-corner="bottom-right"] { right: var(--space-4); bottom: 0; }
+.os-root .retro-clippy[data-corner="bottom-left"] { left: var(--space-4); bottom: 0; }
+.os-root .retro-clippy[data-corner="top-right"] { right: var(--space-4); top: 0; }
+.os-root .retro-clippy[data-corner="top-left"] { left: var(--space-4); top: 0; }
+.os-root .retro-clippy-character {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 160px;
+  height: 128px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+  image-rendering: pixelated;
+}
+.os-root .retro-clippy-character:active { cursor: grabbing; }
+.os-root .retro-clippy-sprite {
+  --clippy-y: 25%;
+  display: block;
+  width: 160px;
+  height: 128px;
+  background-image: url("/images/edav-clippy-sprites.png");
+  background-repeat: no-repeat;
+  background-size: 960px 640px;
+  background-position: -772px var(--clippy-y);
+}
+.os-root .retro-clippy:not([data-state="IDLE"]) .retro-clippy-sprite { animation: os-clippy-action 0.4s steps(1, end) 1 forwards; }
+.os-root .retro-clippy[data-state="APPEARING"] .retro-clippy-sprite { --clippy-y: 0%; animation-duration: 0.55s; }
+.os-root .retro-clippy[data-state="WRITING"] .retro-clippy-sprite { --clippy-y: 50%; }
+.os-root .retro-clippy[data-state="SEARCHING"] .retro-clippy-sprite { --clippy-y: 75%; }
+.os-root .retro-clippy[data-state="CONFUSED"] .retro-clippy-sprite { --clippy-y: 100%; }
+.os-root .retro-clippy-bubble {
+  position: relative;
+  width: 268px;
+  max-width: 100%;
+  margin-bottom: var(--space-3);
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  border: 1px solid var(--xp-edge-strong);
+  border-radius: var(--xp-radius-btn);
+  background: var(--xp-balloon-bg);
+  box-shadow: var(--xp-shadow-menu);
+  color: var(--xp-ink);
+  font-size: var(--xp-text-md);
+  line-height: 1.35;
+  user-select: text;
+  animation: os-clippy-pop 0.2s steps(2, end) both;
+}
+.os-root .retro-clippy-copy { padding-right: var(--space-6); }
+.os-root .retro-clippy-copy kbd { font-family: var(--xp-font-mono); font-weight: 700; }
+.os-root .retro-clippy-close {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  min-width: var(--xp-hit);
+  min-height: var(--xp-hit);
+  border: 0;
+  background: transparent;
+  font-size: var(--xp-text-lg);
+  line-height: 1;
+}
+.os-root .retro-clippy-close:hover { background: var(--xp-select-bg); color: var(--xp-on-accent); }
+.os-root .retro-clippy-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-4); }
+.os-root .retro-clippy :is(.retro-clippy-actions button, .retro-clippy-hide, .retro-clippy-corner) {
+  min-height: var(--xp-hit);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--xp-edge-btn);
+  border-radius: var(--xp-radius-btn);
+  background: var(--xp-btn-bg);
+  color: var(--xp-ink);
+  font-size: var(--xp-text-xs);
+}
+.os-root .retro-clippy :is(.retro-clippy-actions button, .retro-clippy-hide, .retro-clippy-corner):active { background: var(--xp-btn-bg-press); }
+.os-root .retro-clippy-hide { position: absolute; right: 0; bottom: 0; }
+.os-root .retro-clippy-corner { position: absolute; left: 0; bottom: 0; }
+@keyframes os-clippy-action {
+  0%, 16.665% { background-position-x: -26px; }
+  16.666%, 33.332% { background-position-x: -175px; }
+  33.333%, 49.999% { background-position-x: -325px; }
+  50%, 66.665% { background-position-x: -470px; }
+  66.666%, 83.332% { background-position-x: -622px; }
+  83.333%, 100% { background-position-x: -772px; }
+}
+@keyframes os-clippy-pop { from { clip-path: inset(100% 0 0 100%); } to { clip-path: inset(0); } }
+
+/* Pocket: sin arranque ni mascota (el lanzador ocupa la pantalla) */
+@media (max-width: 768px) {
+  .os-boot, .os-assistant-slot { display: none; }
+}
+@media (forced-colors: active) {
+  .os-root .retro-clippy-bubble { border-color: CanvasText; background: Canvas; color: CanvasText; }
+  .os-boot { background: Canvas; color: CanvasText; }
+}

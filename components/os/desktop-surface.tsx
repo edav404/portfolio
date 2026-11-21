@@ -4,6 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardE
 import { createPortal } from "react-dom";
 import { slugOf, type OsState, type WindowId } from "@/lib/os/window-reducer";
 import { APP_ICON, DESKTOP_APPS } from "./app-meta";
+import { preloadApp } from "./apps/registry";
 import { XpIcon } from "./icons";
 import { Menu, type MenuEntry } from "./menu";
 import { useOsCommands, useOsPrefs } from "./os-commands";
@@ -92,7 +93,8 @@ export const DesktopSurface = memo(function DesktopSurface({ state }: { state: O
               data-icon={id}
               data-selected={open.has(id)}
               tabIndex={roving.tabIndexFor(id)}
-              onFocus={() => roving.onFocusItem(id)}
+              onFocus={() => { roving.onFocusItem(id); preloadApp(id); }}
+              onPointerEnter={() => preloadApp(id)}
               onClick={() => actions.open(id)}
             >
               <XpIcon name={APP_ICON[id]}/>

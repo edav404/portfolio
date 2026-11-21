@@ -13,6 +13,7 @@ import { OsGlyph, XpIcon } from "./icons";
 import { useOsActions, useOsStatic } from "./os-context";
 import { StepsPanel } from "./steps-panel";
 import { SystemMenu, type SystemAction, type SystemMenuHandle } from "./system-menu";
+import { usePocket } from "./use-pocket";
 import { usePointerDrag } from "./use-pointer-drag";
 import { WindowIdContext } from "./window-guard";
 
@@ -43,7 +44,7 @@ function WindowContent({ id }: { id: WindowId }) {
   return <App id={id as AppId}/>;
 }
 
-type Props = { win: WindowState; z: number; active: boolean; title: string };
+type Props = { win: WindowState; z: number; active: boolean; title: string; /** Pocket: título de la ventana a la que vuelve Atrás (`null`: al lanzador). */ backTitle?: string | null };
 type Mode = KeyboardMode | "steps";
 
 /**
@@ -51,10 +52,11 @@ type Mode = KeyboardMode | "steps";
  * Arrastre y redimensionado: `usePointerDrag` (sin render durante el gesto, un commit al soltar). Sin
  * arrastre: menú de sistema, modo Mover/Tamaño por teclado y panel de pasos (WCAG 2.5.7).
  */
-export const WindowFrame = memo(function WindowFrame({ win, z, active, title }: Props) {
+export const WindowFrame = memo(function WindowFrame({ win, z, active, title, backTitle = null }: Props) {
   const { copy } = useOsStatic();
   const actions = useOsActions();
   const { id } = win;
+  const pocket = usePocket();
   const label = (action: string) => format(copy.window.actionOn, { action, title });
   const titleId = `${windowDomId(id)}-title`;
   const frameRef = useRef<HTMLDivElement>(null);
@@ -143,8 +145,9 @@ export const WindowFrame = memo(function WindowFrame({ win, z, active, title }: 
       ref={frameRef}
       id={windowDomId(id)}
       className="xp-window"
-      role="dialog"
-      aria-modal="false"
+      // Pocket: pantalla activa (region), no un dialogo modal ni no modal (§4, §5.4).
+      role={pocket ? "region" : "dialog"}
+      aria-modal={pocket ? undefined : "false"}
       aria-labelledby={titleId}
       tabIndex={-1}
       data-active={active}
@@ -160,14 +163,15 @@ export const WindowFrame = memo(function WindowFrame({ win, z, active, title }: 
       <div
         className="xp-titlebar"
         onPointerDown={drag.onTitlePointerDown}
-        onDoubleClick={(event) => { if (!(event.target as HTMLElement).closest("button, [role=menu]")) actions.toggleMaximize(id); }}
+        onDoubleClick={(event) => { if (pocket) return; if (!(event.target as HTMLElement).closest("button, [role=menu]")) actions.toggleMaximize(id); }}
         onContextMenu={(event) => {
+          if (pocket) return;
           if ((event.target as HTMLElement).closest("button, [role=menu]")) return;
           event.preventDefault();
           menuRef.current?.open("first");
         }}
       >
-        <button type="button" className="xp-back" onClick={actions.pocketBack}>
+        <button type="button" className="xp-back" aria-label={backTitle ? format(copy.pocket.backTo, { title: backTitle }) : copy.pocket.backToLauncher} onClick={() => actions.requestClose(id)}>
           <OsGlyph name="back"/>
           {copy.pocket.back}
         </button>

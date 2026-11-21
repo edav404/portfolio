@@ -1,5 +1,7 @@
 "use client";
 
+import { CORNERS } from "@/lib/os/prefs";
+import { cornerLabel } from "../assistant";
 import { useOsCommands, useOsPrefs } from "../os-commands";
 import { useOsStatic } from "../os-context";
 import styles from "./app-ui.module.css";
@@ -42,6 +44,15 @@ export default function Settings() {
           <input type="checkbox" checked={prefs.assistant === "clippy"} onChange={(event) => commands.setPref({ assistant: event.target.checked ? "clippy" : "none" })}/>
           {t.assistant}
         </label>
+        <fieldset className={styles.group} disabled={prefs.assistant !== "clippy"}>
+          <legend>{t.corners}</legend>
+          {CORNERS.map((corner) => (
+            <label key={corner} className={styles.check}>
+              <input type="radio" name="os-assistant-corner" value={corner} checked={prefs.assistantCorner === corner} onChange={() => commands.setPref({ assistantCorner: corner })}/>
+              {cornerLabel(corner, t)}
+            </label>
+          ))}
+        </fieldset>
       </fieldset>
       <fieldset className={styles.group}>
         <legend>{t.keyboardGroup}</legend>

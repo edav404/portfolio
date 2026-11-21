@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { slugOf, taskbarIds, zIndexOf, type OsState, type WindowId } from "@/lib/os/window-reducer";
+import { nextAfterClose, slugOf, taskbarIds, zIndexOf, type OsState, type WindowId } from "@/lib/os/window-reducer";
 import { activeId } from "@/lib/os/window-reducer";
 import { WindowFrame } from "./window-frame";
 import { useOsStatic } from "./os-context";
@@ -16,6 +16,12 @@ export function useWindowTitle() {
   };
 }
 
+/** Pocket: título de la ventana a la que vuelve Atrás (la inferior de la pila local); `null` = lanzador. */
+function backTitleOf(state: OsState, id: WindowId, titleOf: (id: WindowId) => string): string | null {
+  const below = nextAfterClose(state, id);
+  return below === null ? null : titleOf(below);
+}
+
 /**
  * Capa de ventanas. El DOM sigue el orden de la barra de tareas (estable); el z-order se expresa con
  * `z-index` = índice en `order`, así reordenar no mueve nodos ni pierde el foco.
@@ -26,7 +32,7 @@ export const WindowLayer = memo(function WindowLayer({ state }: { state: OsState
   return (
     <div className="os-windows">
       {taskbarIds(state).map((id) => (
-        <WindowFrame key={id} win={state.windows[id]!} z={zIndexOf(state, id)} active={id === active} title={titleOf(id)}/>
+        <WindowFrame key={id} win={state.windows[id]!} z={zIndexOf(state, id)} active={id === active} title={titleOf(id)} backTitle={id === active ? backTitleOf(state, id, titleOf) : null}/>
       ))}
     </div>
   );

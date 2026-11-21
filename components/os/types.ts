@@ -12,7 +12,7 @@ export type OsShellText = Resolved<Ui["osShell"]>;
 
 /** Subconjunto del copy `ui.osShell` que viaja al cliente. */
 export type OsCopy = Pick<OsShellText, "heading" | "apps" | "desktop" | "window" | "steps" | "start" | "taskbar" | "contextMenu" | "shortcuts" | "announce" | "project" | "pocket" | "noscript" | "fallback"
-  | "gallery" | "errors" | "settings" | "aboutApp" | "servicesApp" | "contactApp" | "terminal"> & {
+  | "gallery" | "errors" | "settings" | "boot" | "clippy" | "aboutApp" | "servicesApp" | "contactApp" | "terminal"> & {
   /** Textos del reproductor y del formulario (secciones `music` y `contactForm`, resueltas en el servidor). */
   music: MusicCopy;
   contactForm: ContactFormCopy;

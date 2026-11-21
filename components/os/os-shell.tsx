@@ -13,11 +13,15 @@ import {
 } from "@/lib/os/window-reducer";
 import { isMobileWidth } from "@/lib/os/window-geometry";
 import { AnnouncerRegion, createAnnouncer } from "./announcer";
+import { Assistant, cornerLabel } from "./assistant";
+import { createAudio } from "./audio";
+import { Boot } from "./boot";
 import { iconKeyFor } from "./app-meta";
 import { captureActivator, createActivatorStore, focusElement, isUsableElement, resolveReturnTarget, type Activator } from "./focus-manager";
 import { DesktopSurface } from "./desktop-surface";
 import { OsCommandsContext, OsPrefsContext, type OsCommands } from "./os-commands";
 import { OsActionsContext, OsDetailsContext, OsStaticContext, type OsActions, type OsStatic } from "./os-context";
+import { PocketController } from "./pocket-launcher";
 import { Taskbar } from "./taskbar";
 import type { OsCopy, OsHrefs, OsProjectIndexItem, WelcomeCopy } from "./types";
 import { useOsNavigation } from "./use-os-navigation";
@@ -58,6 +62,11 @@ export default function OsShell({ locale, copy, welcome, projects, knownSlugs, h
   const setAnnouncement = useCallback((text: string | ((before: string) => string)) => announcer.announce(typeof text === "string" ? text : text("").trim()), [announcer]);
   useEffect(() => () => announcer.dispose(), [announcer]);
   const [guards] = useState(createGuardStore);
+  // Audio opcional (apagado por defecto, solo tras un gesto): osciladores, sin assets.
+  const [audio] = useState(createAudio);
+  useEffect(() => { audio.setEnabled(prefs.sound); }, [audio, prefs.sound]);
+  useEffect(() => () => audio.dispose(), [audio]);
+  const playBoot = useCallback(() => audio.play("boot"), [audio]);
   const [activators] = useState(createActivatorStore);
   const pending = useRef<PendingFocus | null>(null);
 
@@ -77,11 +86,15 @@ export default function OsShell({ locale, copy, welcome, projects, knownSlugs, h
       case "task": focus(document.querySelector<HTMLElement>(`[data-task="${request.id}"]`)); break;
       case "return": {
         // Cadena (docs §4): activador -> boton de Inicio (si vino de un menu) -> icono -> siguiente ventana -> escritorio.
+        // En Pocket, con ventana inferior en la pila local, el foco va a ella (el icono queda tapado).
+        const nextBody = request.next ? document.getElementById(windowBodyId(request.next)) : null;
+        const icon = document.querySelector<HTMLElement>(`[data-icon="${iconKeyFor(request.id)}"]`);
+        const pocketStack = nextBody !== null && isMobileWidth(window.innerWidth);
         const target = resolveReturnTarget<HTMLElement>([
           request.activator?.el,
           request.activator?.fromMenu ? document.querySelector<HTMLElement>(".xp-start-button") : null,
-          document.querySelector<HTMLElement>(`[data-icon="${iconKeyFor(request.id)}"]`),
-          request.next ? document.getElementById(windowBodyId(request.next)) : null,
+          pocketStack ? nextBody : icon,
+          nextBody,
           document.getElementById("os-desktop"),
         ], isUsableElement);
         focusElement(target);
@@ -95,6 +108,8 @@ export default function OsShell({ locale, copy, welcome, projects, knownSlugs, h
     if (persistsGeometry(action) && origin !== "hydrate") saver.schedule(collectGeometry(next));
     if (origin === "user") {
       for (const event of deriveEvents(prev, next, action)) {
+        if (event.type === "opened" || event.type === "restored") audio.play("open");
+        else if (event.type === "closed" || event.type === "minimized") audio.play("close");
         if (!event.id) continue;
         const key = event.type === "minimized" ? "minimized" : event.type === "maximized" ? "maximized" : event.type === "restored" ? "restored" : event.type === "closed" ? "closed" : null;
         if (key) setAnnouncement((before) => { const text = format(copy.announce[key], { title: titleOf(event.id!) }); return text === before ? `${text} ` : text; });
@@ -135,15 +150,18 @@ export default function OsShell({ locale, copy, welcome, projects, knownSlugs, h
       toggleMaximize(id) { act({ type: "TOGGLE_MAXIMIZE", id }); },
       pocketBack() {
         const id = activeId(ref.current);
-        if (id !== null && guards.isDirty(id)) { guards.ask(id); return; }
+        if (id !== null && guards.isDirty(id)) { guards.ask(id); audio.play("error"); return; }
         const inside = id !== null && hasFocus(id);
         act({ type: "POCKET_BACK" });
-        if (inside && id !== null) pending.current = { kind: "return", id, next: activeId(ref.current), activator: activators.take(id) };
+        // Con ventana inferior en la pila local el foco va a ella; sin ella, al icono del lanzador.
+        const next = activeId(ref.current);
+        const activator = id === null ? null : activators.take(id);
+        if (inside && id !== null) pending.current = { kind: "return", id, next, activator: next === null ? activator : null };
       },
       // Vía común de cierre (✕, Atrás, Escape, atajo): con borrador pide confirmación en la ventana.
       requestClose(id) {
         const policy = closePolicy(id, { dirty: guards.isDirty(id), pocket: isMobileWidth(window.innerWidth) });
-        if (policy.confirm) { guards.ask(id); return; }
+        if (policy.confirm) { guards.ask(id); audio.play("error"); return; }
         if (policy.action.type === "POCKET_BACK") this.pocketBack();
         else this.close(id);
       },
@@ -153,7 +171,7 @@ export default function OsShell({ locale, copy, welcome, projects, knownSlugs, h
       snap(id, to) { act({ type: "SNAP", id, to }); },
       announce(text) { announcer.announce(text); },
     };
-  }, [act, ref, flushFocus, pending, guards, activators, announcer]);
+  }, [act, ref, flushFocus, pending, guards, activators, announcer, audio]);
 
   // Tras montar: viewport y geometría guardada en UNA transición (HYDRATE), foco del deep link, resize y guardado.
   useEffect(() => {
@@ -169,6 +187,8 @@ export default function OsShell({ locale, copy, welcome, projects, knownSlugs, h
     let frame = 0;
     const onResize = () => {
       cancelAnimationFrame(frame);
+      // En Pocket las ventanas son pantalla completa por CSS: no se recortan sus rects (al volver a escritorio se conservan).
+      if (isMobileWidth(window.innerWidth)) return;
       frame = requestAnimationFrame(() => act({ type: "SET_VIEWPORT", w: window.innerWidth, h: window.innerHeight, origin: "hydrate" }));
     };
     const onHide = () => saver.flush();
@@ -194,8 +214,9 @@ export default function OsShell({ locale, copy, welcome, projects, knownSlugs, h
 
   const onPref = useCallback((patch: Partial<Prefs>) => {
     prefsStore.set(patch);
-    const key = "shortcuts" in patch ? (patch.shortcuts ? "shortcutsOn" : "shortcutsOff") : "sound" in patch ? (patch.sound ? "soundOn" : "soundOff") : "screenEffect" in patch ? (patch.screenEffect ? "effectOn" : "effectOff") : null;
+    const key = "shortcuts" in patch ? (patch.shortcuts ? "shortcutsOn" : "shortcutsOff") : "sound" in patch ? (patch.sound ? "soundOn" : "soundOff") : "screenEffect" in patch ? (patch.screenEffect ? "effectOn" : "effectOff") : "assistant" in patch ? (patch.assistant === "clippy" ? "assistantShown" : "assistantHidden") : null;
     if (key) setAnnouncement(copy.announce[key]);
+    else if (patch.assistantCorner) setAnnouncement(format(copy.announce.assistantCorner, { corner: cornerLabel(patch.assistantCorner, copy.settings) }));
   }, [prefsStore, copy, setAnnouncement]);
 
   // Comandos del cromo (menú contextual del escritorio y atajos opt-in): identidad estable salvo idioma.
@@ -241,8 +262,11 @@ export default function OsShell({ locale, copy, welcome, projects, knownSlugs, h
               <DesktopSurface state={state}/>
               <WindowLayer state={state}/>
             </main>
+            <PocketController activeWindow={activeId(state)}/>
+            <Assistant/>
             <Taskbar state={state} prefs={prefs} onPref={onPref}/>
             <div className="xp-crt" aria-hidden="true"/>
+            <Boot deepLink={routeSlug !== null} onSound={playBoot}/>
             <AnnouncerRegion announcer={announcer}/>
           </div>
         </GuardContext.Provider>

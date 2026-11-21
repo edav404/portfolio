@@ -8,19 +8,24 @@
 import { getLocalStorage, type StorageLike } from "./persistence";
 
 export type Assistant = "clippy" | "none";
+/** Esquina de la zona útil donde se ancla la mascota (alternativa sin arrastre, WCAG 2.5.7). */
+export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+export const CORNERS: readonly Corner[] = ["top-left", "top-right", "bottom-left", "bottom-right"];
+export const DEFAULT_CORNER: Corner = "bottom-right";
 export type Prefs = {
   readonly sound: boolean;
   readonly screenEffect: boolean;
   readonly assistant: Assistant;
+  readonly assistantCorner: Corner;
   readonly shortcuts: boolean;
 };
 
 export const PREFS_KEY = "edav-os:prefs:v1";
 export const PREFS_VERSION = 1;
-export const DEFAULT_PREFS: Prefs = Object.freeze({ sound: false, screenEffect: false, assistant: "clippy", shortcuts: false });
+export const DEFAULT_PREFS: Prefs = Object.freeze({ sound: false, screenEffect: false, assistant: "clippy", assistantCorner: DEFAULT_CORNER, shortcuts: false });
 
 export function samePrefs(a: Prefs, b: Prefs): boolean {
-  return a.sound === b.sound && a.screenEffect === b.screenEffect && a.assistant === b.assistant && a.shortcuts === b.shortcuts;
+  return a.sound === b.sound && a.screenEffect === b.screenEffect && a.assistant === b.assistant && a.assistantCorner === b.assistantCorner && a.shortcuts === b.shortcuts;
 }
 
 /** Normaliza un objeto cualquiera a `Prefs` válidas; devuelve `DEFAULT_PREFS` (misma referencia) si coincide. */
@@ -31,6 +36,7 @@ export function normalizePrefs(value: unknown): Prefs {
     sound: v.sound === true,
     screenEffect: v.screenEffect === true,
     assistant: v.assistant === "none" ? "none" : "clippy",
+    assistantCorner: CORNERS.find((corner) => corner === v.assistantCorner) ?? DEFAULT_CORNER,
     shortcuts: v.shortcuts === true,
   };
   return samePrefs(next, DEFAULT_PREFS) ? DEFAULT_PREFS : Object.freeze(next);
@@ -48,7 +54,7 @@ export function parsePrefs(raw: string | null | undefined): Prefs {
 }
 
 export function serializePrefs(prefs: Prefs): string {
-  return JSON.stringify({ v: PREFS_VERSION, prefs: { sound: prefs.sound, screenEffect: prefs.screenEffect, assistant: prefs.assistant, shortcuts: prefs.shortcuts } });
+  return JSON.stringify({ v: PREFS_VERSION, prefs: { sound: prefs.sound, screenEffect: prefs.screenEffect, assistant: prefs.assistant, assistantCorner: prefs.assistantCorner, shortcuts: prefs.shortcuts } });
 }
 
 export type PrefsStore = {

@@ -9,7 +9,7 @@ function memoryStorage(initial: Record<string, string> = {}): StorageLike & { da
 
 describe("valores por defecto", () => {
   it("sonido y efecto apagados, Clippy visible, atajos desactivados", () => {
-    expect(DEFAULT_PREFS).toEqual({ sound: false, screenEffect: false, assistant: "clippy", shortcuts: false });
+    expect(DEFAULT_PREFS).toEqual({ sound: false, screenEffect: false, assistant: "clippy", assistantCorner: "bottom-right", shortcuts: false });
     expect(Object.isFrozen(DEFAULT_PREFS)).toBe(true);
   });
   it("parsePrefs ante cualquier basura devuelve la MISMA referencia de defaults", () => {
@@ -19,7 +19,7 @@ describe("valores por defecto", () => {
   });
   it("normalizePrefs valida tipos: solo `true` enciende; assistant desconocido → clippy", () => {
     expect(normalizePrefs({ sound: "yes", screenEffect: 1, shortcuts: "true", assistant: "otro" })).toBe(DEFAULT_PREFS);
-    expect(normalizePrefs({ sound: true, assistant: "none" })).toEqual({ sound: true, screenEffect: false, assistant: "none", shortcuts: false });
+    expect(normalizePrefs({ sound: true, assistant: "none" })).toEqual({ sound: true, screenEffect: false, assistant: "none", assistantCorner: "bottom-right", shortcuts: false });
     expect(normalizePrefs(null)).toBe(DEFAULT_PREFS);
   });
   it("ida y vuelta", () => {

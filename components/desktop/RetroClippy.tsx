@@ -15,6 +15,8 @@ export type ClippyOption = {
 export type ClippyCopy = {
   appearing: string; idle: string; writing: string; searchingBefore: string; searchingAfter: string; confused: string;
   show: string; name: string; closeMessage: string; dragHint: string; hideLabel: string; hide: string;
+  /** Solo en el SO: etiqueta del botón «Cambiar de esquina» (alternativa sin arrastre, WCAG 2.5.7). */
+  changeCorner?: string;
 };
 
 type RetroClippyProps = {
@@ -22,6 +24,19 @@ type RetroClippyProps = {
   state?: ClippyState;
   children?: ReactNode;
   options?: ClippyOption[];
+  /**
+   * Solo el SO: contenedor del portal (la raíz `.os-root`, no `document.body`). `null` = aún no listo.
+   * Sin esta prop se comporta como el overlay anterior.
+   */
+  container?: HTMLElement | null;
+  /** Esquina de anclaje (atributo `data-corner`); al cambiar, la posición arrastrada se reinicia. */
+  corner?: string;
+  /** Si existe, «Ocultar» lo llama (la preferencia vive fuera) y no hay botón «ED?» interno. */
+  onHide?: () => void;
+  /** Si existe, se pinta el botón «Cambiar de esquina» (un solo puntero). */
+  onCorner?: () => void;
+  /** Globo sin `role="status"`: el SO tiene un único anunciador. */
+  quiet?: boolean;
 };
 
 function stateCopy(copy: ClippyCopy): Record<ClippyState, ReactNode> {
@@ -50,6 +65,12 @@ function useClippyDrag() {
   const offset = useRef({ x: 0, y: 0 });
   const drag = useRef<{ id: number; startX: number; startY: number; originX: number; originY: number; moved: boolean } | null>(null);
   const suppressClick = useRef(false);
+
+  /** Vuelve al anclaje por CSS (cambio de esquina). */
+  const reset = useCallback(() => {
+    offset.current = { x: 0, y: 0 };
+    if (nodeRef.current) nodeRef.current.style.transform = "";
+  }, []);
 
   /** Aplica el desplazamiento limitándolo para que la mascota no salga del contenedor. */
   const apply = useCallback((x: number, y: number) => {
@@ -148,18 +169,19 @@ function useClippyDrag() {
   return {
     boundsRef,
     setNode,
+    reset,
     onKeyDown,
     handlers: { onPointerDown, onPointerMove, onPointerUp: endDrag, onPointerCancel: endDrag, onClickCapture },
   };
 }
 
-export function RetroClippy({ copy, state: forcedState, children, options = [] }: RetroClippyProps) {
+export function RetroClippy({ copy, state: forcedState, children, options = [], container, corner, onHide, onCorner, quiet = false }: RetroClippyProps) {
   const [mounted, setMounted] = useState(false);
   const [appearing, setAppearing] = useState(true);
   const [formActive, setFormActive] = useState(false);
   const [bubbleVisible, setBubbleVisible] = useState(false);
   const [assistantVisible, setAssistantVisible] = useState(true);
-  const { boundsRef, setNode, onKeyDown, handlers } = useClippyDrag();
+  const { boundsRef, setNode, reset, onKeyDown, handlers } = useClippyDrag();
   const activeState: ClippyState = appearing ? "APPEARING" : forcedState ?? (formActive ? "WRITING" : "IDLE");
 
   useEffect(() => {
@@ -183,13 +205,16 @@ export function RetroClippy({ copy, state: forcedState, children, options = [] }
     return () => { document.removeEventListener("focusin", onFocusIn); document.removeEventListener("focusout", onFocusOut); };
   }, []);
 
-  if (!mounted) return null;
+  // Al cambiar de esquina, la posición arrastrada se descarta (el anclaje por CSS manda).
+  useEffect(() => { reset(); }, [corner, reset]);
+
+  if (!mounted || container === null) return null;
 
   return createPortal(
     <div className="retro-clippy-portal" data-theme="xp" ref={boundsRef}>
-      {!assistantVisible ? <button className="retro-clippy-restore win-outset" type="button" onClick={() => { setAssistantVisible(true); setBubbleVisible(true); }} aria-label={copy.show}>ED?</button> :
-        <aside className="retro-clippy" ref={setNode} {...handlers} aria-label={copy.name} data-state={activeState}>
-          {bubbleVisible && <div className="retro-clippy-bubble" role="status" aria-live="polite">
+      {!assistantVisible && !onHide ? <button className="retro-clippy-restore win-outset" type="button" onClick={() => { setAssistantVisible(true); setBubbleVisible(true); }} aria-label={copy.show}>ED?</button> :
+        <aside className="retro-clippy" ref={setNode} {...handlers} aria-label={copy.name} data-state={activeState} data-corner={corner}>
+          {bubbleVisible && <div className="retro-clippy-bubble" {...(quiet ? {} : { role: "status", "aria-live": "polite" as const })}>
             <button className="retro-clippy-close" type="button" onClick={() => setBubbleVisible(false)} aria-label={copy.closeMessage}>×</button>
             <div className="retro-clippy-copy">{children ?? stateCopy(copy)[activeState]}</div>
             {options.length > 0 && <div className="retro-clippy-actions">{options.map((option) => <button className="win-outset" type="button" key={option.label} onClick={option.onSelect}>{option.label}</button>)}</div>}
@@ -197,9 +222,10 @@ export function RetroClippy({ copy, state: forcedState, children, options = [] }
           <button className="retro-clippy-character" type="button" aria-label={copy.dragHint} onClick={() => setBubbleVisible(true)} onKeyDown={onKeyDown}>
             <span className="retro-clippy-sprite" aria-hidden="true" key={activeState}/>
           </button>
-          <button className="retro-clippy-hide win-outset" type="button" onClick={() => setAssistantVisible(false)} aria-label={copy.hideLabel}>{copy.hide}</button>
+          {onCorner && copy.changeCorner ? <button className="retro-clippy-corner win-outset" type="button" onClick={onCorner}>{copy.changeCorner}</button> : null}
+          <button className="retro-clippy-hide win-outset" type="button" onClick={() => (onHide ? onHide() : setAssistantVisible(false))} aria-label={copy.hideLabel}>{copy.hide}</button>
         </aside>}
     </div>,
-    document.body,
+    container ?? document.body,
   );
 }

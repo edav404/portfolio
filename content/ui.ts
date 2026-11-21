@@ -658,8 +658,45 @@ export const ui = {
       shortcutsOn: { es: "Atajos de teclado activados", en: "Keyboard shortcuts on" },
       shortcutsOff: { es: "Atajos de teclado desactivados", en: "Keyboard shortcuts off" },
       started: { es: "EDAV OS listo", en: "EDAV OS ready" },
+      /** Menú de ventana: ajustar, centrar y restablecer posición (`{title}` = ventana). */
+      snappedLeft: { es: "Ventana {title} ajustada a la izquierda", en: "Window {title} snapped to the left" },
+      snappedRight: { es: "Ventana {title} ajustada a la derecha", en: "Window {title} snapped to the right" },
+      centered: { es: "Ventana {title} centrada", en: "Window {title} centered" },
+      positionReset: { es: "Posición de la ventana {title} restablecida", en: "Window {title} position reset" },
+      /** Asistente ED: `{corner}` = nombre de la esquina. */
+      assistantShown: { es: "Asistente ED visible", en: "ED assistant shown" },
+      assistantHidden: { es: "Asistente ED oculto", en: "ED assistant hidden" },
+      assistantCorner: { es: "Asistente ED movido: {corner}", en: "ED assistant moved: {corner}" },
+      assistantCollapsed: { es: "El asistente ED se ocultó para no tapar el elemento enfocado", en: "The ED assistant was hidden so it does not cover the focused element" },
       /** Foco/selección al llegar por Atrás/Adelante o enlace. */
       projectSelected: { es: "Proyecto {title} abierto", en: "Project {title} opened" },
+    },
+    /** Asistente ED en el SO (RetroClippy diferido); `changeCorner` es la alternativa sin arrastre. */
+    clippy: {
+      appearing: { es: "Iniciando ED Assistant...", en: "Starting ED Assistant..." },
+      idle: { es: "Parece que estás explorando el portafolio de Emmanuel. ¿Quieres que te ayude?", en: "It looks like you're exploring Emmanuel's portfolio. Would you like some help?" },
+      writing: {
+        es: "Parece que estás escribiendo un mensaje. Incluye objetivo, alcance y fecha para recibir una respuesta más útil.",
+        en: "It looks like you're writing a message. Include your goal, scope and date to get a more useful reply.",
+      },
+      searchingBefore: { es: "Estoy buscando comandos disponibles. Escribe", en: "I'm looking for available commands. Type" },
+      searchingAfter: { es: "para verlos todos.", en: "to see them all." },
+      confused: {
+        es: "Hmm... no encuentro ese archivo. Podemos volver al escritorio o abrir los proyectos.",
+        en: "Hmm... I can't find that file. We can go back to the desktop or open the projects.",
+      },
+      viewProjects: { es: "Ver proyectos", en: "View projects" },
+      contact: { es: "Contactar", en: "Get in touch" },
+      show: { es: "Mostrar asistente ED", en: "Show ED assistant" },
+      name: { es: "Asistente ED", en: "ED assistant" },
+      closeMessage: { es: "Cerrar mensaje del asistente", en: "Close assistant message" },
+      dragHint: {
+        es: "Asistente ED: clic para mostrar ayuda; arrástralo o usa las flechas para moverlo.",
+        en: "ED assistant: click to show help; drag it or use the arrow keys to move it.",
+      },
+      hideLabel: { es: "Ocultar asistente ED", en: "Hide ED assistant" },
+      hide: { es: "Ocultar", en: "Hide" },
+      changeCorner: { es: "Cambiar de esquina", en: "Change corner" },
     },
     /** Boot decorativo (aria-hidden). */
     boot: {

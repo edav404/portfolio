@@ -7,6 +7,7 @@ import { format } from "@/content/format";
 import { activeId, taskbarIds, type OsState } from "@/lib/os/window-reducer";
 import type { Prefs } from "@/lib/os/prefs";
 import { iconFor } from "./app-meta";
+import { useAssistantCollapsed, toggleAssistant } from "./assistant";
 import { Balloon } from "./balloon";
 import { OsGlyph, XpIcon } from "./icons";
 import { EdavLogo } from "./logo";
@@ -14,6 +15,7 @@ import { useOsCommands } from "./os-commands";
 import { useOsActions, useOsStatic } from "./os-context";
 import { HELP_PANEL_ID, ShortcutsHelp } from "./shortcuts-help";
 import { START_PANEL_ID, StartPanel } from "./start-panel";
+import { usePocket } from "./use-pocket";
 import { useRoving } from "./use-roving";
 import { useShortcuts } from "./use-shortcuts";
 import { windowDomId } from "./window-frame";
@@ -55,6 +57,9 @@ export const Taskbar = memo(function Taskbar({ state, prefs, onPref }: Props) {
   const helpReturn = useRef<HTMLElement | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const commands = useOsCommands();
+  const assistantCollapsed = useAssistantCollapsed();
+  const assistantOn = prefs.assistant === "clippy" && !assistantCollapsed;
+  const pocket = usePocket();
   const ids = taskbarIds(state);
   const active = activeId(state);
   const idsKey = ids.join("|");
@@ -87,6 +92,8 @@ export const Taskbar = memo(function Taskbar({ state, prefs, onPref }: Props) {
   });
 
   const activate = (id: (typeof ids)[number]) => {
+    // Pocket: el boton muestra el titulo de la pantalla activa; no minimiza (la salida es Atras, ✕ o Escape).
+    if (pocket) return;
     const win = state.windows[id]!;
     if (win.minimized) actions.open(id);
     else if (id === active) actions.minimize(id);
@@ -105,7 +112,7 @@ export const Taskbar = memo(function Taskbar({ state, prefs, onPref }: Props) {
           aria-expanded={startOpen}
           aria-controls={START_PANEL_ID}
           onFocus={() => roving.onFocusItem("start")}
-          onClick={() => setStartOpen((value) => !value)}
+          onClick={() => { if (pocket && startOpen) closeStart(true); else setStartOpen((value) => !value); }}
         >
           <EdavLogo size={22}/>
           <span className="xp-start-button__label">{copy.start.button}</span>
@@ -149,6 +156,9 @@ export const Taskbar = memo(function Taskbar({ state, prefs, onPref }: Props) {
         </Link>
         <button type="button" className="xp-tray__btn" aria-label={copy.taskbar.sound} aria-pressed={prefs.sound} onClick={() => onPref({ sound: !prefs.sound })}>
           <OsGlyph name={prefs.sound ? "volume" : "volume-off"}/>
+        </button>
+        <button type="button" className="xp-tray__btn xp-tray__btn--desktop-only" aria-label={copy.taskbar.assistant} aria-pressed={assistantOn} onClick={() => toggleAssistant(prefs, onPref)}>
+          <OsGlyph name="assistant"/>
         </button>
         <button type="button" className="xp-tray__btn xp-tray__btn--desktop-only" aria-label={copy.taskbar.screenEffect} aria-pressed={prefs.screenEffect} onClick={() => onPref({ screenEffect: !prefs.screenEffect })}>
           <OsGlyph name="crt"/>

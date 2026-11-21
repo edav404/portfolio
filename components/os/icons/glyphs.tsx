@@ -18,7 +18,8 @@ export type OsGlyphName =
   | "network"
   | "language"
   | "start"
-  | "crt";
+  | "crt"
+  | "assistant";
 
 const line = { fill: "none", stroke: "currentColor", strokeLinecap: "square", strokeLinejoin: "miter" } as const;
 
@@ -98,6 +99,11 @@ const art = {
         <path d="M4 5.5h8M4 8h8M5.5 13.5h5" {...line} strokeWidth="1.2" />
       </>
     ),
+  },
+  /* Clip de papel (mascota): bandeja */
+  assistant: {
+    box: "0 0 16 16",
+    node: <path d="M11 4.5v6a3 3 0 0 1-6 0V4a1.8 1.8 0 0 1 3.6 0v6.2a.6.6 0 0 1-1.2 0V5.5" {...line} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
   },
 } satisfies Record<OsGlyphName, { box: string; node: ReactNode }>;
 
