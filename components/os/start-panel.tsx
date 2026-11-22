@@ -7,7 +7,6 @@ import { APP_ICON, DESKTOP_APPS, START_PINNED, START_SYSTEM } from "./app-meta";
 import { preloadApp } from "./apps/registry";
 import { OsGlyph, XpIcon } from "./icons";
 import { EdavLogo } from "./logo";
-import { wrapTab } from "@/lib/os/pocket";
 import { useOsActions, useOsStatic } from "./os-context";
 import { usePocket } from "./use-pocket";
 
@@ -46,8 +45,8 @@ export function StartPanel({ open, onClose, buttonRef, languageHref }: Props) {
     focusFirstOfAll.current = false;
   }, [all]);
 
-  // Pocket: hoja a pantalla completa. El resto del fondo queda inerte solo mientras esta abierta y el foco
-  // entra en la hoja (la barra de tareas sigue operable para cerrarla con el mismo boton).
+  // Pocket: hoja a pantalla completa. El escritorio queda inerte solo mientras esta abierta y el foco entra
+  // en la hoja; Tab es el natural (sin bucle) y la barra de tareas sigue operable para cerrarla.
   useEffect(() => {
     if (!open || !pocket) return;
     const behind = [document.getElementById("os-desktop"), document.querySelector<HTMLElement>(".xp-skip-link")].filter((el): el is HTMLElement => el !== null);
@@ -93,15 +92,6 @@ export function StartPanel({ open, onClose, buttonRef, languageHref }: Props) {
 
   const onPanelKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
-    if (pocket && event.key === "Tab") {
-      // Foco contenido en la hoja: Tab da la vuelta entre su primer y ultimo elemento.
-      const items = Array.from(panelRef.current?.querySelectorAll<HTMLElement>("button, a[href]") ?? []).filter((el) => !el.closest("[hidden]"));
-      const index = items.indexOf(target);
-      const atEdge = event.shiftKey ? index <= 0 : index === items.length - 1;
-      const next = wrapTab(index, items.length, event.shiftKey);
-      if (atEdge && next >= 0) { event.preventDefault(); items[next].focus({ preventScroll: true }); }
-      return;
-    }
     if (event.key === "ArrowRight" && target === allButtonRef.current && !all) {
       event.preventDefault();
       focusFirstOfAll.current = true;
@@ -112,6 +102,9 @@ export function StartPanel({ open, onClose, buttonRef, languageHref }: Props) {
     }
   };
   const onPanelBlur = (event: ReactFocusEvent<HTMLDivElement>) => {
+    // Pocket: Tab natural (Disclosure) puede pasar de la hoja a la bandeja sin cerrarla; se cierra con Esc,
+    // con el botón de Inicio o con un toque fuera.
+    if (pocket) return;
     const next = event.relatedTarget as Node | null;
     if (next && !panelRef.current?.contains(next) && !buttonRef.current?.contains(next)) onClose(false);
   };

@@ -20,12 +20,23 @@ class Browser {
   constructor(path = "/os/", private locale: "es" | "en" = "es") {
     this.state = createInitialState({ path, knownSlugs: known });
     this.stack = [path];
+    this.seen = path;
   }
   get url() { return this.stack[this.index]; }
+  /** Última ruta observada: un navegador real no cambia `usePathname` entre entradas con la misma URL. */
+  private seen: string;
+  /**
+   * Un paso del navegador entre dos entradas con la misma URL no es observable: el cursor propio queda
+   * dentro de la racha y deja de poder alinearse con el real hasta que un fallback reinicia la pila.
+   */
+  drifted = false;
   private route() {
+    if (this.url === this.seen) { this.drifted = true; return; }
+    this.seen = this.url;
     const target = intentFromPath(this.url, known);
     if (!target) return;
     this.state = reduce(this.state, { type: "ROUTE_CHANGED", target, origin: "route" });
+    if (this.state.entries.length === 1) this.drifted = false;
     // Idempotencia: repetir la misma ruta no cambia nada.
     expect(reduce(this.state, { type: "ROUTE_CHANGED", target, origin: "route" })).toBe(this.state);
   }
@@ -53,6 +64,43 @@ function invariants(b: Browser, trace: string) {
   }
   expect(new Set(s.order).size, trace).toBe(s.order.length);
   expect([...s.order].sort(), trace).toEqual(Object.keys(s.windows).sort());
+  alignment(b, trace);
+}
+
+/** Selección que expresa cada URL de la pila real; las entradas consecutivas iguales se colapsan (no son distinguibles desde la ruta). */
+function collapsed(sels: (string | null)[], index: number): { list: (string | null)[]; at: number } {
+  const list: (string | null)[] = [];
+  let at = 0;
+  sels.forEach((sel, i) => {
+    if (list.length === 0 || list[list.length - 1] !== sel) list.push(sel);
+    if (i === index) at = list.length - 1;
+  });
+  return { list, at };
+}
+
+function selOf(url: string): string | null {
+  const t = intentFromPath(url, known)!;
+  return t.kind === "project" ? t.slug : null;
+}
+
+/**
+ * Cursor y aperturas: la pila propia es siempre un tramo contiguo de la pila real alineado en el cursor
+ * (salvo entradas con la misma URL consecutiva), y ninguna ventana sobrevive abierta por una entrada futura.
+ */
+function alignment(b: Browser, trace: string) {
+  const s = b.state;
+  expect(s.pending, trace).toBeNull();
+  for (const id of Object.keys(s.openedBy) as WindowId[]) {
+    expect(s.windows[id], `${trace} (openedBy de ventana cerrada ${id})`).toBeDefined();
+    const position = s.entries.findIndex((e) => e.id === s.openedBy[id]);
+    expect(position === -1 || position <= s.entryIndex, `${trace} (apertura futura ${id})`).toBe(true);
+  }
+  if (b.drifted) return;
+  const real = collapsed(b.stack.map(selOf), b.index);
+  const own = collapsed(s.entries.map((e) => e.sel), s.entryIndex);
+  const start = real.at - own.at;
+  expect(start, trace).toBeGreaterThanOrEqual(0);
+  expect(real.list.slice(start, start + own.list.length), trace).toEqual(own.list);
 }
 
 function rng(seed: number) {
@@ -60,7 +108,7 @@ function rng(seed: number) {
 }
 
 describe("fuzz de historial: la URL y el estado nunca se desalinean", () => {
-  it.each([1, 2, 3, 4, 5, 6, 7, 8])("semilla %i (200 pasos)", (seed) => {
+  it.each(Array.from({ length: 40 }, (_, i) => i + 1))("semilla %i (200 pasos)", (seed) => {
     const next = rng(seed);
     const pick = <T,>(xs: readonly T[]) => xs[Math.floor(next() * xs.length)];
     const locale = seed % 2 ? "es" : "en";

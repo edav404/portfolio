@@ -4,13 +4,13 @@
  * sin dependencias, emulando 390x844 con toque (`Emulation.setDeviceMetricsOverride` +
  * `setTouchEmulationEnabled`) contra el build standalone.
  *
- * Uso:  node scripts/os-e2e-pocket.mjs [baseUrl] [--serve]
+ * Uso:  node scripts/os-e2e-pocket.mjs [baseUrl] [--serve]   (o `npm run e2e:pocket`)
  *   --serve   arranca `.next/standalone/server.js` (de E2E_ROOT o de este repo) en 127.0.0.1:3121 y lo detiene.
  *             Para no pisar el standalone compartido, sirve una copia: E2E_ROOT=<copia> node scripts/... --serve
  *   Sin --serve usa un servidor ya arrancado (por defecto http://127.0.0.1:3121). Navegador: E2E_BROWSER.
  *
  * Cubre: lanzador, abrir app, Atrás/✕/Escape equivalentes, pila local, deep link de proyecto (cierra al
- * lanzador con replace, sin back()), borrador de Contacto, hoja de Inicio (inert, foco contenido y retorno),
+ * lanzador con replace, sin back()), borrador de Contacto, hoja de Inicio (inert, Tab natural sin bucle y retorno),
  * rotación 390<->844 con foco dentro de una ventana, objetivos >= 44 px, axe y consola limpia.
  */
 import { spawn } from "node:child_process";
@@ -54,7 +54,7 @@ const KEYCODES = { Escape: 27, Tab: 9 };
 async function launch() {
   const profile = mkdtempSync(join(tmpdir(), "os-pocket-"));
   const port = 9600 + Math.floor(Math.random() * 300);
-  const proc = spawn(findBrowser(), ["--headless=new", "--disable-gpu", "--no-first-run", `--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, "about:blank"], { stdio: "ignore" });
+  const proc = spawn(findBrowser(), ["--headless=new", "--disable-gpu", "--no-first-run", ...(process.env.E2E_NO_SANDBOX ? ["--no-sandbox"] : []), `--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, "about:blank"], { stdio: "ignore" });
   let targets;
   for (let i = 0; i < 100; i++) { try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); break; } catch { await sleep(100); } }
   if (!targets) throw new Error("El navegador no abrió el puerto de depuración.");
@@ -74,7 +74,8 @@ async function launch() {
   listeners.push((m) => {
     if (m.method === "Runtime.consoleAPICalled" && ["error", "warning", "assert"].includes(m.params.type)) logs.push(`[console.${m.params.type}] ${m.params.args.map((a) => a.value ?? a.description ?? "").join(" ").slice(0, 300)}`);
     if (m.method === "Runtime.exceptionThrown") logs.push(`[exception] ${(m.params.exceptionDetails.exception?.description ?? m.params.exceptionDetails.text).slice(0, 300)}`);
-    if (m.method === "Log.entryAdded" && ["error", "warning"].includes(m.params.entry.level)) logs.push(`[log.${m.params.entry.level}] ${m.params.entry.text.slice(0, 200)} ${m.params.entry.url ?? ""}`);
+    // Sin credenciales de Last.fm (CI, copia local) `/api/lastfm/` responde 503 por diseño; no es un fallo del SO.
+    if (m.method === "Log.entryAdded" && ["error", "warning"].includes(m.params.entry.level) && !(m.params.entry.url ?? "").includes("/api/lastfm/")) logs.push(`[log.${m.params.entry.level}] ${m.params.entry.text.slice(0, 200)} ${m.params.entry.url ?? ""}`);
   });
   for (const domain of ["Page", "Runtime", "Log"]) await send(`${domain}.enable`);
   const viewport = async ({ width, height }) => {
@@ -227,18 +228,21 @@ async function main() {
 
     group = "Inicio como hoja";
     await openApp(b, "about");
+    check("el título de la pantalla activa es texto y la barra no deja tabindex=0 en tareas", await b.ev(`(() => { const t = document.querySelector('.xp-taskbar__tasks .xp-task'); return !!t && t.tagName === 'SPAN' && !document.querySelector('.xp-taskbar__tasks [tabindex="0"]'); })()`));
     await openStart(b);
     s = await state(b);
     check("la hoja está abierta", s.startOpen);
     check("el fondo (escritorio y enlace de salto) queda inert", s.deskInert && s.skipInert, JSON.stringify([s.deskInert, s.skipInert]));
     check("la barra de tareas sigue operable (Inicio no inerte)", !s.startBtnInert);
     check("el foco entra en la hoja", s.focus.inStart, JSON.stringify(s.focus));
-    for (let i = 0; i < 30; i++) await b.key("Tab");
+    // Tab natural (sin bucle): recorre la hoja y sale hacia la bandeja sin cerrarla; Mayús+Tab vuelve a entrar.
+    let left = false;
+    for (let i = 0; i < 40 && !left; i++) { await b.key("Tab"); left = !(await state(b)).focus.inStart; }
     s = await state(b);
-    check("Tab no saca el foco de la hoja (foco contenido)", s.focus.inStart && s.startOpen, JSON.stringify(s.focus));
+    check("Tab no es un bucle: el foco sale de la hoja y esta sigue abierta", left && s.startOpen, JSON.stringify(s.focus));
     await b.key("Tab", { modifiers: 8 });
     s = await state(b);
-    check("Mayús+Tab tampoco", s.focus.inStart && s.startOpen, JSON.stringify(s.focus));
+    check("Mayús+Tab vuelve a entrar en la hoja", s.focus.inStart && s.startOpen, JSON.stringify(s.focus));
     const sheetTargets = JSON.parse(await b.ev(TARGETS));
     check("objetivos >= 44 px con la hoja abierta", sheetTargets.length === 0, JSON.stringify(sheetTargets));
     await axe(b, "hoja de Inicio");
@@ -278,14 +282,17 @@ async function main() {
       if (how === "back") await b.tap("#win-contact .xp-back");
       else if (how === "close") await b.tap("#win-contact .xp-caption--close");
       else { await b.ev(`document.querySelector('#win-contact input[name=name]').focus()`); await b.key("Escape"); }
-      const asking = await b.until(`!!document.querySelector('#win-contact [role=alertdialog]')`, 2000);
+      const asking = await b.until(`!!document.querySelector('#win-contact [aria-labelledby=contact-unsaved-title]')`, 2000);
       s = await state(b);
       check(`[${how}] con borrador pide confirmación y no cierra`, asking && s.shown.join() === "contact", JSON.stringify(s.shown));
-      if (how !== "escape") { await b.ev(`document.querySelector('#win-contact [role=alertdialog] button').click()`); await sleep(200); } // «Seguir editando»
+      if (how !== "escape") { await b.ev(`document.querySelector('#win-contact [aria-labelledby=contact-unsaved-title] button').click()`); await sleep(200); // «Seguir editando»
+        s = await state(b);
+        check(`[${how}] «Seguir editando» devuelve el foco a la ventana (no a BODY)`, s.focus.inWin === "win-contact" && s.focus.tag !== "BODY", JSON.stringify(s.focus));
+      }
     }
     const draft = await b.ev(`document.querySelector('#win-contact input[name=name]').value`);
     check("el borrador sigue intacto tras «Seguir editando»", draft === "Ana", draft);
-    await b.ev(`document.querySelector('#win-contact [role=alertdialog] button:last-of-type').click()`); // «Cerrar y descartar»
+    await b.ev(`document.querySelector('#win-contact [aria-labelledby=contact-unsaved-title] button:last-of-type').click()`); // «Cerrar y descartar»
     await sleep(300);
     s = await state(b);
     check("«Cerrar y descartar» vuelve al lanzador y devuelve el foco al icono", s.shown.length === 0 && s.focus.icon === "contact", JSON.stringify([s.shown, s.focus]));

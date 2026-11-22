@@ -65,6 +65,8 @@ function useClippyDrag() {
   const offset = useRef({ x: 0, y: 0 });
   const drag = useRef<{ id: number; startX: number; startY: number; originX: number; originY: number; moved: boolean } | null>(null);
   const suppressClick = useRef(false);
+  const suppressTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(suppressTimer.current), []);
 
   /** Vuelve al anclaje por CSS (cambio de esquina). */
   const reset = useCallback(() => {
@@ -145,7 +147,8 @@ function useClippyDrag() {
     // Tras arrastrar, el `click` que dispara el navegador no debe abrir el globo.
     // Si ese clic no llega (se soltó fuera), el bloqueo caduca en la siguiente vuelta del bucle.
     suppressClick.current = true;
-    window.setTimeout(() => { suppressClick.current = false; }, 0);
+    window.clearTimeout(suppressTimer.current);
+    suppressTimer.current = window.setTimeout(() => { suppressClick.current = false; }, 0);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
 
@@ -199,10 +202,14 @@ export function RetroClippy({ copy, state: forcedState, children, options = [], 
 
   useEffect(() => {
     const onFocusIn = (event: FocusEvent) => setFormActive(event.target instanceof HTMLElement && Boolean(event.target.closest("form")));
-    const onFocusOut = () => window.setTimeout(() => setFormActive(document.activeElement instanceof HTMLElement && Boolean(document.activeElement.closest("form"))), 0);
+    let focusOutTimer: number | undefined;
+    const onFocusOut = () => {
+      window.clearTimeout(focusOutTimer);
+      focusOutTimer = window.setTimeout(() => setFormActive(document.activeElement instanceof HTMLElement && Boolean(document.activeElement.closest("form"))), 0);
+    };
     document.addEventListener("focusin", onFocusIn);
     document.addEventListener("focusout", onFocusOut);
-    return () => { document.removeEventListener("focusin", onFocusIn); document.removeEventListener("focusout", onFocusOut); };
+    return () => { window.clearTimeout(focusOutTimer); document.removeEventListener("focusin", onFocusIn); document.removeEventListener("focusout", onFocusOut); };
   }, []);
 
   // Al cambiar de esquina, la posición arrastrada se descarta (el anclaje por CSS manda).

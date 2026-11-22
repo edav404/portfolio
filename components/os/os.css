@@ -979,6 +979,8 @@
 
   /* El boton de tarea es solo el titulo de la pantalla activa: no es un control de minimizar (O10) */
   .xp-task { cursor: default; }
+  /* En Pocket es un <span> (texto): sin realce de :hover de botón */
+  span.xp-task:hover { background: var(--xp-task-bg-active); }
   /* Zonas seguras de iOS/Android con muescas */
   .os-desktop-icons { padding-left: max(var(--space-4), env(safe-area-inset-left)); padding-right: max(var(--space-4), env(safe-area-inset-right)); }
 

@@ -2,16 +2,18 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect } from "react";
 import { format } from "@/content/format";
 import { useOsActions, useOsDetails, useOsStatic } from "../os-context";
 import { CreditBadge } from "./credit-badge";
+import { ProjectDetailBody } from "./project-detail";
 import styles from "./apps.module.css";
 
 /**
  * Contenido de una ventana de proyecto (núcleo). Cabecera desde el índice lean (categoría, año,
  * estado, crédito, resumen, capturas); el detalle (datos, reto, solución, rol, servicios, tecnologías,
- * enlaces) lo entrega la ruta del slug como `children` del layout y el shell lo conserva en
- * `OsDetailsContext`. Sin detalle todavía: estado de carga. El pie lleva «Ver página pública» (enlace
+ * enlaces) lo entrega la ruta del slug como DATOS (`ProjectDetailPublisher`) y el shell los conserva por slug en
+ * `OsDetailsContext`; cada ventana pinta los de su propio slug. Sin detalle todavía: estado de carga. El pie lleva «Ver página pública» (enlace
  * real) e «Iniciar un proyecto» (abre Contacto).
  */
 export default function ProjectWindow({ slug }: { slug: string }) {
@@ -19,8 +21,17 @@ export default function ProjectWindow({ slug }: { slug: string }) {
   const details = useOsDetails();
   const actions = useOsActions();
   const project = projects.find((item) => item.slug === slug);
+  const detail = details.get(slug);
+  // Normalmente el detalle llega con la navegacion a la ruta del slug; si no llega (p. ej. Next descarto esa
+  // navegacion al llegar otra) se pide bajo demanda, tras un margen para no duplicar la peticion habitual.
+  const { load } = details;
+  const known = project !== undefined;
+  useEffect(() => {
+    if (detail || !known) return;
+    const timer = setTimeout(() => load(slug), 600);
+    return () => clearTimeout(timer);
+  }, [detail, known, load, slug]);
   if (!project) return <p className={styles.page} role="alert">{copy.errors.projectNotFound}</p>;
-  const detail = details[slug];
   const others = project.credits.filter((credit) => !credit.self);
   return (
     <article className={styles.page}>
@@ -55,7 +66,7 @@ export default function ProjectWindow({ slug }: { slug: string }) {
           </ul>
         </section>
       ) : null}
-      {detail ?? <p className={styles.muted} role="status">{copy.window.loading}</p>}
+      {details.slotSlug === slug && details.slot ? details.slot : detail ? <ProjectDetailBody data={detail}/> : <p className={styles.muted} role="status">{copy.window.loading}</p>}
       <div className={styles.footer}>
         <Link className={`xp-button ${styles.linkbutton}`} href={project.publicHref} prefetch={false}>{copy.project.viewPublic}</Link>
         <button type="button" className="xp-button" onClick={() => actions.open("contact")}>{copy.project.startProject}</button>

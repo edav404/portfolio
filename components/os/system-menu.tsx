@@ -27,9 +27,11 @@ type Props = {
   maximized: boolean;
   labels: Record<SystemAction, string>;
   onAction: (action: SystemAction) => void;
+  /** Marco minimizado u oculto (Pocket): un menú abierto no sobrevive a que su ventana deje de verse. */
+  suspended?: boolean;
 };
 
-export function SystemMenu({ ref, buttonId, label, icon, maximized, labels, onAction }: Props) {
+export function SystemMenu({ ref, buttonId, label, icon, maximized, labels, onAction, suspended = false }: Props) {
   const menuId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -50,24 +52,38 @@ export function SystemMenu({ ref, buttonId, label, icon, maximized, labels, onAc
     { action: "steps", label: labels.steps, enabled: !maximized, separator: true },
     { action: "close", label: labels.close, enabled: true, separator: true },
   ];
+  // Transitorio: se cierra al ocultarse/minimizarse el marco (ajuste de estado durante el render, con guarda).
+  if (suspended && open) setOpen(false);
   const enabled = items.map((item) => item.enabled);
 
   const openMenu = useCallback((where: "first" | "last" = "first") => { target.current = where; setOpen(true); }, []);
   useImperativeHandle(ref, () => ({ open: openMenu, focusButton: () => buttonRef.current?.focus({ preventScroll: true }) }), [openMenu]);
 
   const itemEls = () => Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
-  const focusAt = (index: number) => { if (index >= 0) itemEls()[index]?.focus({ preventScroll: true }); };
+  // El menú se limita al área útil y hace scroll: el elemento enfocado siempre queda a la vista (WCAG 2.4.11).
+  const focusAt = (index: number) => {
+    const el = index >= 0 ? itemEls()[index] : undefined;
+    if (!el) return;
+    el.focus({ preventScroll: true });
+    el.scrollIntoView({ block: "nearest" });
+  };
   const currentIndex = () => itemEls().indexOf(document.activeElement as HTMLElement);
 
   // Al abrir: foco en el primer o último elemento habilitado y, si no cabe sobre la barra de tareas, se sube.
   useEffect(() => {
     if (!open) return;
-    focusAt(nextIndex(enabled, -1, target.current === "last" ? "ArrowUp" : "ArrowDown"));
     const menu = menuRef.current;
     if (menu) {
-      const limit = window.innerHeight - 30; // altura de la barra de tareas en escritorio (el menú no existe en Pocket)
-      const overflow = menu.getBoundingClientRect().bottom - limit;
-      if (overflow > 0) menu.style.top = `calc(100% - ${Math.ceil(overflow)}px)`;
+      // Área útil = sobre la barra de tareas y dentro del viewport; si no cabe, el menú hace scroll.
+      const limit = document.querySelector(".xp-taskbar")?.getBoundingClientRect().top ?? window.innerHeight - 30;
+      menu.style.maxHeight = `${Math.max(96, Math.floor(limit) - 8)}px`;
+      menu.style.overflowY = "auto";
+      const rect = menu.getBoundingClientRect();
+      let delta = 0;
+      if (rect.bottom > limit) delta = -Math.ceil(rect.bottom - limit);
+      if (rect.top + delta < 0) delta = Math.ceil(-rect.top);
+      if (delta !== 0) menu.style.top = `calc(100% + ${delta}px)`;
+      focusAt(nextIndex(enabled, -1, target.current === "last" ? "ArrowUp" : "ArrowDown"));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al abrir
   }, [open]);

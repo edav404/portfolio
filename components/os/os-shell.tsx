@@ -11,6 +11,7 @@ import {
   activeId, collectGeometry, persistsGeometry, projectWindowId, requestClose as closePolicy, slugOf,
   type Action, type OsState, type WindowId,
 } from "@/lib/os/window-reducer";
+import { createHydrationGate } from "@/lib/os/hydration";
 import { isMobileWidth } from "@/lib/os/window-geometry";
 import { AnnouncerRegion, createAnnouncer } from "./announcer";
 import { Assistant, cornerLabel } from "./assistant";
@@ -20,10 +21,12 @@ import { iconKeyFor } from "./app-meta";
 import { captureActivator, createActivatorStore, focusElement, isUsableElement, resolveReturnTarget, type Activator } from "./focus-manager";
 import { DesktopSurface } from "./desktop-surface";
 import { OsCommandsContext, OsPrefsContext, type OsCommands } from "./os-commands";
-import { OsActionsContext, OsDetailsContext, OsStaticContext, type OsActions, type OsStatic } from "./os-context";
+import { OsActionsContext, OsDetailsContext, OsStaticContext, type OsActions, type OsDetails, type OsStatic } from "./os-context";
+import type { ProjectDetailData } from "./apps/project-detail";
 import { PocketController } from "./pocket-launcher";
 import { Taskbar } from "./taskbar";
 import type { OsCopy, OsHrefs, OsProjectIndexItem, WelcomeCopy } from "./types";
+import { useFocusRecovery } from "./use-focus-recovery";
 import { useOsNavigation } from "./use-os-navigation";
 import { windowBodyId, windowDomId } from "./window-frame";
 import { GuardContext, createGuardStore } from "./window-guard";
@@ -124,6 +127,7 @@ export default function OsShell({ locale, copy, welcome, projects, knownSlugs, h
   const { state, act, ref, pathname } = useOsNavigation({ locale, knownSlugs, onTransition });
 
   useEffect(() => { flushFocus(); }, [state, flushFocus]);
+  useFocusRecovery(state); // tras flushFocus: solo actúa si el foco se perdió por desaparición
 
   const actions = useMemo<OsActions>(() => {
     const winEl = (id: WindowId) => document.getElementById(windowDomId(id));
@@ -175,11 +179,11 @@ export default function OsShell({ locale, copy, welcome, projects, knownSlugs, h
 
   // Tras montar: viewport y geometría guardada en UNA transición (HYDRATE), foco del deep link, resize y guardado.
   useEffect(() => {
-    const saved = loadGeometry();
-    act({ type: "HYDRATE", viewport: { w: window.innerWidth, h: window.innerHeight }, saved, origin: "hydrate" });
-    for (const id of Object.keys(ref.current.windows)) {
-      if (!(id in saved)) act({ type: "SNAP", id: id as WindowId, to: "default", origin: "hydrate" });
-    }
+    // Pocket en frío: no se hidrata con el ancho Pocket (recortaría la geometría de escritorio); la puerta
+    // lo hace una sola vez al primer viewport de escritorio, con el ajuste por defecto incluido.
+    const gate = createHydrationGate();
+    const hydrate = () => act({ type: "HYDRATE", viewport: { w: window.innerWidth, h: window.innerHeight }, saved: loadGeometry(), snapUnsaved: true, origin: "hydrate" });
+    if (gate.take(window.innerWidth)) hydrate();
     if (ref.current.selection !== null) {
       pending.current = { kind: "content", id: projectWindowId(ref.current.selection) };
       flushFocus();
@@ -189,7 +193,10 @@ export default function OsShell({ locale, copy, welcome, projects, knownSlugs, h
       cancelAnimationFrame(frame);
       // En Pocket las ventanas son pantalla completa por CSS: no se recortan sus rects (al volver a escritorio se conservan).
       if (isMobileWidth(window.innerWidth)) return;
-      frame = requestAnimationFrame(() => act({ type: "SET_VIEWPORT", w: window.innerWidth, h: window.innerHeight, origin: "hydrate" }));
+      frame = requestAnimationFrame(() => {
+        if (gate.take(window.innerWidth)) hydrate();
+        else act({ type: "SET_VIEWPORT", w: window.innerWidth, h: window.innerHeight, origin: "hydrate" });
+      });
     };
     const onHide = () => saver.flush();
     window.addEventListener("resize", onResize);
@@ -205,10 +212,28 @@ export default function OsShell({ locale, copy, welcome, projects, knownSlugs, h
   // Detalle de proyecto: el de la ruta actual entra ya en el HTML del servidor; se conserva por slug.
   const routeTarget = intentFromPath(pathname, knownSlugs);
   const routeSlug = routeTarget?.kind === "project" ? routeTarget.slug : null;
-  const [details, setDetails] = useState<Record<string, ReactNode>>({});
-  // Se guarda al recibirlo (ajuste de estado durante el render, con guarda): sobrevive a la navegación.
-  if (routeSlug && children && details[routeSlug] !== children) setDetails((before) => ({ ...before, [routeSlug]: children }));
-  const detailsValue = useMemo(() => (routeSlug && children ? { ...details, [routeSlug]: children } : details), [details, routeSlug, children]);
+  // El slot `children` de Next se monta UNA vez, en la ventana de la ruta activa (resuelve el segmento vigente);
+  // su página además entrega el detalle como DATOS por slug: el resto de ventanas pinta desde ellos.
+  const detailMap = useRef<Map<string, ProjectDetailData>>(new Map());
+  const detailLoading = useRef<Set<string>>(new Set());
+  const [detailVersion, setDetailVersion] = useState(0);
+  const detailsValue = useMemo<OsDetails>(() => ({
+    get: (slug) => detailMap.current.get(slug),
+    publish: (slug, data) => { if (detailMap.current.get(slug) !== data) detailMap.current.set(slug, data); },
+    load: (slug) => {
+      if (detailMap.current.has(slug) || detailLoading.current.has(slug)) return;
+      detailLoading.current.add(slug);
+      fetch(`/api/os-project/${locale}/${slug}/`)
+        .then((res) => (res.ok ? (res.json() as Promise<ProjectDetailData>) : Promise.reject(new Error(String(res.status)))))
+        .then((data) => { if (!detailMap.current.has(slug)) detailMap.current.set(slug, data); setDetailVersion((v) => v + 1); })
+        .catch(() => { /* la ventana conserva el estado de carga; se reintenta al volver a montarla */ })
+        .finally(() => { detailLoading.current.delete(slug); });
+    },
+    notify: () => setDetailVersion((v) => v + 1),
+    slotSlug: routeSlug,
+    slot: routeSlug ? children : null,
+    version: detailVersion,
+  }), [detailVersion, locale, routeSlug, children]);
 
   const staticValue = useMemo<OsStatic>(() => ({ locale, copy, welcome, projects, hrefs }), [locale, copy, welcome, projects, hrefs]);
 

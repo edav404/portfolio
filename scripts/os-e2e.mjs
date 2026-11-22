@@ -12,6 +12,12 @@
  * Tras cada paso verifica URL, `document.title`, canonical, `og:url` (contra el HTML que sirve el
  * servidor para esa misma URL), ventanas abiertas, ventana activa y foco, y cuenta las peticiones RSC:
  * 1 por push/replace, 0 con Atrás/Adelante, enfocar o abrir una app local.
+ *
+ * Los proyectos se abren SIEMPRE por la galería (seleccionar y «Abrir»); si no funciona, el escenario
+ * falla (sin atajos por `next.router.push`). Cada ventana de proyecto se compara con el HTML que el
+ * servidor sirve para su slug (texto completo y enlaces): cabecera, reto, solución y enlaces de A y B.
+ * Escenarios extra: URLs repetidas, salto de varias entradas y latencia de red (CDP) con intenciones
+ * de navegación que Next descarta o sustituye.
  * Salida: matriz de resultados; código 1 si algo falla.
  */
 import { spawn } from "node:child_process";
@@ -55,7 +61,7 @@ let nextDebugPort = 9500;
 async function launch() {
   const profile = mkdtempSync(join(tmpdir(), "os-e2e-"));
   const port = nextDebugPort++;
-  const proc = spawn(findBrowser(), ["--headless=new", "--disable-gpu", "--no-first-run", `--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, "--window-size=1280,800", "about:blank"], { stdio: "ignore" });
+  const proc = spawn(findBrowser(), ["--headless=new", "--disable-gpu", "--no-first-run", ...(process.env.E2E_NO_SANDBOX ? ["--no-sandbox"] : []), `--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, "--window-size=1280,800", "about:blank"], { stdio: "ignore" });
   let targets;
   for (let i = 0; i < 100; i++) { try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); break; } catch { await sleep(100); } }
   if (!targets) throw new Error("El navegador no abrió el puerto de depuración.");
@@ -81,7 +87,7 @@ async function launch() {
   const goto = async (url) => { await send("Page.navigate", { url }); await sleep(300); await until("document.readyState === 'complete'"); await sleep(900); };
   const reload = async () => { await send("Page.reload"); await sleep(300); await until("document.readyState === 'complete'"); await sleep(900); };
   const close = async () => { try { ws.close(); } catch { /* cerrado */ } proc.kill(); await sleep(500); try { rmSync(profile, { recursive: true, force: true }); } catch { /* perfil en uso */ } };
-  return { ev, until, logs, rsc, goto, reload, close };
+  return { ev, until, logs, rsc, goto, reload, close, send };
 }
 
 // --- Observación y verificación ---------------------------------------------------------------------
@@ -113,6 +119,37 @@ async function serverHead(path) {
   };
 }
 
+const decode = (s) => s.replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+const squash = (s) => s.replace(/\s+/g, " ").trim();
+const articleCache = new Map();
+
+/** Texto y enlaces del `<article>` de la ventana del proyecto en el HTML que sirve el servidor para su ruta. */
+async function serverArticle(path) {
+  if (articleCache.has(path)) return articleCache.get(path);
+  const html = await (await fetch(base + path)).text();
+  const i = html.indexOf("<article");
+  const j = html.indexOf("</article>", i);
+  const frag = i >= 0 && j > i ? html.slice(i, j) : "";
+  const result = {
+    text: squash(decode(frag.replace(/<!--.*?-->/g, "").replace(/<[^>]*>/g, ""))),
+    hrefs: [...frag.matchAll(/href="([^"]*)"/g)].map((m) => decode(m[1])),
+  };
+  articleCache.set(path, result);
+  return result;
+}
+
+const ARTICLE = (slug) => `(() => { const w = document.getElementById(${JSON.stringify(`win-project:${slug}`)}); const a = w?.querySelector('article'); return a ? JSON.stringify({ text: a.textContent, hrefs: [...a.querySelectorAll('a[href]')].map((x) => x.getAttribute('href')) }) : null; })()`;
+
+/** El contenido de la ventana de `slug` (cabecera, reto, solución, enlaces) es el de SU proyecto. */
+async function checkDetail(b, ctx, slug, label) {
+  const raw = await b.ev(ARTICLE(slug));
+  if (!raw) { check(`${label}: ventana ${slug} con contenido`, false, "sin <article>"); return; }
+  const dom = JSON.parse(raw);
+  const server = await serverArticle(ctx.proj(slug));
+  check(`${label}: detalle de ${slug} (texto)`, server.text.length > 200 && squash(dom.text) === server.text, `dom=${squash(dom.text).slice(0, 120)} | srv=${server.text.slice(0, 120)}`);
+  check(`${label}: detalle de ${slug} (enlaces)`, JSON.stringify(dom.hrefs) === JSON.stringify(server.hrefs), `${dom.hrefs} != ${server.hrefs}`);
+}
+
 const matrix = [];
 const failures = [];
 let currentGroup = "";
@@ -142,6 +179,13 @@ async function verify(b, label, exp, ctx) {
   if (exp.rsc !== undefined) check(sub(`RSC = ${exp.rsc}`), rscCount(b, ctx.mark) === exp.rsc, `hubo ${rscCount(b, ctx.mark)}`);
   if (exp.focus) check(sub(`foco ${exp.focus}`), exp.focus(o.focus), JSON.stringify(o.focus));
   if (exp.hist) check(sub(`historial ${exp.hist}`), exp.hist === "+1" ? o.hist === ctx.hist + 1 : o.hist === ctx.hist, `${ctx.hist} -> ${o.hist}`);
+  if (exp.details !== false) {
+    for (const w of o.wins.filter((x) => x.id.startsWith("project:") && !x.min)) {
+      const slug = w.id.slice("project:".length);
+      if (await b.until(`!!document.querySelector('[id="win-project:${slug}"] article dt')`, 8000)) await checkDetail(b, ctx, slug, label);
+      else check(sub(`detalle de ${slug} cargado (no queda en estado de carga)`), false);
+    }
+  }
   ctx.hist = o.hist;
   ctx.mark = b.rsc.length;
   return o;
@@ -154,20 +198,21 @@ const back = (b) => b.ev("history.back(), true");
 const forward = (b) => b.ev("history.forward(), true");
 
 /**
- * Abre un proyecto como lo haría el usuario: por la galería del SO si ya expone `[data-slug]` o
- * `[data-project]` (O7); mientras no exista, por `next.router.push`, que entra por el fallback de ruta.
+ * Abre un proyecto como lo haría el usuario: icono de la galería -> seleccionar la tarjeta -> «Abrir»,
+ * y cierra la galería (deja el escritorio como estaba). Sin atajos: si algo falta, lanza error.
  */
 async function openProject(b, ctx, slug) {
-  const sel = `#win-projects [data-slug="${slug}"], #win-projects [data-project="${slug}"]`;
-  if (ctx.gallery === undefined) {
-    if (!(await b.ev("!!document.getElementById('win-projects')"))) { await click(b, '[data-icon="projects"]'); await sleep(500); }
-    ctx.gallery = await b.ev(`!!document.querySelector(${JSON.stringify(sel)})`);
-    if (!ctx.gallery) { await b.ev("document.querySelector('#win-projects .xp-caption--close')?.click(), true"); await sleep(300); }
-    ctx.mark = b.rsc.length; // abrir/cerrar la galería puede pedir su chunk, no RSC; se reinicia por si acaso
-  }
-  if (ctx.gallery) { await click(b, sel); return "ui"; }
-  await b.ev(`window.next.router.push(${JSON.stringify(ctx.proj(slug))}, { scroll: false }), true`);
-  return "router";
+  const gallery = await b.ev(`(() => { const w = document.getElementById('win-projects'); return !w ? 'none' : w.hidden ? 'min' : 'open'; })()`);
+  if (gallery === "none") await click(b, '[data-icon="projects"]');
+  else if (gallery === "min") await click(b, '[data-task="projects"]');
+  const card = `#win-projects [data-slug="${slug}"]`;
+  if (!(await b.until(`!!document.querySelector(${JSON.stringify(card)})`, 10000))) throw new Error(`La galería no expone ${card}`);
+  await click(b, card);
+  if (!(await b.until(`document.querySelector('#win-projects [data-gallery-open]')?.disabled === false`, 5000))) throw new Error("«Abrir» no se habilitó tras seleccionar");
+  await click(b, "#win-projects [data-gallery-open]");
+  if (!(await b.until(`!!document.getElementById(${JSON.stringify(`win-project:${slug}`)})`, 5000))) throw new Error(`«Abrir» no abrió la ventana de ${slug}`);
+  await click(b, "#win-projects .xp-caption--close");
+  return "ui";
 }
 
 // --- Escenarios ---------------------------------------------------------------------------------------
@@ -242,7 +287,7 @@ async function runLocale(locale) {
     currentGroup = `${locale} · push/replace`;
     ctx.mark = b.rsc.length;
     const via = await openProject(b, ctx, A);
-    check(`apertura de A vía ${via}`, true);
+    check(`apertura de A vía ${via} (galería)`, via === "ui");
     await verify(b, "abrir A", { url: ctx.proj(A), wins: ["welcome", `project:${A}*`], rsc: 1, hist: "+1", focus: focusOnBody(`project:${A}`) }, ctx);
     ctx.mark = b.rsc.length;
     await click(b, '[data-icon="contact"]');
@@ -266,7 +311,7 @@ async function runLocale(locale) {
   b = await launch();
   try {
     await b.goto(base + ctx.os);
-    ctx.hist = (await observe(b)).hist; ctx.mark = b.rsc.length; ctx.gallery = undefined;
+    ctx.hist = (await observe(b)).hist; ctx.mark = b.rsc.length;
     await sequence(b, ctx, slugs, 7, false);
     check("Atrás/Adelante: consola limpia", b.logs.length === 0, b.logs.join(" | "));
   } finally { await b.close(); }
@@ -276,7 +321,7 @@ async function runLocale(locale) {
     b = await launch();
     try {
       await b.goto(base + ctx.os);
-      ctx.hist = (await observe(b)).hist; ctx.mark = b.rsc.length; ctx.gallery = undefined;
+      ctx.hist = (await observe(b)).hist; ctx.mark = b.rsc.length;
       await sequence(b, ctx, slugs, k, true);
     } finally { await b.close(); }
   }
@@ -315,7 +360,7 @@ async function runLocale(locale) {
     check("cambio de idioma: URL equivalente", await b.until(`location.pathname === ${JSON.stringify(ctx.otherProj(A))} && !!document.querySelector('.xp-window')`));
     await sleep(900);
     const other = locale === "es" ? "en" : "es";
-    await verify(b, "tras cambiar de idioma", { url: ctx.otherProj(A), wins: [`project:${A}*`] }, { ...ctx, locale: other });
+    await verify(b, "tras cambiar de idioma", { url: ctx.otherProj(A), wins: [`project:${A}*`] }, { ...ctx, locale: other, proj: ctx.otherProj });
     await click(b, ".xp-tray a[hreflang]");
     check("cambio de idioma: de vuelta", await b.until(`location.pathname === ${JSON.stringify(ctx.proj(A))} && !!document.querySelector('.xp-window')`));
     await sleep(500);
@@ -323,6 +368,90 @@ async function runLocale(locale) {
     // Escritorio: equivalencia de /os/
     await b.goto(base + ctx.os);
     check("selector de idioma: equivalencia de /os/", (await b.ev("document.querySelector('.xp-tray a[hreflang]').getAttribute('href')")) === ctx.otherOs);
+  } finally { await b.close(); }
+
+  // -- C2. URLs repetidas: /os/ -> A -> B -> minimizar A -> restaurar A -------------------------------------------
+  currentGroup = `${locale} · URLs repetidas`;
+  const [, B, C] = slugs;
+  const wA = `project:${A}`, wB = `project:${B}`, wC = `project:${C}`;
+  const stepper = (b) => async (label, run, exp) => { ctx.mark = b.rsc.length; await run(); return verify(b, label, exp, ctx); };
+  b = await launch();
+  try {
+    await b.goto(base + ctx.os);
+    ctx.hist = (await observe(b)).hist; ctx.mark = b.rsc.length;
+    const step = stepper(b);
+    await step("abrir A", () => openProject(b, ctx, A), { url: ctx.proj(A), wins: ["welcome", `${wA}*`], rsc: 1, hist: "+1" });
+    await step("abrir B", () => openProject(b, ctx, B), { url: ctx.proj(B), wins: ["welcome", wA, `${wB}*`], rsc: 1, hist: "+1" });
+    await step("minimizar A (B seleccionada: sin historial)", () => click(b, `#win-project\\:${A} .xp-caption--min`), { url: ctx.proj(B), wins: ["welcome", `${wA}(min)`, `${wB}*`], rsc: 0, hist: "same" });
+    await step("restaurar A desde la barra (push con URL repetida)", () => click(b, `[data-task="${wA}"]`), { url: ctx.proj(A), wins: ["welcome", `${wA}*`, wB], rsc: 1, hist: "+1" });
+    await step("Atrás -> B (vecino inequívoco)", () => back(b), { url: ctx.proj(B), wins: ["welcome", wA, `${wB}*`], rsc: 0 });
+    await step("Atrás -> A (URL repetida = ambigua: fallback, B no se cierra)", () => back(b), { url: ctx.proj(A), wins: ["welcome", `${wA}*`, wB], rsc: 0 });
+    await step("Atrás -> /os/ (fallback: cierra solo la seleccionada)", () => back(b), { url: ctx.os, wins: ["welcome", `${wB}*`], rsc: 0 });
+    check("URLs repetidas: consola limpia", b.logs.length === 0, b.logs.join(" | "));
+  } finally { await b.close(); }
+
+  // -- C3. Salto de varias entradas ---------------------------------------------------------------------------
+  currentGroup = `${locale} · salto de entradas`;
+  b = await launch();
+  try {
+    await b.goto(base + ctx.os);
+    ctx.hist = (await observe(b)).hist; ctx.mark = b.rsc.length;
+    const step = stepper(b);
+    await step("abrir A", () => openProject(b, ctx, A), { url: ctx.proj(A), wins: ["welcome", `${wA}*`], rsc: 1, hist: "+1" });
+    await step("abrir B", () => openProject(b, ctx, B), { url: ctx.proj(B), wins: ["welcome", wA, `${wB}*`], rsc: 1, hist: "+1" });
+    await step("history.go(-2) -> /os/ (fallback por URL)", () => b.ev("history.go(-2), true"), { url: ctx.os, wins: ["welcome", `${wA}*`], rsc: 0 });
+    await step("history.go(2) -> B (reabre B por URL)", () => b.ev("history.go(2), true"), { url: ctx.proj(B), wins: ["welcome", wA, `${wB}*`], rsc: 0 });
+    await step("history.go(-1) -> A", () => b.ev("history.go(-1), true"), { url: ctx.proj(A), wins: ["welcome", `${wA}*`, wB], rsc: 0 });
+    await step("abrir C tras el salto (push, alineado)", () => openProject(b, ctx, C), { url: ctx.proj(C), wins: ["welcome", wA, wB, `${wC}*`], rsc: 1 });
+    await step("Atrás desde C -> A (se deshace C)", () => back(b), { url: ctx.proj(A), wins: ["welcome", `${wA}*`, wB], rsc: 0 });
+    check("salto de entradas: consola limpia", b.logs.length === 0, b.logs.join(" | "));
+  } finally { await b.close(); }
+
+  // -- C4. Latencia: Next descarta una navegación pendiente si llega otra ---------------------------------------
+  currentGroup = `${locale} · latencia`;
+  for (const [first, second] of [[A, B], [B, A]]) {
+    const wf = `project:${first}`, ws = `project:${second}`;
+    b = await launch();
+    try {
+      await b.goto(base + ctx.os);
+      // Calienta el chunk de la galería para que abrir proyectos no dependa de la red estrangulada.
+      await click(b, '[data-icon="projects"]');
+      await b.until("!!document.querySelector('#win-projects [data-slug]')", 10000);
+      await click(b, "#win-projects .xp-caption--close");
+      await sleep(500);
+      ctx.hist = (await observe(b)).hist; ctx.mark = b.rsc.length;
+      const h0 = ctx.hist;
+      await b.send("Network.emulateNetworkConditions", { offline: false, latency: 2500, downloadThroughput: -1, uploadThroughput: -1 });
+      await openProject(b, ctx, first);
+      await openProject(b, ctx, second);
+      await verify(b, `latencia ${first}->${second}: antes de confirmar (optimista)`, { url: ctx.os, wins: ["welcome", wf, `${ws}*`], details: false }, ctx);
+      check(`latencia ${first}->${second}: Next confirma la ruta de la última`, await b.until(`location.pathname === ${JSON.stringify(ctx.proj(second))}`, 40000));
+      await b.send("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+      const after = await verify(b, `latencia ${first}->${second}: tras confirmar`, { url: ctx.proj(second), wins: ["welcome", wf, `${ws}*`] }, ctx);
+      check(`latencia ${first}->${second}: entradas nuevas (1 si Next descarta la primera, 2 si no)`, after.hist - h0 >= 1 && after.hist - h0 <= 2, `${h0} -> ${after.hist}`);
+      const stepL = stepper(b);
+      await stepL(`latencia ${first}->${second}: Atrás deshace las dos aperturas`, () => back(b), { url: ctx.os, wins: ["welcome*"], rsc: 0 });
+      await stepL(`latencia ${first}->${second}: Adelante reabre la de la entrada`, () => forward(b), { url: ctx.proj(second), wins: ["welcome", `${ws}*`], rsc: 0 });
+      check(`latencia ${first}->${second}: consola limpia`, b.logs.length === 0, b.logs.join(" | "));
+    } finally { await b.close(); }
+  }
+
+  b = await launch();
+  try {
+    await b.goto(base + ctx.os);
+    await click(b, '[data-icon="projects"]');
+    await b.until("!!document.querySelector('#win-projects [data-slug]')", 10000);
+    await click(b, "#win-projects .xp-caption--close");
+    await sleep(500);
+    ctx.hist = (await observe(b)).hist; ctx.mark = b.rsc.length;
+    await b.send("Network.emulateNetworkConditions", { offline: false, latency: 2500, downloadThroughput: -1, uploadThroughput: -1 });
+    await openProject(b, ctx, A);
+    await click(b, `#win-project\\:${A} .xp-caption--min`); // sustituye la navegación pendiente por replace a /os/
+    check("latencia: abrir y minimizar A antes de confirmar: la URL se queda en /os/", await b.until(`location.pathname === ${JSON.stringify(ctx.os)}`, 5000));
+    await sleep(7000); // el push de A, si siguiera en vuelo, ya habría llegado
+    await b.send("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+    await verify(b, "latencia: push de A cancelado por minimizar", { url: ctx.os, wins: ["welcome*", `${wA}(min)`], hist: "same", details: false }, ctx);
+    check("latencia: consola limpia", b.logs.length === 0, b.logs.join(" | "));
   } finally { await b.close(); }
 
   // -- F. Entrada directa sin barra, slug no autorizado ----------------------------------------------------

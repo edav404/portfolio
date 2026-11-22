@@ -18,13 +18,6 @@ export function pocketScreen(state: OsState): PocketScreen {
   return { kind: "window", id, back: below === null ? { kind: "launcher" } : { kind: "window", id: below } };
 }
 
-/** Siguiente índice de Tab dentro de un contenedor de `count` elementos con foco contenido (-1 = el contenedor). */
-export function wrapTab(current: number, count: number, shift: boolean): number {
-  if (count <= 0) return -1;
-  if (shift) return current <= 0 ? count - 1 : current - 1;
-  return current >= count - 1 ? 0 : current + 1;
-}
-
 /** ¿Hay que reubicar el foco tras cruzar el breakpoint? Estaba en una ventana y ya no hay elemento enfocado utilizable. */
 export function needsFocusRecovery(opts: { hadFocusInWindow: boolean; activeIsUsable: boolean }): boolean {
   return opts.hadFocusInWindow && !opts.activeIsUsable;

@@ -52,19 +52,25 @@ export function samePath(a: string, b: string): boolean {
 
 /**
  * Qué llamada de historial debe hacer el hook tras una acción, derivada del reducer:
- * - entrada nueva (`entryIndex` sube) → `push`; entrada sustituida → `replace`; resto → ninguna;
- * - solo `origin: "user"`: `ROUTE_CHANGED` y `HYDRATE` nunca tocan el historial;
+ * - intención pendiente nueva (`pending` cambia) -> su `push` o `replace`; el reducer ya fundió las
+ *   anteriores (Next descarta una navegación pendiente al llegar otra);
+ * - intención cancelada por el usuario (el destino ya es el de la entrada confirmada) -> `replace` a esa
+ *   URL, que sustituye la navegación en vuelo;
+ * - solo `origin: "user"`: `ROUTE_CHANGED`, `NAV_TIMEOUT` y `HYDRATE` nunca tocan el historial;
  * - nunca `back()`: Pocket cierra hacia el lanzador sin historial (§5.4).
  */
 export function planHistory(prev: OsState, next: OsState, action: Action, locale: Locale): HistoryPlan {
-  if (prev === next || action.type === "ROUTE_CHANGED" || action.type === "HYDRATE") return NO_HISTORY;
+  if (prev === next || action.type === "ROUTE_CHANGED" || action.type === "HYDRATE" || action.type === "NAV_TIMEOUT") return NO_HISTORY;
   if ((action.origin ?? "user") !== "user") return NO_HISTORY;
-  const entry = next.entries[next.entryIndex];
-  if (!entry) return NO_HISTORY;
-  const target: RouteTarget = entry.sel === null ? { kind: "desktop" } : { kind: "project", slug: entry.sel };
-  const href = hrefForTarget(target, locale);
-  if (next.entryIndex > prev.entryIndex) return { kind: "push", href, options: { scroll: false } };
-  if (next.entryIndex === prev.entryIndex && prev.entries[prev.entryIndex]?.id !== entry.id) return { kind: "replace", href, options: { scroll: false } };
+  const p = next.pending;
+  if (p !== null && p !== prev.pending) {
+    const href = hrefForTarget(p.sel === null ? { kind: "desktop" } : { kind: "project", slug: p.sel }, locale);
+    return { kind: p.kind, href, options: { scroll: false } };
+  }
+  if (p === null && prev.pending !== null) {
+    const sel = next.entries[next.entryIndex]?.sel ?? null;
+    return { kind: "replace", href: hrefForTarget(sel === null ? { kind: "desktop" } : { kind: "project", slug: sel }, locale), options: { scroll: false } };
+  }
   return NO_HISTORY;
 }
 

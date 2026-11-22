@@ -3,8 +3,11 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { Locale } from "@/content/types";
-import { intentFromPath, shouldNavigate } from "@/lib/os/window-url";
+import { intentFromPath, samePath, shouldNavigate } from "@/lib/os/window-url";
 import { createInitialState, reduceWithHistory, reduce, type Action, type OsState } from "@/lib/os/window-reducer";
+
+/** Tiempo máximo que una navegación puede quedar sin confirmar antes de darla por cancelada. */
+export const NAV_TIMEOUT_MS = 10_000;
 
 export type Transition = (prev: OsState, next: OsState, action: Action) => void;
 
@@ -14,7 +17,12 @@ export type Transition = (prev: OsState, next: OsState, action: Action) => void;
  * - `act` calcula la transición y el plan de historial con `reduceWithHistory`, despacha al reducer
  *   y ejecuta `router.push/replace(href, { scroll: false })` solo para acciones del usuario.
  *   Antes de navegar se valida el slug contra el catálogo (un 404 por RSC rompería el shell).
- * - `usePathname` despacha `ROUTE_CHANGED` (origen "route"): transición idempotente, nunca navega.
+ * - La navegación lanzada queda como intención PENDIENTE en el reducer (aparte del historial confirmado):
+ *   Next descarta una navegación pendiente si llega otra, así que solo `ROUTE_CHANGED` (la ruta observada)
+ *   confirma entradas. Si no se confirma en `NAV_TIMEOUT_MS`, `NAV_TIMEOUT` la cancela (las ventanas
+ *   optimistas siguen abiertas, la selección vuelve a la URL real).
+ * - `usePathname` despacha `ROUTE_CHANGED` (origen "route") solo cuando la ruta OBSERVADA cambia de verdad:
+ *   transición idempotente, nunca navega.
  * El espejo `ref` permite encadenar acciones en el mismo tick; el reducer es puro, así que React
  * recalcula exactamente el mismo estado.
  */
@@ -47,10 +55,21 @@ export function useOsNavigation(opts: { locale: Locale; knownSlugs: readonly str
     return true;
   }, [knownSlugs, locale, router]);
 
+  // Ruta observada: solo un cambio real de pathname (no cada re-ejecución del efecto) reconcilia con la intención pendiente.
+  const observed = useRef(pathname ?? "");
   useEffect(() => {
-    const target = intentFromPath(pathname ?? "", knownSlugs);
+    const current = pathname ?? "";
+    if (samePath(observed.current, current)) return;
+    observed.current = current;
+    const target = intentFromPath(current, knownSlugs);
     if (target) act({ type: "ROUTE_CHANGED", target, origin: "route" });
   }, [pathname, knownSlugs, act]);
+
+  useEffect(() => {
+    if (state.pending === null) return;
+    const timer = setTimeout(() => act({ type: "NAV_TIMEOUT", origin: "route" }), NAV_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [state.pending, act]);
 
   return { state, act, ref, pathname: pathname ?? "" };
 }

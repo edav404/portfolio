@@ -780,6 +780,7 @@ export const ui = {
       closeApp: { es: "Cerrar aplicación", en: "Close app" },
       unsavedTitle: { es: "Hay cambios sin enviar", en: "You have unsent changes" },
       unsavedBody: { es: "Si cierras esta ventana, perderás lo que escribiste.", en: "If you close this window, you will lose what you wrote." },
+      unsavedSending: { es: "Tu mensaje se está enviando: si cierras ahora, el envío puede completarse igualmente, porque cerrar no lo revierte.", en: "Your message is being sent: if you close now, it may still be delivered, because closing does not undo it." },
       unsavedKeep: { es: "Seguir editando", en: "Keep editing" },
       unsavedDiscard: { es: "Cerrar y descartar", en: "Close and discard" },
     },

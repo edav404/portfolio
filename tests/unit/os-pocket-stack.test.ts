@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { needsFocusRecovery, pocketScreen, wrapTab } from "@/lib/os/pocket";
+import { needsFocusRecovery, pocketScreen } from "@/lib/os/pocket";
 import { requestClose, activeId, createInitialState, reduce, reduceWithHistory, type OsState } from "@/lib/os/window-reducer";
 import { planHistory } from "@/lib/os/window-url";
 
@@ -61,15 +61,6 @@ describe("Pocket: pila local y pantalla activa", () => {
 });
 
 describe("Pocket: foco", () => {
-  it("wrapTab da la vuelta dentro de la hoja", () => {
-    expect(wrapTab(2, 3, false)).toBe(0);
-    expect(wrapTab(0, 3, true)).toBe(2);
-    expect(wrapTab(-1, 3, true)).toBe(2);
-    expect(wrapTab(1, 3, false)).toBe(2);
-    expect(wrapTab(1, 3, true)).toBe(0);
-    expect(wrapTab(0, 0, false)).toBe(-1);
-  });
-
   it("solo se recupera el foco si estaba en una ventana y no queda un elemento utilizable", () => {
     expect(needsFocusRecovery({ hadFocusInWindow: true, activeIsUsable: false })).toBe(true);
     expect(needsFocusRecovery({ hadFocusInWindow: true, activeIsUsable: true })).toBe(false);

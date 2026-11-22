@@ -48,3 +48,20 @@ export function createActivatorStore() {
     take(id: string): Activator | null { const found = map.get(id) ?? null; map.delete(id); return found; },
   };
 }
+
+/** ¿Se perdió el foco? Nada enfocado, `body`, o un elemento que ya no se puede usar (desmontado u oculto). */
+export function isFocusLost(doc: Document = document): boolean {
+  const active = doc.activeElement;
+  if (!(active instanceof HTMLElement) || active === doc.body) return true;
+  return !isUsableElement(active);
+}
+
+/**
+ * Recuperación por desaparición (única vía, para cualquier causa: Atrás del navegador, cierre desde otra
+ * parte...): si el foco se perdió, va al primer candidato utilizable de la cadena (icono -> ventana inferior
+ * -> escritorio). No hace nada si el foco ya está en un elemento utilizable (no se le roba al usuario).
+ */
+export function recoverLostFocus(chain: ReadonlyArray<HTMLElement | null | undefined>, doc: Document = document): boolean {
+  if (!isFocusLost(doc)) return false;
+  return focusElement(resolveReturnTarget(chain, isUsableElement));
+}

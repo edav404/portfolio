@@ -7,6 +7,7 @@ import { format } from "@/content/format";
 import { activeId, taskbarIds, type OsState } from "@/lib/os/window-reducer";
 import type { Prefs } from "@/lib/os/prefs";
 import { iconFor } from "./app-meta";
+import { focusElement, isUsableElement } from "./focus-manager";
 import { useAssistantCollapsed, toggleAssistant } from "./assistant";
 import { Balloon } from "./balloon";
 import { OsGlyph, XpIcon } from "./icons";
@@ -62,9 +63,12 @@ export const Taskbar = memo(function Taskbar({ state, prefs, onPref }: Props) {
   const pocket = usePocket();
   const ids = taskbarIds(state);
   const active = activeId(state);
-  const idsKey = ids.join("|");
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- `idsKey` resume `ids`
-  const keys = useMemo(() => ["start", ...ids], [idsKey]);
+  // Pocket: las tareas no activas están ocultas por CSS y la activa es solo un título (texto), así que la
+  // barra tiene una única parada roving (Inicio): ningún `tabIndex=0` queda en un elemento invisible.
+  const rovingIds = pocket ? [] : ids;
+  const idsKey = rovingIds.join("|");
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `idsKey` resume `rovingIds`
+  const keys = useMemo(() => ["start", ...rovingIds], [idsKey]);
   const roving = useRoving(keys, "horizontal");
   const languageHref = hrefs.languageIndex[pathname ?? ""] ?? hrefs.languageFallback;
 
@@ -83,7 +87,10 @@ export const Taskbar = memo(function Taskbar({ state, prefs, onPref }: Props) {
   // Atajos globales opt-in (Alt+Shift+tecla física). El filtro y la ayuda salen de lib/os/shortcuts.
   useShortcuts(prefs.shortcuts, {
     start: () => { setStartOpen((value) => !value); startRef.current?.focus({ preventScroll: true }); },
-    taskbar: () => toolbarRef.current?.querySelector<HTMLElement>('[data-roving][tabindex="0"]')?.focus({ preventScroll: true }),
+    taskbar: () => {
+      const stop = toolbarRef.current?.querySelector<HTMLElement>('[data-roving][tabindex="0"]');
+      focusElement(isUsableElement(stop) ? stop : startRef.current);
+    },
     desktop: () => commands.focusDesktop(),
     cyclePrev: () => commands.cycle(-1),
     cycleNext: () => commands.cycle(1),
@@ -92,8 +99,6 @@ export const Taskbar = memo(function Taskbar({ state, prefs, onPref }: Props) {
   });
 
   const activate = (id: (typeof ids)[number]) => {
-    // Pocket: el boton muestra el titulo de la pantalla activa; no minimiza (la salida es Atras, ✕ o Escape).
-    if (pocket) return;
     const win = state.windows[id]!;
     if (win.minimized) actions.open(id);
     else if (id === active) actions.minimize(id);
@@ -121,6 +126,16 @@ export const Taskbar = memo(function Taskbar({ state, prefs, onPref }: Props) {
           {ids.map((id) => {
             const win = state.windows[id]!;
             const isActive = id === active;
+            if (pocket) {
+              // Título de la pantalla activa: texto, no un botón inoperante (la salida es Atrás, ✕ o Escape).
+              if (!isActive) return null;
+              return (
+                <span key={id} className="xp-task" data-active="true" data-task={id}>
+                  <XpIcon name={iconFor(id)} size={16}/>
+                  <span className="xp-task__label">{titleOf(id)}</span>
+                </span>
+              );
+            }
             return (
               <button
                 key={id}

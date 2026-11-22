@@ -1,4 +1,4 @@
-# CI (DX-01): typecheck, lint, tests unitarios y build de producción.
+# CI (DX-01): typecheck, lint, tests unitarios y build de producción; E2E del SO (Fase 4, O12) sobre el standalone.
 # El despliegue NO pasa por aquí: lo hace Coolify con el Dockerfile (docs/despliegue-coolify.md).
 name: CI
 
@@ -61,3 +61,55 @@ jobs:
           PORT=3111 HOSTNAME=127.0.0.1 node .next/standalone/server.js &
           for i in $(seq 1 30); do curl -sf -o /dev/null http://127.0.0.1:3111/api/health/ && break; sleep 1; done
           npm run smoke -- http://127.0.0.1:3111
+
+  # E2E del SO (docs/arquitectura-os.md §8, O12) contra el artefacto standalone, en un job aparte para no
+  # alargar `check`. Los scripts no usan dependencias: Chrome de ubuntu-latest + CDP.
+  #
+  # Variables (todas opcionales):
+  #   E2E_BROWSER     ruta del navegador (aquí /usr/bin/google-chrome; en local se autodetecta Edge/Chrome).
+  #   E2E_NO_SANDBOX  cualquier valor añade --no-sandbox (el sandbox de Chrome falla en runners sin userns).
+  #   E2E_ROOT        raíz con `.next/standalone` a servir (por defecto, este repo). Sirve una copia para no pisar el build.
+  #   E2E_VERBOSE     (pocket) imprime cada comprobación, no solo los fallos.
+  # Puertos: smoke y e2e:os en 3111, e2e:pocket en 3121 (cada script arranca y detiene su servidor con --serve).
+  os-e2e:
+    name: E2E del SO (standalone)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      E2E_BROWSER: /usr/bin/google-chrome
+      E2E_NO_SANDBOX: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci --no-audit --no-fund
+
+      - name: Build
+        run: npm run build
+
+      - name: Preparar standalone
+        run: |
+          cp -r public .next/standalone/public
+          cp -r .next/static .next/standalone/.next/static
+
+      - name: Smoke de rutas (incluye el SO)
+        run: |
+          PORT=3111 HOSTNAME=127.0.0.1 node .next/standalone/server.js &
+          SERVER_PID=$!
+          for i in $(seq 1 30); do curl -sf -o /dev/null http://127.0.0.1:3111/api/health/ && break; sleep 1; done
+          npm run smoke -- http://127.0.0.1:3111; STATUS=$?
+          kill $SERVER_PID
+          exit $STATUS
+
+      - name: E2E de historial y foco del SO
+        run: npm run e2e:os
+
+      - name: E2E de XP Pocket (móvil)
+        run: npm run e2e:pocket

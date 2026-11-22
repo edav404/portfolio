@@ -187,6 +187,7 @@ export const WindowFrame = memo(function WindowFrame({ win, z, active, title, ba
             steps: w.menuMoveAndResize, close: w.menuClose,
           }}
           onAction={onSystemAction}
+          suspended={win.minimized || pocket}
         />
         <h2 id={titleId} className="xp-titlebar__title">{title}</h2>
         <div className="xp-titlebar__controls">

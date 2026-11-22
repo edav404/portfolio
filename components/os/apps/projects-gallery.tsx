@@ -24,6 +24,7 @@ const ProjectCard = memo(function ProjectCard({ project, selected, onSelect, onO
       <button
         type="button"
         className={styles.pick}
+        data-slug={project.slug}
         aria-pressed={selected}
         aria-label={format(copy.gallery.select, { title: project.title })}
         onClick={() => onSelect(project.slug)}
@@ -116,7 +117,7 @@ export default function ProjectsGallery() {
       </div>
       <div className={styles.status}>
         <p>{format(g.status, { count: visible.length, selected: detail })}</p>
-        <button type="button" className="xp-button" disabled={current === null} onClick={() => current && open(current.slug)} aria-label={current ? format(g.openProject, { title: current.title }) : g.open}>{g.open}</button>
+        <button type="button" className="xp-button" data-gallery-open disabled={current === null} onClick={() => current && open(current.slug)} aria-label={current ? format(g.openProject, { title: current.title }) : g.open}>{g.open}</button>
       </div>
       <p className="xp-visually-hidden" role="status">{countText}</p>
     </div>

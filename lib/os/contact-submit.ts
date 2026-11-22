@@ -35,3 +35,21 @@ export function failureMessage(response: { status: number; retryAfter: string | 
   if (wait !== null) return format(copy.rateLimitedWait, { wait: waitText(wait, copy.waitUnits) });
   return isContactErrorCode(response.code) ? copy.errors[response.code] : copy.generic;
 }
+
+/** Borrador del formulario de Contacto. El servicio preseleccionado NO cuenta como texto escrito. */
+export type ContactDraft = { name: string; email: string; service: string; message: string };
+
+/** ¿Hay texto sin enviar en el borrador ACTUAL? (nombre, correo o mensaje; el servicio no es un borrador). */
+export function isContactDirty(draft: ContactDraft): boolean {
+  return draft.name !== "" || draft.email !== "" || draft.message !== "";
+}
+
+/** Tras un envío exitoso se limpia solo lo enviado: un campo editado mientras se enviaba se conserva. */
+export function clearSent(draft: ContactDraft, sent: ContactDraft): ContactDraft {
+  return {
+    name: draft.name === sent.name ? "" : draft.name,
+    email: draft.email === sent.email ? "" : draft.email,
+    service: draft.service,
+    message: draft.message === sent.message ? "" : draft.message,
+  };
+}

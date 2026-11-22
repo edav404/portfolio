@@ -7,6 +7,7 @@ import type { Rect, WindowId } from "@/lib/os/window-reducer";
 import type { Locale } from "@/content/types";
 import type { OsCopy, OsHrefs, OsProjectIndexItem, WelcomeCopy } from "./types";
 import type { ReactNode } from "react";
+import type { ProjectDetailData } from "./apps/project-detail";
 
 /** Datos que no cambian durante la sesión del shell. */
 export type OsStatic = {
@@ -38,8 +39,22 @@ export type OsActions = {
 
 export const OsStaticContext = createContext<OsStatic | null>(null);
 export const OsActionsContext = createContext<OsActions | null>(null);
-/** Detalle (servidor) de los proyectos ya recibidos, por slug. */
-export const OsDetailsContext = createContext<Readonly<Record<string, ReactNode>>>({});
+/** Detalle de los proyectos ya recibidos, como datos por slug (no elementos de React: ver `project-detail.tsx`). */
+export type OsDetails = {
+  get(slug: string): ProjectDetailData | undefined;
+  /** Registra el detalle recibido (idempotente; se llama durante el render de la página del slug). */
+  publish(slug: string, data: ProjectDetailData): void;
+  /** Pide el detalle bajo demanda (endpoint estático por slug) si aún no llegó: ventanas cuya navegación Next descartó. */
+  load(slug: string): void;
+  /** Avisa a los consumidores tras publicar (en un efecto). */
+  notify(): void;
+  /** Slug de la ruta activa y el elemento de Next para esa ruta (se monta una sola vez, en su ventana); `null` fuera de un proyecto. */
+  slotSlug: string | null;
+  slot: ReactNode;
+  /** Cambia con cada aviso: obliga a re-renderizar a quien lea el contexto. */
+  version: number;
+};
+export const OsDetailsContext = createContext<OsDetails>({ get: () => undefined, publish: () => {}, load: () => {}, notify: () => {}, slotSlug: null, slot: null, version: 0 });
 
 export function useOsStatic(): OsStatic {
   const value = useContext(OsStaticContext);
@@ -53,6 +68,6 @@ export function useOsActions(): OsActions {
   return value;
 }
 
-export function useOsDetails() {
+export function useOsDetails(): OsDetails {
   return useContext(OsDetailsContext);
 }

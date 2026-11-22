@@ -16,6 +16,8 @@ import { languageIndex } from "@/lib/i18n/pages";
 import { resolveCredits } from "@/lib/os/credits";
 import { buildMetadata } from "@/lib/metadata";
 import { isOsPath } from "@/lib/os/window-url";
+import { ProjectDetailPublisher } from "@/components/os/apps/project-detail";
+import { osProjectDetail } from "@/lib/os-project-detail";
 
 /**
  * Vistas de servidor de `/os/` y `/en/os/` (docs/arquitectura-os.md §1). El único módulo que resuelve
@@ -134,55 +136,13 @@ export function OsHomeView(_props: { locale: Locale }) {
 }
 
 /**
- * Detalle de UN proyecto del catálogo (solo sus datos). Slug fuera del catálogo: 404. El shell lo
- * monta dentro de la ventana del proyecto y lo conserva por slug; la cabecera (portada, resumen,
- * pie) la pone la ventana desde el índice.
+ * Detalle de UN proyecto del catálogo (solo sus datos, serializables). Slug fuera del catálogo: 404. No
+ * pinta nada: entrega los datos al shell, que los conserva por slug; cada ventana los pinta y su
+ * cabecera (portada, resumen, pie) sale del índice.
  */
 export function OsProjectView({ locale, slug }: { locale: Locale; slug: string }) {
   const project = getOsProject(slug);
   if (!project) notFound();
-  const { project: labels } = uiFor(locale, "osShell");
-  const services = project.services[locale];
-  return (
-    <>
-      <dl className={styles.facts}>
-        <div><dt>{labels.client}</dt><dd>{project.client[locale]}</dd></div>
-        <div><dt>{labels.location}</dt><dd>{project.location[locale]}</dd></div>
-      </dl>
-      <section className={styles.section}>
-        <h3 className={styles.heading}>{labels.challenge}</h3>
-        <p className={styles.text}>{project.challenge[locale]}</p>
-      </section>
-      <section className={styles.section}>
-        <h3 className={styles.heading}>{labels.solution}</h3>
-        <p className={styles.text}>{project.solution[locale]}</p>
-      </section>
-      {project.myRole ? (
-        <section className={styles.section}>
-          <h3 className={styles.heading}>{labels.myRole}</h3>
-          <p className={styles.text}>{project.myRole[locale]}</p>
-        </section>
-      ) : null}
-      <section className={styles.section}>
-        <h3 className={styles.heading}>{labels.services}</h3>
-        <ul className={styles.list}>{services.map((service) => <li key={service}>{service}</li>)}</ul>
-      </section>
-      <section className={styles.section}>
-        <h3 className={styles.heading}>{labels.technologies}</h3>
-        <ul className={styles.chips}>{project.technologies.map((tech) => <li key={tech} className={styles.chip}>{tech}</li>)}</ul>
-      </section>
-      {project.links?.length ? (
-        <section className={styles.section}>
-          <h3 className={styles.heading}>{labels.links}</h3>
-          <ul className={styles.list}>
-            {project.links.map((link) => (
-              <li key={link.href}>
-                <a className={styles.link} href={link.href} target="_blank" rel="noopener noreferrer" aria-label={format(labels.externalLink, { label: link.label[locale] })}>{link.label[locale]}</a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-    </>
-  );
+  const data = osProjectDetail(project.slug, locale)!;
+  return <ProjectDetailPublisher slug={project.slug} data={data}/>;
 }
