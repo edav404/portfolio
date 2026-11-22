@@ -249,6 +249,8 @@ export const ui = {
     waitingTitle: { es: "Last.fm espera conexión", en: "Last.fm is waiting for a connection" },
     loadingDetail: { es: "Consultando a {user}", en: "Checking {user}" },
     unavailable: { es: "Last.fm no está disponible en este momento.", en: "Last.fm isn't available right now." },
+    /** El servidor no tiene Last.fm configurado (503): estado esperado, no un error. */
+    notConfigured: { es: "Last.fm no está configurado en este servidor.", en: "Last.fm isn't set up on this server." },
     noResponse: { es: "LAST.FM SIN RESPUESTA", en: "NO RESPONSE FROM LAST.FM" },
     poweredBy: { es: "Datos de Last.fm", en: "Data from Last.fm" },
     openLastfm: { es: "ABRIR LAST.FM ↗", en: "OPEN LAST.FM ↗" },
@@ -504,6 +506,8 @@ export const ui = {
       /** Globo de bandeja de primer arranque (UX-11). */
       balloonTitle: { es: "Bienvenido a EDAV OS", en: "Welcome to EDAV OS" },
       balloonText: { es: "Haz clic en un icono para abrirlo", en: "Click an icon to open it" },
+      /** Pocket: no hay iconos sueltos; las aplicaciones están en la lista y en Inicio. */
+      balloonTextPocket: { es: "Elige una aplicación de la lista o abre el menú Inicio", en: "Pick an app from the list or open the Start menu" },
       balloonClose: { es: "Cerrar globo de ayuda", en: "Close help balloon" },
       /** Pocket: el escritorio es un lanzador. */
       launcher: { es: "Lanzador de aplicaciones", en: "App launcher" },

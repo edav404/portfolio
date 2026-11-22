@@ -3,6 +3,7 @@
 import { useEffect, useId, useSyncExternalStore } from "react";
 import { getLocalStorage } from "@/lib/os/persistence";
 import { useOsStatic } from "./os-context";
+import { usePocket } from "./use-pocket";
 
 /** Descarte persistente del globo de primer arranque (clave propia; no mezcla con las preferencias). */
 export const BALLOON_KEY = "edav-os:balloon:v1";
@@ -17,6 +18,10 @@ let dismissedInMemory = false;
 const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
 const getSnapshot = () => dismissedInMemory || readDismissed();
 const getServerSnapshot = () => true;
+/** El globo de primer arranque está en pantalla (la mascota se aparta de su zona). */
+export function useBalloonVisible(): boolean {
+  return !useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}
 function dismissBalloon() {
   dismissedInMemory = true;
   try { getLocalStorage()?.setItem(BALLOON_KEY, "1"); } catch { /* bloqueado: se descarta solo en memoria */ }
@@ -33,6 +38,7 @@ export function Balloon() {
   const { copy } = useOsStatic();
   const visible = !useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const titleId = useId();
+  const pocket = usePocket();
 
 
   useEffect(() => {
@@ -58,7 +64,7 @@ export function Balloon() {
   return (
     <div className="xp-balloon" role="group" aria-labelledby={titleId}>
       <strong id={titleId} className="xp-balloon__title">{copy.desktop.balloonTitle}</strong>
-      <span>{copy.desktop.balloonText}</span>
+      <span>{pocket ? copy.desktop.balloonTextPocket : copy.desktop.balloonText}</span>
       <button type="button" className="xp-balloon__close" aria-label={copy.desktop.balloonClose} onClick={dismissBalloon}>×</button>
     </div>
   );

@@ -14,7 +14,7 @@ export type MusicCopy = {
   region: string; coverLink: string; coverAlt: string; titlebar: string; quality: string;
   loadingStatus: string; nowPlaying: string; offline: string; lastPlayed: string;
   loadingTitle: string; waitingTitle: string; loadingDetail: string; unavailable: string;
-  noResponse: string; poweredBy: string; openLastfm: string; volume: string;
+  noResponse: string; notConfigured: string; poweredBy: string; openLastfm: string; volume: string;
 };
 
 export function MusicWidget({ copy }: { copy: MusicCopy }) {

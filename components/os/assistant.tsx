@@ -1,9 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { clearCorner, coversFocus } from "@/lib/os/assistant";
+import { useCallback, type CSSProperties, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { clearCorner, coversFocus, cornerBox, overlaps } from "@/lib/os/assistant";
 import { CORNERS, type Corner, type Prefs } from "@/lib/os/prefs";
+import { useBalloonVisible } from "./balloon";
 import { useOsCommands, useOsPrefs } from "./os-commands";
 import { useOsActions, useOsStatic } from "./os-context";
 import type { OsCopy } from "./types";
@@ -57,10 +58,14 @@ export function Assistant() {
   const isCollapsed = useAssistantCollapsed();
   const [layer, setLayer] = useState<HTMLElement | null>(null);
   const [ready, setReady] = useState(false);
+  const balloonVisible = useBalloonVisible();
+  // Alto que sube la mascota para no solaparse con el globo de la bandeja (abajo a la derecha).
+  const [liftPx, setLiftPx] = useState(0);
   // Esquina elegida por la evasión del foco; vale solo mientras la preferencia no cambie.
   const [auto, setAuto] = useState<{ base: Corner; corner: Corner } | null>(null);
   const corner = auto && auto.base === prefs.assistantCorner ? auto.corner : prefs.assistantCorner;
   const show = prefs.assistant === "clippy" && !isCollapsed;
+  const lift = balloonVisible && corner === "bottom-right" ? liftPx : 0;
 
   // Tras hidratar y con el hilo libre: el chunk de la mascota no compite con el arranque.
   useEffect(() => {
@@ -75,7 +80,24 @@ export function Assistant() {
 
   const cornerRef = useRef(corner);
   const baseRef = useRef(prefs.assistantCorner);
-  useEffect(() => { cornerRef.current = corner; baseRef.current = prefs.assistantCorner; });
+  const autoRef = useRef(auto);
+  useEffect(() => { cornerRef.current = corner; baseRef.current = prefs.assistantCorner; autoRef.current = auto; });
+
+  // Mide el globo de la bandeja y sube la mascota lo justo para que no se pisen.
+  useEffect(() => {
+    if (!balloonVisible || !show || !ready || !layer) return;
+    let id = 0;
+    let tries = 0;
+    // El portal de la mascota se monta un instante después: se reintenta unas veces.
+    const measure = () => {
+      const balloon = document.querySelector<HTMLElement>(".xp-balloon");
+      const area = layer.querySelector<HTMLElement>(".retro-clippy-portal");
+      if (!balloon || !area) { if (++tries < 20) id = window.setTimeout(measure, 100); return; }
+      setLiftPx(Math.max(0, Math.ceil(area.getBoundingClientRect().bottom - balloon.getBoundingClientRect().top) + 8));
+    };
+    id = window.setTimeout(measure, 80);
+    return () => window.clearTimeout(id);
+  }, [balloonVisible, show, ready, layer, corner]);
 
   // 2.4.11: el elemento enfocado no puede quedar tapado por la mascota.
   useEffect(() => {
@@ -86,9 +108,16 @@ export function Assistant() {
       const active = document.activeElement;
       const aside = layer.querySelector<HTMLElement>(".retro-clippy");
       const area = layer.querySelector<HTMLElement>(".retro-clippy-portal");
-      if (!aside || !area || !(active instanceof HTMLElement) || active === document.body || aside.contains(active)) return;
-      const focus = active.getBoundingClientRect();
+      if (!aside || !area) return;
       const box = aside.getBoundingClientRect();
+      const unfocused = !(active instanceof HTMLElement) || active === document.body;
+      // Vuelve a la esquina elegida en cuanto el foco ya no estorba allí (p. ej. al cerrar la ayuda).
+      if (autoRef.current) {
+        const home = cornerBox(baseRef.current, area.getBoundingClientRect(), { w: box.width, h: box.height }, 0);
+        if (unfocused || !overlaps(home, active.getBoundingClientRect())) { setAuto(null); return; }
+      }
+      if (unfocused || aside.contains(active)) return;
+      const focus = active.getBoundingClientRect();
       if (!coversFocus(box, focus)) return;
       const next = clearCorner(cornerRef.current, focus, area.getBoundingClientRect(), { w: box.width, h: box.height }, 0);
       if (next) setAuto({ base: baseRef.current, corner: next });
@@ -120,7 +149,7 @@ export function Assistant() {
   ];
 
   return (
-    <div className="os-assistant-slot" ref={setLayer} data-corner={corner}>
+    <div className="os-assistant-slot" ref={setLayer} data-corner={corner} style={lift ? ({ "--os-assistant-lift": `${lift}px` } as CSSProperties) : undefined}>
       {show && ready && layer ? <RetroClippy copy={copy.clippy} container={layer} corner={corner} onHide={onHide} onCorner={onCorner} quiet options={options}/> : null}
     </div>
   );

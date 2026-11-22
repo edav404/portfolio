@@ -232,7 +232,7 @@
 .retro-clippy { position: absolute; right: 18px; bottom: 8px; display: grid; justify-items: center; width: 280px; pointer-events: auto; touch-action: none; }
 .retro-clippy-character { position: relative; display: grid; place-items: center; width: 160px; height: 128px; margin-left: auto; padding: 0; border: 0; outline-offset: 2px; cursor: grab; background: transparent; image-rendering: pixelated; }
 .retro-clippy-character:active { cursor: grabbing; }
-.retro-clippy-sprite { --clippy-y: 25%; display: block; width: 160px; height: 128px; background-image: url("/images/edav-clippy-sprites.png"); background-repeat: no-repeat; background-size: 960px 640px; background-position: -772px var(--clippy-y); }
+.retro-clippy-sprite { --clippy-y: 25%; display: block; width: 160px; height: 128px; background-image: url("/images/edav-clippy-sprites.png"); background-image: image-set(url("/images/edav-clippy-sprites.webp") type("image/webp"), url("/images/edav-clippy-sprites.png") type("image/png")); background-repeat: no-repeat; background-size: 960px 640px; background-position: -772px var(--clippy-y); }
 .retro-clippy:not([data-state="IDLE"]) .retro-clippy-sprite { animation: retro-clippy-action .4s steps(1, end) 1 forwards; }
 .retro-clippy[data-state="APPEARING"] .retro-clippy-sprite { --clippy-y: 0%; animation-duration: .55s; }
 .retro-clippy[data-state="IDLE"] .retro-clippy-sprite { --clippy-y: 25%; }

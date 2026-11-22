@@ -52,10 +52,11 @@ export function StepsPanel({ title, rect, copy, onStep, onDone, onCancel }: Prop
           <div className="xp-nudge__dpad">
             {step("up", text.up, ARROWS.up, "up")}
             {step("left", text.left, ARROWS.left, "left")}
-            <button type="button" className="xp-nudge__btn" data-dir="step" aria-pressed={big} onClick={() => setBig((value) => !value)}>{text.bigStep}</button>
             {step("right", text.right, ARROWS.right, "right")}
             {step("down", text.down, ARROWS.down, "down")}
           </div>
+          {/* Fuera de la cruz: así no se solapa con las flechas en ningún idioma. */}
+          <button type="button" className="xp-nudge__btn xp-nudge__big" data-dir="step" aria-pressed={big} onClick={() => setBig((value) => !value)}>{text.bigStep}</button>
         </fieldset>
         <fieldset className="xp-nudge__group">
           <legend>{text.sizeGroup}</legend>

@@ -10,7 +10,7 @@ import { useWindowHidden } from "./window-visibility";
 import styles from "./media.module.css";
 
 type Track = { name: string; artist: string; album?: string; image?: string; url: string; nowPlaying: boolean };
-type State = "loading" | "ready" | "error";
+type State = "loading" | "ready" | "error" | "unconfigured";
 
 /** Cada cuánto se consulta Last.fm con la ventana visible (la API cachea 30 s). */
 const POLL_MS = 30_000;
@@ -34,22 +34,25 @@ export default function Media() {
     if (hidden) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const controller = new AbortController();
+    let unconfigured = false;
     const load = () => {
       fetch("/api/lastfm/", { headers: { Accept: "application/json" }, signal: controller.signal })
         .then((response) => {
+          // 503 = el servidor no tiene credenciales de Last.fm: estado esperado, se informa y no se sondea más.
+          if (response.status === 503) { unconfigured = true; setState("unconfigured"); return null; }
           if (!response.ok) throw new Error(`Last.fm ${response.status}`);
           return response.json() as Promise<Track>;
         })
-        .then((data) => { setTrack(data); setState("ready"); })
+        .then((data) => { if (data) { setTrack(data); setState("ready"); } })
         .catch((error: unknown) => { if (!(error instanceof DOMException && error.name === "AbortError")) setState("error"); })
-        .finally(() => { if (!controller.signal.aborted) timer = setTimeout(load, POLL_MS); });
+        .finally(() => { if (!controller.signal.aborted && !unconfigured) timer = setTimeout(load, POLL_MS); });
     };
     load();
     return () => { controller.abort(); if (timer !== undefined) clearTimeout(timer); };
   }, [hidden]);
 
   const isLoading = state === "loading";
-  const isError = state === "error" || !track;
+  const isError = state === "error" || state === "unconfigured" || !track;
   const user = profile.contact.lastfm;
   const profileUrl = `https://www.last.fm/user/${user}`;
   const trackUrl = track?.url ?? profileUrl;
@@ -69,7 +72,7 @@ export default function Media() {
         </div>
       </div>
       <div className={styles.footer}>
-        <span>{isError ? t.noResponse : t.poweredBy}</span>
+        <span>{state === "unconfigured" ? t.notConfigured : isError ? t.noResponse : t.poweredBy}</span>
         <a href={profileUrl} target="_blank" rel="noopener noreferrer">{t.openLastfm}</a>
       </div>
     </section>

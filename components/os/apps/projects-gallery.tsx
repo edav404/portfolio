@@ -32,7 +32,7 @@ const ProjectCard = memo(function ProjectCard({ project, selected, onSelect, onO
         onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); onOpen(project.slug); } }}
       >
         {project.image ? (
-          <Image className={styles.thumb} src={project.image} alt="" width={240} height={150} sizes="160px" loading="lazy"/>
+          <Image className={styles.thumb} src={project.thumb} alt="" width={240} height={150} sizes="160px" loading="lazy"/>
         ) : <span className={styles.nothumb} aria-hidden="true">{copy.gallery.noCover}</span>}
         <span className={styles.name}>{project.title}</span>
         <span className={styles.sub}>{project.category} · {project.year}</span>

@@ -1,5 +1,5 @@
 /* Galería «Mi trabajo»: panel de tareas a la izquierda, cuadrícula y barra de estado */
-.root { display: flex; flex-direction: column; min-height: 100%; }
+.root { display: flex; flex-direction: column; min-height: 100%; container-type: inline-size; }
 .body { display: flex; flex: 1; flex-wrap: wrap; min-height: 0; }
 .tasks {
   flex: 0 0 200px;
@@ -91,3 +91,10 @@
   font-size: var(--xp-text-xs);
 }
 .status p { margin: 0; flex: 1 1 200px; min-width: 0; }
+/* Ventana estrecha (Pocket o ventana pequeña): filtros a todo el ancho en una fila y el listado debajo. */
+@container (max-width: 519px) {
+  .body { flex-direction: column; flex-wrap: nowrap; }
+  .tasks { flex: none; flex-direction: row; flex-wrap: wrap; gap: var(--space-4); border-right: 0; border-bottom: 1px solid var(--xp-edge-strong); }
+  .group { flex: 1 1 140px; }
+  .results { flex: 1 1 auto; }
+}

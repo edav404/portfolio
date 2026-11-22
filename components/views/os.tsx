@@ -1,3 +1,4 @@
+import { thumbPath } from "@/lib/os/thumbs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import OsShell from "@/components/os/os-shell";
@@ -59,6 +60,7 @@ function projectIndex(locale: Locale): OsProjectIndexItem[] {
       year: project.year,
       summary: project.summary[locale],
       image: project.image,
+      thumb: thumbPath(project.image),
       alt: project.alt?.[locale] ?? title,
       publicHref: href("project", locale, { slug: project.slug }),
       kind: project.kind,

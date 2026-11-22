@@ -551,7 +551,7 @@
 .xp-nudge__dpad > [data-dir="left"] { grid-area: 2 / 1; }
 .xp-nudge__dpad > [data-dir="right"] { grid-area: 2 / 3; }
 .xp-nudge__dpad > [data-dir="down"] { grid-area: 3 / 2; }
-.xp-nudge__dpad > [data-dir="step"] { grid-area: 2 / 2; }
+.xp-nudge__big { white-space: nowrap; }
 .xp-nudge__row { display: flex; align-items: center; gap: var(--space-3); }
 .xp-nudge__btn {
   display: inline-flex;
@@ -1154,7 +1154,7 @@
   user-select: none;
 }
 .os-boot[data-phase="fade"] { opacity: 0; transition: opacity var(--os-boot-fade, 240ms) linear; }
-.os-boot__title { margin: 0; font-size: var(--xp-text-lg); text-shadow: var(--xp-text-shadow-title); }
+.os-boot__title { margin: 0; color: var(--xp-on-accent); font-size: var(--xp-text-lg); text-shadow: var(--xp-text-shadow-title); }
 .os-boot__bar {
   width: min(240px, 60vw);
   height: var(--space-5);
@@ -1171,7 +1171,7 @@
   background: repeating-linear-gradient(90deg, var(--c-luna-cap-2) 0 8px, transparent 8px 10px);
   animation: os-boot-fill var(--os-boot-ms, 2000ms) linear forwards;
 }
-.os-boot__hint { margin: 0; font-size: var(--xp-text-xs); }
+.os-boot__hint { margin: 0; color: var(--xp-on-accent); font-size: var(--xp-text-xs); }
 @keyframes os-boot-fill { to { width: 100%; } }
 
 .os-assistant-slot { display: contents; }
@@ -1191,7 +1191,7 @@
   pointer-events: auto;
   touch-action: none;
 }
-.os-root .retro-clippy[data-corner="bottom-right"] { right: var(--space-4); bottom: 0; }
+.os-root .retro-clippy[data-corner="bottom-right"] { right: var(--space-4); bottom: var(--os-assistant-lift, 0px); }
 .os-root .retro-clippy[data-corner="bottom-left"] { left: var(--space-4); bottom: 0; }
 .os-root .retro-clippy[data-corner="top-right"] { right: var(--space-4); top: 0; }
 .os-root .retro-clippy[data-corner="top-left"] { left: var(--space-4); top: 0; }
@@ -1215,6 +1215,7 @@
   width: 160px;
   height: 128px;
   background-image: url("/images/edav-clippy-sprites.png");
+  background-image: image-set(url("/images/edav-clippy-sprites.webp") type("image/webp"), url("/images/edav-clippy-sprites.png") type("image/png"));
   background-repeat: no-repeat;
   background-size: 960px 640px;
   background-position: -772px var(--clippy-y);

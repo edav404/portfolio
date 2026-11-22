@@ -53,7 +53,7 @@ export function OsLayoutView({ locale, children }) {
 }
 ```
 
-- **Los detalles no viajan como props del layout.** challenge, solution, myRole, services, technologies y links los entrega la página del slug (`<ProjectDetail>`, solo ese proyecto) como `children`. El shell guarda en una caché de sesión (`detailBySlug`) el nodo recibido, para que las ventanas ya abiertas lo conserven aunque la ruta cambie. Una ventana de proyecto sin detalle todavía (navegación en curso) muestra la cabecera del índice (título, categoría, resumen) y un estado de carga. Si no se abre ninguna ventana, no se entrega ningún detalle.
+- **Los detalles no viajan como props del layout ni como nodos React.** Tras Fix A son **datos serializables por slug** (`ProjectDetailData`: client, location, challenge, solution, myRole, services, technologies, links), construidos por `lib/os-project-detail.ts`. Llegan por dos vías: la página del slug (`/os/proyectos/<slug>/`, HTML y RSC) los publica con `<ProjectDetailPublisher>` en la caché de sesión del shell (`detailMap`, por slug), y, para una ventana cuyo detalle no llegó por navegación (Next descartó la navegación en vuelo), el shell los pide al **endpoint estático** `/api/os-project/<locale>/<slug>/` (`app/api/os-project/[locale]/[slug]/route.ts`: `dynamicParams = false`, un JSON por idioma y slug autorizado, `Cache-Control: public, max-age=300, stale-while-revalidate=3600`, 404 fuera del catálogo). Una ventana de proyecto sin detalle todavía muestra la cabecera del índice (título, categoría, resumen) y un estado de carga. Si no se abre ninguna ventana, no se entrega ningún detalle. El índice lleva además `thumb` (miniatura WebP ≤ 480 px por convención, §13).
 - Se importa `@/components/os/os.css` aquí. Es CSS de segmento, pero **Next no lo retira al salir en navegación suave** (`01-getting-started/11-css.md`): los tokens y reglas nuevos van bajo `.os-root` o en CSS Modules mientras convivan con el overlay, y no pisan selectores globales. `app/desktop.css` se borra en O9.
 - `<div class="os-root" data-theme="xp">` con `position: fixed; inset: 0; isolation: isolate`. Sin `body:has()` ni `html[data-os-open]`. Cumple D4 y §2.1 de `arquitectura-rutas.md`.
 - **Presupuesto de datos**: el índice del catálogo (13 proyectos por defecto) es del orden de unos pocos KB gz en HTML y RSC. El criterio se mide sobre **datos transferidos** (HTML + RSC + JS + CSS + imágenes), no sobre el peso de la fuente (§2.3).
@@ -64,11 +64,18 @@ export function OsLayoutView({ locale, children }) {
 
 **Navegación real.** Abrir un proyecto es `router.push(hrefFor("osProject", locale, slug), { scroll: false })`. El layout `os/` persiste, el shell conserva las ventanas y Next resuelve para esa ruta los `children`, el canonical, `og:url`, el título y el 404 reales. No hay `pushState` propio, `document.title` manual ni `lastWritten`. Las URLs se generan con `hrefFor` y se comparan con `canonicalPath` (con y sin barra final).
 
-**Estado añadido al reducer.** `selection: string | null` (slug seleccionado, espejo de la URL), `openedBy[windowId]` (id de la entrada de historial que abrió cada ventana de proyecto) y `entries[]` + `entryIndex` (pila de ids de entrada propias, solo en memoria). Cada acción lleva un **origen**: `"user"`, `"route"` o `"hydrate"`.
+**Estado añadido al reducer.** `selection: string | null` (slug seleccionado, espejo de la URL), `openedBy[windowId]` (id de la entrada de historial que abrió cada ventana de proyecto), `entries[]` + `entryIndex` (pila de entradas propias, solo en memoria) y `pending` (la **intención de navegación pendiente**). Cada acción lleva un **origen**: `"user"`, `"route"` o `"hydrate"`.
+
+**Cambios de Fix A (vigentes).**
+- **Sin `entryId` en `ROUTE_CHANGED`.** No se lee ni se escribe `history.state` (§12.4): `ROUTE_CHANGED` lleva solo el `target` (`project(slug)` o `desktop`) deducido de la ruta observada. Los ids de entrada (`e0`, `e1`...) son internos del reducer.
+- **Atrás/Adelante por adyacencia.** Se deduce solo si el destino es la entrada **vecina e inequívoca** (la anterior o la siguiente a la racha de entradas consecutivas con la misma URL). Si coinciden ambas vecinas, no hay vecina (p. ej. con `unknownBefore` tras un fallback), o el destino es otro, se aplica el **fallback por URL**: abre/restaura/enfoca el proyecto del destino, o limpia la selección y cierra solo la ventana seleccionada que abrió una navegación.
+- **Intención pendiente.** Una acción de usuario que navega no confirma entradas: deja `pending { kind, sel, created, superseded }`. Solo `ROUTE_CHANGED` (la ruta realmente observada) la confirma (`commitPending`: crea la entrada y atribuye las ventanas optimistas). Next descarta una navegación en vuelo si llega otra: la nueva intención se funde con la anterior (`superseded`, sus ventanas se conservan) y una confirmación tardía de una intención sustituida se ignora. Si no se confirma en **`NAV_TIMEOUT` = 10 s** (`NAV_TIMEOUT_MS` en `use-os-navigation.ts`), `NAV_TIMEOUT` la cancela: las ventanas optimistas siguen abiertas y la selección vuelve a la entrada confirmada.
+- **`OPEN` frente a `FOCUS`.** `OPEN` crea la ventana si no existe (y restaura la minimizada); `FOCUS` nunca crea y, sobre una ventana visible, solo cambia el orden z. Solo `OPEN`, o `FOCUS` sobre una minimizada, inician una intención `push` hacia el slug del proyecto; las apps locales nunca tocan el historial.
+- **Validación previa.** `shouldNavigate` comprueba el slug contra `knownSlugs` antes de `router.push/replace`.
 
 **Flujo (sin bucles, sin filtro por pathname).**
-1. Acción del usuario: un hook `useOsNavigation` hace `dispatch({ type, origin: "user" })` y, en el mismo manejador, llama a `router.push/replace` si la regla de abajo lo exige. Tras el `push`, `history.replaceState({ ...history.state, osEntry: id }, "")` marca la entrada con un id propio [S: el spike O0 comprueba que Next tolera el estado ampliado; si no, se usa solo el fallback por URL].
-2. La ruta cambia (por nuestra acción, Atrás/Adelante, un `<Link>` externo, deep link o recarga): `usePathname` dispara `dispatch({ type: "ROUTE_CHANGED", target, entryId?, origin: "route" })`, con `entryId` leído de `history.state.osEntry`.
+1. Acción del usuario: un hook `useOsNavigation` hace `dispatch({ type, origin: "user" })` y, en el mismo manejador, llama a `router.push/replace` si el plan de historial lo exige (`reduceWithHistory`). La acción deja una intención `pending`; no se escribe `history.state` (el spike O0 lo descartó, §12).
+2. La ruta observada cambia (por nuestra acción, Atrás/Adelante, un `<Link>` externo, deep link o recarga): `usePathname` dispara `dispatch({ type: "ROUTE_CHANGED", target, origin: "route" })` solo cuando el pathname cambia de verdad.
 3. `ROUTE_CHANGED` es una **transición idempotente**: si `selection` ya coincide con el destino y la ventana está abierta y visible, devuelve la misma referencia. Dos entradas consecutivas con el mismo pathname no rompen nada; el efecto no necesita filtrar por pathname porque la transición es la misma desde cualquier origen.
 
 **Reglas de historial (escritorio).**
@@ -86,10 +93,10 @@ export function OsLayoutView({ locale, children }) {
 
 `replace` tras cerrar o minimizar puede dejar dos entradas consecutivas `/os/`. Se acepta: un Atrás extra no hace nada visible gracias a la idempotencia. Se descartó usar `router.back()` para evitarlo (asíncrono y frágil si el usuario navegó entre medias).
 
-**Atrás y Adelante.** `ROUTE_CHANGED` usa el `entryId` de la entrada destino:
-- *Entrada propia conocida, anterior* (Atrás): se cierran las ventanas de proyecto cuyo `openedBy` sea una entrada posterior a la destino (se deshace la apertura), `selection` pasa a la de esa entrada y se enfoca esa ventana (se restaura si estaba minimizada). Las apps locales y los proyectos abiertos por entradas anteriores no se tocan.
-- *Entrada propia conocida, posterior* (Adelante): se reabre el proyecto que abrió esa entrada y se selecciona.
-- *Entrada ajena, sin id (deep link, recarga, `<Link>` externo, entrada de otra sesión)*: fallback puro por URL. `project(slug)` abre, restaura y enfoca esa ventana y la selecciona; `desktop` limpia la selección y cierra solo la ventana de proyecto que estaba seleccionada, si la abrió una entrada de navegación. Un slug fuera del catálogo no llega aquí: Next responde 404 (§1.4).
+**Atrás y Adelante.** `ROUTE_CHANGED` compara el destino con las entradas vecinas:
+- *Entrada vecina anterior* (Atrás): se cierran las ventanas de proyecto cuyo `openedBy` sea una entrada posterior a la destino (se deshace la apertura), `selection` pasa a la de esa entrada y se enfoca esa ventana (se restaura si estaba minimizada). Las apps locales y los proyectos abiertos por entradas anteriores no se tocan.
+- *Entrada vecina posterior* (Adelante): se reabre el proyecto que abrió esa entrada y se selecciona.
+- *Destino que no es vecino inequívoco (deep link, recarga, `<Link>` externo, entrada de otra sesión)*: fallback puro por URL. `project(slug)` abre, restaura y enfoca esa ventana y la selecciona; `desktop` limpia la selección y cierra solo la ventana de proyecto que estaba seleccionada, si la abrió una entrada de navegación. Un slug fuera del catálogo no llega aquí: Next responde 404 (§1.4).
 - Secuencia comprobable: abrir A, abrir B, enfocar A (sin historial), Atrás (→ A seleccionada, B cerrada por deshacer su apertura), Atrás (→ `/os/`, A cerrada), Adelante ×2 (reabre A, luego B).
 
 **Modo Pocket.** Los proyectos siguen siendo rutas y usan estas reglas. Las apps locales **no crean entradas**: Atrás, ✕ y Escape son una transición local (§5.4). Entrada directa sin predecesora propia: Atrás local cierra hacia el lanzador sin llamar a `history.back()`.
@@ -164,7 +171,7 @@ export type Action = { origin?: Origin } & (          // origen de la acción; p
   | { type: "RESET_GEOMETRY"; id?: WindowId }
   | { type: "HYDRATE"; viewport: { w: number; h: number }; saved: Record<string, Rect & { maximized?: boolean }> }  // medidas + almacenamiento tras hidratar: aplica y re-clampa en UNA transición
   | { type: "SET_VIEWPORT"; w: number; h: number }
-  | { type: "ROUTE_CHANGED"; target: { kind: "desktop" } | { kind: "project"; slug: string }; entryId?: string; known: readonly string[] }
+  | { type: "ROUTE_CHANGED"; target: { kind: "desktop" } | { kind: "project"; slug: string } }
   | { type: "POCKET_BACK" }                                  // Atrás, ✕ y Escape en Pocket comparten esta transición
   | { type: "MINIMIZE_ALL" } | { type: "CLOSE_ALL" }
   | { type: "CYCLE"; dir: 1 | -1 });
@@ -590,3 +597,43 @@ Medido con un SO mínimo (SSG, 3 slugs, `dynamicParams=false`, `trailingSlash: t
 4. **No se escribe `history.state` a mano**: Next controla la entrada. Por tanto el "id de entrada" (`openedBy`) no puede apoyarse en `history.state`; el fallback por URL de §1.3 es el diseño base. Pocket usa su pila local con Atrás propio.
 5. Salir de `/os` y volver remonta el shell: el estado que deba sobrevivir (geometría, preferencias) se persiste en `localStorage` (hidratación tras montar), no en memoria del layout.
 6. Cuidado con contadores de módulo en el shell: el HTML estático los hornea y provoca el error de hidratación #418 (asignar ids en `useEffect`).
+
+## 13. Resultado de O12 (QA y pulido antes del corte)
+
+Detalle y método en `docs/qa-os.md` (standalone de una copia de `git archive`, Edge headless por CDP, sin credenciales de Last.fm ni SMTP).
+
+**Cifras de la QA (HEAD aa25602)**
+
+| Área | Resultado |
+|---|---|
+| Axe (wcag2a/aa, 21a/aa, 22aa, best-practice) | 0 violaciones en 10 estados de escritorio y 4 de Pocket, ES y EN (28 ejecuciones). Repetido tras el pulido: 0 en las 28. |
+| Smoke de rutas | 44 URLs del sitemap, redirecciones, 404, 22 páginas EN, 4 del SO, 6 cambios de idioma: OK. |
+| JS | Núcleo del SO 27,7 KB gz (límite 45); apps de 1,1 a 6,8 KB gz (límite 20); la portada `/` no descarga ningún chunk del SO. |
+| HTML `/os/` | 15,0 KB gz (el de `/` son 21,1 KB). |
+| Rendimiento (CPU 4x, 1,6 Mb/s, 150 ms RTT) | `/os/` FCP 1,21 s y LCP 1,30 s; CLS 0,026-0,037; TBT aprox. 98-299 ms. Abrir el overlay desde la portada: ~600 ms de hilo bloqueado. |
+| Defectos | D1-D12 (1 alta, 4 medias, 5 bajas, 2 informativos). |
+
+**Corregidos en el pulido posterior (sin commit de la QA)**
+
+| # | Antes | Después |
+|---|---|---|
+| D1 Mi trabajo | 13 miniaturas a tamaño completo: **7,48 MB** | WebP ≤ 480 px de `scripts/make-thumbs.mjs` en `public/images/projects/thumbs/`: **124 KB** (3,5 a 12,8 KB cada una). Convención `thumbPath()` en `lib/os/thumbs.ts`; el índice del SO lleva `thumb`. Los originales (web pública y cabecera de la ventana de proyecto) no cambian. |
+| D2 Sprite de la mascota | `edav-clippy-sprites.png` 2,28 MB | `edav-clippy-sprites.webp` 349 KB (lossy q82, alfa sin pérdida) servido con `image-set()` en `os.css` y `desktop.css`; el PNG queda como alternativa de navegadores sin `image-set(type())`. Solo se descarga al pintar la mascota (ya diferida tras hidratar y con el hilo libre). |
+| D3 Pocket 390 | Filtros en 200 px, columna derecha vacía y tarjetas debajo | `@container` en `gallery.module.css`: bajo 520 px los filtros ocupan el ancho y las tarjetas van debajo. |
+| D4 Arranque | Texto `rgb(84,101,139)` sobre azul (~1,6:1) | `color: var(--xp-on-accent)` en título y aviso: blanco sobre `#003dd7`/`#0831d9` = 7,93:1 y 8,57:1. |
+| D5 Globo de bienvenida | Solapado con la mascota (1440, 1024 y deep link) | La mascota sube lo justo (`--os-assistant-lift`, medido con el globo) mientras el globo está visible: sin solape en 1440x900, 1024x768 y deep link. |
+| D6 | Mascota en la esquina de evasión tras cerrar la ayuda | Vuelve a su esquina en cuanto el foco ya no estorba allí (`assistant.tsx`). |
+| D7 | «Paso grande» solapaba las flechas | Botón fuera de la cruz de flechas (`.xp-nudge__big`), sin solapes en ES y EN. |
+| D9 | `error` de consola con 503 de `/api/lastfm/` | El cliente de Multimedia trata 503 como «no configurado»: mensaje en la UI, sin sondeo y sin `console.error`. La línea «Failed to load resource» la emite el propio navegador ante cualquier 503 y no se puede suprimir sin cambiar la API (no se cambió). `e2e:pocket` conserva su filtro. |
+| D10 | Globo de Pocket hablaba de «icono» | `balloonTextPocket` (ES/EN) en `content/ui.ts`. |
+
+Verificación del pulido: `npm run check` (2045 pruebas), `e2e:os` 1644 correctas / 0 fallidas, `e2e:pocket` 78/78, axe 0 violaciones.
+
+**Pendientes del corte**
+1. **Prueba por el borde real (§7 O12)**: calentamiento HTML primero y RSC primero, `Vary` respetado por Cloudflare, `Content-Type` correcto, `_rsc` y redirecciones con query, y **purga** por URL y por etiqueta que renueve ambas variantes. Sin ella no hay corte.
+2. **O9**: enlazar la portada y el pie al SO con `prefetch={false}` y repetir la medición de prefetch; retirar `app/desktop.css` y el overlay (RetroClippy comparte hoja de sprites con ambos hasta entonces).
+3. **Navegadores y AT no cubiertos por CDP**: lector de pantalla (NVDA/JAWS/VoiceOver/TalkBack), WebKit y Firefox (`fill="var()"` en SVG, `inert`, `:focus-visible`), gesto Atrás físico, atajos `Alt+Shift+…` con teclados reales y táctil real (teclado virtual al enfocar el primer campo de Contacto, D11).
+4. **D8**: CLS de 0,026-0,037 sin fuente identificada (sospecha: mascota/globo o reloj tras hidratar).
+5. **CI**: el job `os-e2e` no se ha ejecutado en un runner real.
+6. **Producción**: CSP en Report-Only, cabeceras de Cloudflare/Coolify y credenciales reales de Last.fm/SMTP.
+7. Si se vuelve a añadir un proyecto, ejecutar `node scripts/make-thumbs.mjs` (necesita `sharp`, que Next instala como dependencia opcional; no es dependencia directa).

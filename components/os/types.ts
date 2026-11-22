@@ -36,6 +36,8 @@ export type OsProjectIndexItem = {
   year: string;
   summary: string;
   image: string;
+  /** Miniatura WebP ligera (≤ 480 px) para la galería. */
+  thumb: string;
   alt: string;
   /** Ruta de la página pública del proyecto (`/proyectos/<slug>/`). */
   publicHref: string;
